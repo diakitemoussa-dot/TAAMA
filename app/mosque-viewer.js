@@ -220,6 +220,8 @@ const viewTarget   = new THREE.Vector3();   // centre de la mosquée
 /* Cadrage "Façade" (vue de face, comme la capture) */
 const facadeTarget = new THREE.Vector3();   // centre de la façade
 const facadeNormal = new THREE.Vector3(0, 0, 1);   // normale sortante (vers l'avant)
+const doorTarget   = new THREE.Vector3();   // centre de la porte principale (missions)
+const canarisTarget = new THREE.Vector3();  // centre des canaris du toit (missions)
 let   facadeDist   = 120;                   // distance caméra ↔ façade
 let   domeR        = 0;                      // rayon du dôme (limite)
 const mosqueBox    = new THREE.Box3();       // boîte englobante de la mosquée (missions)
@@ -377,6 +379,12 @@ loader.load(
     facadeDist = Math.max((H / 2) / Math.tan(vfov / 2), (W / 2) / Math.tan(hfovRef / 2)) * 1.06 + depth / 2;
     facadeTarget.copy(facCenter);
 
+    // Centres ciblés par les missions (photo de la porte / des canaris)
+    doorTarget.copy(facCenter);
+    if (mainDoor) new THREE.Box3().setFromObject(mainDoor).getCenter(doorTarget);
+    canarisTarget.set(target.x, box.max.y, target.z);
+    if (canarisRoots[0]) new THREE.Box3().setFromObject(canarisRoots[0]).getCenter(canarisTarget);
+
     loaded = true;
     if (active && loadingEl) loadingEl.classList.add('hidden');
     if (active) revealStage();                              // affiche le titre puis les boutons
@@ -518,6 +526,8 @@ window.MosqueScene = {
   get facadeTarget(){ return facadeTarget; },
   get facadeNormal(){ return facadeNormal; },
   get facadeDist(){ return facadeDist; },
+  get doorTarget(){ return doorTarget; },
+  get canarisTarget(){ return canarisTarget; },
   flyTo,
   setGameUpdate(fn){ gameUpdate = (typeof fn === 'function') ? fn : null; },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },

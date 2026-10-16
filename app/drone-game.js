@@ -965,7 +965,7 @@ function update(dt){
   }
 
   tickScan(dt);
-  window.Missions?.tick?.(dt, rig.position, rig.rotation.y);
+  window.Missions?.tick?.(dt, rig.position, rig.rotation.y, landed);
 
   M.renderer.render(M.scene, M.camera);
 }

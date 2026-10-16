@@ -189,3 +189,42 @@ avant d'être appliquée à l'original et publiée.
 2. **Narrateur** : le Maître Maçon — OK ?
 3. **Monnaie « Banco » ⛁** et **Talismans** — OK ou autres noms ?
 4. Priorité des phases (proposition : P1 d'abord, jouable tout de suite).
+
+---
+
+# 🎮 MISE À JOUR v1.1 — Chapitre 1 « qualité jeu vidéo » (16/10/2026)
+
+Suite aux retours : le chapitre 1 passe d'un enchaînement de tutoriels à **5 vraies missions**
+avec briefing, objectifs multiples, étoiles et débriefing.
+
+## Nouveau système commun
+- **Briefing avant chaque mission** : histoire du Maître Maçon, liste des objectifs,
+  récompenses, bouton « 🚁 COMMENCER LA MISSION » (entre directement dans le mode drone).
+- **Objectifs à étapes** affichés en direct dans le bandeau (✓ / ○ / ☆ bonus).
+- **Étoiles 1 à 3** par mission : 1 ⭐ = mission remplie, ⭐⭐ = performance,
+  ⭐⭐⭐ = exploit bonus. Total chapitre : 15 ⭐.
+- **Chrono en direct** pour les missions à performance (course, safari, livraison).
+- **Écran de débriefing** : étoiles animées, temps réalisé, record, récompenses,
+  bouton « ▸ MISSION SUIVANTE ».
+- **Grades** : 🎓 Apprenti (0) → ⚒️ Compagnon (75) → 🛡️ Gardien (150) → 👑 Grand Gardien (240 ⛁),
+  avec toast de promotion.
+
+## Les 5 missions du chapitre 1
+| ID | Mission | Mécanique | Étoiles |
+|---|---|---|---|
+| M01 | 🚁 Premier vol | Décoller (10 m) + atterrir | ⭐ vol · ⭐⭐ 30 s en l'air · ⭐⭐⭐ 40 m d'altitude |
+| M02 | 🏁 La Course du Sahel | Circuit ordonné de 8 anneaux en slalom + compte à rebours + chrono | ⭐ finir · ⭐⭐ <60 s · ⭐⭐⭐ <40 s |
+| M03 | 📸 Safari Photo | 3 cibles à photographier (façade, porte, toit aux canaris) | ⭐ 3 photos · ⭐⭐ <2 min 30 · ⭐⭐⭐ + photo des œufs |
+| M04 | 🪺 Le Trésor des Tours | Radar œufs + inspection rapprochée | ⭐ scan · ⭐⭐ <30 m des œufs · ⭐⭐⭐ photo des œufs |
+| M05 | 🧱 L'Urgence de la Tour | Livraison : 2 boules de banco (chantier → sommet du toit) | ⭐ 2 livraisons · ⭐⭐ <2 min · ⭐⭐⭐ <1 min 20 |
+
+## Assistance en vol
+- **Balise lumineuse** (colonne de lumière dorée) qui marque l'objectif actif
+  (cible photo, œufs, point de collecte / de livraison).
+- **Anneau suivant mis en surbrillance** dans la course (les autres s'estompent).
+- **Balle de banco** visible qui suit le drone pendant le transport.
+
+## Technique
+- `app/missions.js` : moteur v2 (état par mission dans `localStorage`, clé `djenne.missions.v2`).
+- `mosque-viewer.js` expose `doorTarget` et `canarisTarget` (centres porte / canaris).
+- `drone-game.js` transmet `landed` à la boucle de missions (objectif d'atterrissage).
