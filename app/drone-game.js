@@ -157,6 +157,7 @@ function _showScanPanel(){
   result.classList.remove('visible');          // reset animation si rejouée
   void result.offsetWidth;
   result.classList.add('visible');
+  window.Missions?.onEggScan?.();
 }
 
 scanPanel.querySelector('.dg-scan-close').addEventListener('click', () => {
@@ -613,6 +614,7 @@ function enter(){
   }
   updateModelButton();
 
+  window.Missions?.onGameEnter?.();
   M.setGameUpdate(update);
 }
 
@@ -626,6 +628,7 @@ function exit(){
   orbitMode = false; orbitReturning = false; _orbitDragId = null;
 
   M.setGameUpdate(null);
+  window.Missions?.onGameExit?.();
   scanState = 'idle'; scanElapsed = 0;
   if (laserMat) laserMat.opacity = 0;
   if (scanGroup) scanGroup.visible = false;
@@ -962,6 +965,7 @@ function update(dt){
   }
 
   tickScan(dt);
+  window.Missions?.tick?.(dt, rig.position, rig.rotation.y);
 
   M.renderer.render(M.scene, M.camera);
 }
@@ -1006,6 +1010,7 @@ function takePhoto(){
   M.renderer.render(M.scene, M.camera);
   const url = M.renderer.domElement.toDataURL('image/png');
   photos.push(url);
+  window.Missions?.onPhoto?.(rig.position);
   // Téléchargement immédiat
   const a = document.createElement('a');
   a.href = url; a.download = `djenne-drone-${photos.length}.png`;

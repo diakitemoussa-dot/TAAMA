@@ -222,6 +222,7 @@ const facadeTarget = new THREE.Vector3();   // centre de la façade
 const facadeNormal = new THREE.Vector3(0, 0, 1);   // normale sortante (vers l'avant)
 let   facadeDist   = 120;                   // distance caméra ↔ façade
 let   domeR        = 0;                      // rayon du dôme (limite)
+const mosqueBox    = new THREE.Box3();       // boîte englobante de la mosquée (missions)
 
 /* Déplacement fluide de la caméra vers un point de vue (réutilise le travelling) */
 function flyTo(dest, tgt, dur = 1.6){
@@ -288,6 +289,7 @@ loader.load(
     // Cadrage sur la mosquée (ou la scène entière en secours)
     const focus = mosque || root;
     const box = new THREE.Box3().setFromObject(focus);
+    mosqueBox.copy(box);
     box.getCenter(target);
     const size = box.getSize(new THREE.Vector3());
     const r = Math.max(size.x, size.y, size.z) || 40;
@@ -512,6 +514,10 @@ window.MosqueScene = {
   scene, camera, renderer, controls,
   viewOverview, viewTarget,
   get domeRadius(){ return domeR; },
+  get mosqueBox(){ return mosqueBox; },
+  get facadeTarget(){ return facadeTarget; },
+  get facadeNormal(){ return facadeNormal; },
+  get facadeDist(){ return facadeDist; },
   flyTo,
   setGameUpdate(fn){ gameUpdate = (typeof fn === 'function') ? fn : null; },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
@@ -565,6 +571,7 @@ function revealStage(){
   }
 
   stage.classList.add('revealed');
+  window.dispatchEvent(new CustomEvent('mosque:revealed'));
   clearTimeout(readyTimer);
   readyTimer = setTimeout(() => { if (ui) ui.classList.add('ready'); }, 7000);
   try { window.playDroneReveal?.(); } catch(_) {}
