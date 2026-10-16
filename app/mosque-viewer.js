@@ -530,6 +530,10 @@ window.MosqueScene = {
   get canarisTarget(){ return canarisTarget; },
   flyTo,
   setGameUpdate(fn){ gameUpdate = (typeof fn === 'function') ? fn : null; },
+  setAutoRotate(on){                    // rotation douce de la maquette (menu principal)
+    controls.autoRotate = !!on;
+    controls.autoRotateSpeed = 0.6;
+  },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
   resumeLoop() { if (!raf) tick(); },
 };

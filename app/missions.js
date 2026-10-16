@@ -1116,18 +1116,20 @@ function injectToolbarButton(){
    13. CÂBLAGE
    ========================================================== */
 
-document.getElementById('msChoiceMissions')?.addEventListener('click', () => {
+function startMissions(){
   setMode('missions');
   hideChooser();
   const cur = currentMission();
   if (cur) showBrief(cur);
   else toastInfo('🏆 Chapitre 1 terminé — bravo, Gardien !');
-});
-document.getElementById('msChoiceFree')?.addEventListener('click', () => {
+}
+function startFree(){
   setMode('free');
   hideChooser();
   toastInfo('🧭 Exploration libre — visite à ton rythme.');
-});
+}
+document.getElementById('msChoiceMissions')?.addEventListener('click', startMissions);
+document.getElementById('msChoiceFree')?.addEventListener('click', startFree);
 document.getElementById('msBriefGo')?.addEventListener('click', () => {
   const m = missionById(_briefId);
   hideBrief();
@@ -1176,6 +1178,11 @@ let chooserTimer = 0;
 function scheduleChooser(){
   clearTimeout(chooserTimer);
   chooserTimer = setTimeout(() => {
+    if (window.GameMenu && typeof window.GameMenu.show === 'function'){
+      updateBanner();
+      window.GameMenu.show();                 // menu principal « vue 360° »
+      return;
+    }
     if (!state.mode){
       showChooser();
     } else if (state.mode === 'missions'){
@@ -1210,6 +1217,24 @@ window.Missions = {
   openLog,
   openChooser: showChooser,
   openBrief(){ const c = currentMission(); if (c) showBrief(c); },
+  startMissions,
+  startFree,
+  resumeInfo(){
+    const cur = currentMission();
+    return {
+      mode: state.mode,
+      current: cur ? { id: cur.id, title: cur.title, icon: cur.icon } : null,
+      banco: state.banco,
+      stars: starSum(),
+      maxStars: MAX_STARS_CH1,
+      doneCount: Object.keys(state.done).filter(k => { const m = missionById(k); return m && !m.locked; }).length,
+    };
+  },
+  setMenuOpen(open){
+    if (!banner) return;
+    if (open) banner.classList.remove('on');
+    else updateBanner();
+  },
   reset(){ state = blankState(); save(); updateBanner(); updateLog(); },
   _debug: {
     force(id){ complete(id); },
