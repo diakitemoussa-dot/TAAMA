@@ -36,8 +36,8 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 /* ---------- Scène + fog atmosphérique ---------- */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x8fb8de);       // bleu ciel (filet visible hors dôme)
-scene.fog = new THREE.Fog(0xf0dcab, 300, 900);      // brume sable (ajustée après chargement)
+scene.background = new THREE.Color(0xe9a06b);       // orangé du couchant (filet visible hors dôme)
+scene.fog = new THREE.Fog(0xefc9a0, 300, 900);      // brume chaude du soir (ajustée après chargement)
 
 /* ---------- Caméra ---------- */
 const camera = new THREE.PerspectiveCamera(52, 1, 0.5, 4000);
@@ -128,9 +128,9 @@ function renderSelectiveBloom(){
   finalComposer.render();
 }
 
-/* ---------- Lumières (extérieur, fin de journée douce) ---------- */
-const sun = new THREE.DirectionalLight(0xfff3da, 1.7);
-sun.position.set(180, 280, 120);
+/* ---------- Lumières (extérieur, coucher de soleil) ---------- */
+const sun = new THREE.DirectionalLight(0xffb877, 1.3);   // lumière dorée, soleil bas
+sun.position.set(-245, 74, -245);                         // aligné sur le soleil du ciel (sky.js)
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
 sun.shadow.camera.near   =   1;
@@ -142,9 +142,9 @@ sun.shadow.camera.bottom = -320;
 sun.shadow.bias          = -0.003;
 sun.shadow.normalBias    =  0.15;
 scene.add(sun);
-const hemi = new THREE.HemisphereLight(0xcfe2f5, 0xd8c49a, 1.15);  // ciel bleu / sol ocre clair
+const hemi = new THREE.HemisphereLight(0xffd9b0, 0xb98a5e, 1.0);   // reflets chauds du couchant
 scene.add(hemi);
-const amb = new THREE.AmbientLight(0xffffff, 0.35);  // réduit pour que les ombres restent visibles
+const amb = new THREE.AmbientLight(0xfff1e0, 0.32);  // réduit pour que les ombres restent visibles
 scene.add(amb);
 
 /* ---------- Collines d'horizon (illusion de relief autour du village) ---------- */
@@ -556,6 +556,9 @@ window.MosqueScene = {
   },
   addFrameHook(fn){                     // hook appelé chaque frame — fonction(dt)
     if (typeof fn === 'function') frameHooks.push(fn);
+  },
+  setSunLightDirection(x, y, z){        // recale la lumière du jour (synchro soleil du ciel, sky.js)
+    sun.position.set(x, y, z).normalize().multiplyScalar(354);
   },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
   resumeLoop() { if (!raf) tick(); },
