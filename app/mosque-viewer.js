@@ -560,6 +560,9 @@ window.MosqueScene = {
   setSunLightDirection(x, y, z){        // recale la lumière du jour (synchro soleil du ciel, sky.js)
     sun.position.set(x, y, z).normalize().multiplyScalar(354);
   },
+  get sunLight(){ return sun; },        // lumières exposées pour le cycle jour/nuit (daycycle.js)
+  get hemiLight(){ return hemi; },
+  get ambLight(){ return amb; },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
   resumeLoop() { if (!raf) tick(); },
 };

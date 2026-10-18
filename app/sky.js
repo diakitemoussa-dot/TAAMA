@@ -16,7 +16,9 @@
      GameSky.setCloudsVisible(false)       → cache les nuages générés
      GameSky.setLegacyCloudsVisible(true)  → ré-affiche les nuages du modèle
      GameSky.setSunHaloVisible(false)      → enlève le halo du soleil
+     GameSky.setSunHaloOpacity(0.5)        → régler l'éclat du halo (0–1)
      GameSky.setExposure(0.6)              → adoucit le ciel (défaut 0.7)
+     GameSky.setCloudTint(0xffd2a6)        → teinter les nuages (heure du jour)
    ========================================================== */
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
@@ -166,6 +168,7 @@ function init(M){
         fog: false,
       });
       const sp = new THREE.Sprite(mat);
+      sp.userData.tintMul = 0.85 + Math.random() * 0.15;   // variation de teinte gardée lors du teintage (DayCycle)
       const ang = Math.random() * Math.PI * 2;
       const rad = R * (0.30 + Math.random() * 0.62);
       const base = R * (0.15 + Math.random() * 0.20);
@@ -205,7 +208,15 @@ function init(M){
     setCloudsVisible(on){ if (cloudGroup) cloudGroup.visible = !!on; },
     setLegacyCloudsVisible(on){ legacyClouds.forEach((m) => { m.visible = !!on; }); },
     setSunHaloVisible(on){ if (sunHalo) sunHalo.visible = !!on; },
+    setSunHaloOpacity(v){ if (sunHalo) sunHalo.material.opacity = Math.max(0, Math.min(1, v)); },
     setExposure(v){ if (sky) sky.material.uniforms.skyExposure.value = Math.min(2, Math.max(0.05, v)); },
+    setCloudTint(c){                      // teinte des nuages (heure du jour, daycycle.js)
+      if (!cloudGroup) return;
+      const col = (c && c.isColor) ? c : new THREE.Color(c);
+      cloudGroup.children.forEach((s) => {
+        if (s.material && s.material.color) s.material.color.copy(col).multiplyScalar(s.userData.tintMul || 1);
+      });
+    },
   };
 }
 
