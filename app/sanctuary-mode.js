@@ -151,6 +151,7 @@ let _velY = 0;
 const LOOK_SENSITIVITY  = 0.004;
 const LOOK_RETURN_SPEED = 3.5;
 const PITCH_LIMIT       = Math.PI / 2.2;
+const GP_LOOK_SPEED     = 2.4;   // regard au stick droit de la manette (rad/s)
 
 let lookOffsetYaw   = 0;
 let lookOffsetPitch = 0;
@@ -200,6 +201,7 @@ let pointLight = null;
 /* ---------- HUD ---------- */
 let hudAccum        = 0;
 let _controlsInited = false;
+let _gpHintShown    = false;   // aide manette déjà affichée ? (une fois par session)
 
 /* ========================================================= */
 /* ---- Scan — Tombeaux                                  ---- */
@@ -842,9 +844,23 @@ function jumpTo(id) {
 /* ---- Tick FPS                                         ---- */
 /* ========================================================= */
 function tickFPS(dt) {
-  const mx = joyInput.x + (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
-  const mz = joyInput.y + (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+  // Manette : stick gauche = tourner (x) + marcher (y), stick droit = regarder
+  const GP = window.GamepadKit;
+  const gp = GP && GP.connected() ? GP.state() : null;
+  const gx = gp ? gp.lx : 0;
+  const gz = gp ? gp.ly : 0;
+
+  const mx = joyInput.x + gx + (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+  const mz = joyInput.y + gz + (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
   playerYaw -= mx * TURN_SPEED * dt;
+
+  // Regard au stick droit (mêmes variables que le glisser à l'écran)
+  const lookActive = !!gp && (Math.abs(gp.rx) > 0.06 || Math.abs(gp.ry) > 0.06);
+  if (lookActive) {
+    lookOffsetYaw   -= gp.rx * GP_LOOK_SPEED * dt;
+    lookOffsetPitch -= gp.ry * GP_LOOK_SPEED * dt;
+    lookOffsetPitch  = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, lookOffsetPitch));
+  }
 
   _fwd.set(Math.sin(playerYaw), 0, Math.cos(playerYaw));
   _move.copy(_fwd).multiplyScalar(mz * WALK_SPEED); _move.y = 0;
@@ -852,7 +868,7 @@ function tickFPS(dt) {
 
   const isMoving = Math.abs(mz) > 0.05 || Math.abs(mx) > 0.05;
   if (isMoving) _startWalk(); else _stopWalk();
-  if (isMoving) {
+  if (isMoving && !lookActive) {
     const k = Math.min(1, LOOK_RETURN_SPEED * dt);
     lookOffsetYaw   += (0 - lookOffsetYaw)   * k;
     lookOffsetPitch += (0 - lookOffsetPitch) * k;
@@ -918,6 +934,19 @@ function tickFPS(dt) {
 function update(dt) {
   dt = Math.min(dt, 0.05);
   if (dt <= 0) return;
+
+  // --- Manette : boutons (fermer une analyse, photo, lieux, quitter) ---
+  const GP = window.GamepadKit;
+  if (GP && GP.connected()) {
+    if (GP.justPressed('START')) { exit(); return; }
+    if (GP.justPressed('A')) document.querySelector('.sn-scan-result.visible .sn-scan-close')?.click();
+    if (GP.justPressed('X')) document.getElementById('snPhoto')?.click();
+    if (state === S_FPS) {
+      if (GP.justPressed('LEFT'))  jumpTo('exterior');
+      if (GP.justPressed('RIGHT')) jumpTo('interior');
+    }
+  }
+
   if (state === S_APPROACH) {
     animT += dt / APPROACH_DUR;
     if (animT >= 1) {
@@ -966,6 +995,12 @@ function enter() {
   _playInsideSound();
 
   _loadDirModel();
+
+  // Aide manette (une fois par session, si une manette est branchée)
+  if (window.GamepadKit?.connected() && !_gpHintShown) {
+    _gpHintShown = true;
+    window.GamepadKit.toast('🎮 Manette : stick G marcher · stick D regarder · A fermer · X photo · ◀▶ lieux · START quitter');
+  }
 
   M.setGameUpdate(update);
 }

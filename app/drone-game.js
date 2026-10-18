@@ -359,9 +359,12 @@ function makeBlobShadow(){
   return mesh;
 }
 let activeModelId = 'drone'; // le drone est toujours le modèle affiché à l'entrée
+let _gpHintShown  = false;   // aide manette déjà affichée ? (une fois par session)
 
 // Entrées normalisées -1..1 (gauche: lx=yaw, ly=altitude ; droite: rx=strafe, ry=avance)
-const input = { lx:0, ly:0, rx:0, ry:0 };
+// input = fusion joysticks tactiles + manette (recalculé à chaque frame par applyGamepad())
+const input      = { lx:0, ly:0, rx:0, ry:0 };
+const touchInput = { lx:0, ly:0, rx:0, ry:0 };   // joysticks à l'écran uniquement
 
 // Vitesses (amorties) en unités/s
 const vel = { fwd:0, side:0, up:0, yaw:0 };
@@ -598,6 +601,12 @@ function enter(){
   // Affiche le message "décolle" — disparaîtra au premier envol
   takeoffHint.classList.add('is-on');
 
+  // Aide manette (une fois par session, si une manette est branchée)
+  if (window.GamepadKit?.connected() && !_gpHintShown){
+    _gpHintShown = true;
+    window.GamepadKit.toast('🎮 Manette : sticks = vol · A photo · X galerie · Y modèle · B lieux · START quitter');
+  }
+
   // Bouton bascule de modèle (drone <-> vaisseau)
   const _modelBtn = document.getElementById('dgModel');
   window.updateModelButton = function updateModelButton(){
@@ -797,15 +806,49 @@ function moveHorizontal(dt){
 let _hapticCooldown = 0;
 function triggerHaptic(){
   if (_hapticCooldown > 0) return;
-  if (!navigator.vibrate) return;
-  navigator.vibrate([70, 35, 40]);   // choc + rebond
-  _hapticCooldown = 0.30;            // 300 ms avant la prochaine
+  _hapticCooldown = 0.30;                     // 300 ms avant la prochaine
+  window.GamepadKit?.rumble?.(90, 0.7);       // vibration manette (si branchée)
+  if (navigator.vibrate) navigator.vibrate([70, 35, 40]);   // choc + rebond (mobile)
+}
+
+/* ---------- Manette (GamepadKit) ----------
+   Sticks = vol (mêmes axes que les joysticks tactiles).
+   Drone posé (caméra orbitale) : le stick droit fait tourner la caméra.
+   Boutons : A photo · X galerie · Y drone/vaisseau · B lieux · START quitter. */
+function applyGamepad(dt){
+  const GP = window.GamepadKit;
+  const g  = (GP && GP.connected()) ? GP.state() : null;
+
+  // Caméra orbitale au stick droit quand le drone est posé
+  const orbitCam = orbitMode && !!g;
+  if (orbitCam){
+    orbitAzim -= g.rx * 2.6 * dt;
+    orbitElev  = Math.max(ORBIT_ELEV_MIN, Math.min(ORBIT_ELEV_MAX, orbitElev + g.ry * 1.7 * dt));
+  }
+
+  // Fusion tactile + manette (bornée à -1..1)
+  input.lx = touchInput.lx + (g ? g.lx : 0);
+  input.ly = touchInput.ly + (g ? g.ly : 0);
+  input.rx = touchInput.rx + (g && !orbitCam ? g.rx : 0);
+  input.ry = touchInput.ry + (g && !orbitCam ? g.ry : 0);
+  for (const k of ['lx','ly','rx','ry']){
+    if (input[k] >  1) input[k] =  1;
+    if (input[k] < -1) input[k] = -1;
+  }
+
+  if (!g) return;
+  if (GP.justPressed('A'))     takePhoto();
+  if (GP.justPressed('X'))     toggleGallery();
+  if (GP.justPressed('Y'))     setModel(activeModelId === 'vaisseau' ? 'drone' : 'vaisseau');
+  if (GP.justPressed('B'))     toggleList();
+  if (GP.justPressed('START')) exit();
 }
 
 /* ---------- Boucle de vol ---------- */
 function update(dt){
   dt = Math.min(dt, 0.05);   // borne pour éviter les sauts
   if (dt <= 0) return;       // frame nulle : évite une vitesse NaN (division par dt plus bas)
+  applyGamepad(dt);
   const _st = activeState();
   if (_st && _st.mixer){
     const _def = MODELS[activeModelId];
@@ -997,11 +1040,11 @@ function makeStick(el, onMove){
 }
 
 makeStick(document.getElementById('dgStickL'), (x,y)=>{
-  input.lx=x; input.ly=y;
+  touchInput.lx=x; touchInput.ly=y;
 });
 const STICK_R_SENS = 0.45; // réduit la sensibilité du joystick droit
 makeStick(document.getElementById('dgStickR'), (x,y)=>{
-  input.rx=x*STICK_R_SENS; input.ry=y*STICK_R_SENS;
+  touchInput.rx=x*STICK_R_SENS; touchInput.ry=y*STICK_R_SENS;
 });
 
 /* ---------- Outil Photo ---------- */
