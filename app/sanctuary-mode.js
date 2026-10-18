@@ -727,6 +727,38 @@ function makeStick(el, onMove) {
   el.addEventListener('pointercancel', (e) => { if (e.pointerId === id) { id = null; reset(); } });
 }
 
+/* ---------- Vidéo (🎥) — enregistre le canvas du sanctuaire ---------- */
+let _recorder  = null;
+let _recChunks = [];
+
+function toggleRecord() {
+  if (_recorder) {                        // arrêt → téléchargement (voir onstop)
+    try { _recorder.stop(); } catch (_) {}
+    return;
+  }
+  if (typeof MediaRecorder === 'undefined' || !M.renderer.domElement.captureStream) {
+    window.GamepadKit?.toast?.('🎥 Enregistrement vidéo non disponible sur ce navigateur');
+    return;
+  }
+  const stream = M.renderer.domElement.captureStream(30);
+  _recChunks = [];
+  _recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+  _recorder.ondataavailable = (e) => { if (e.data.size) _recChunks.push(e.data); };
+  _recorder.onstop = () => {
+    const blob = new Blob(_recChunks, { type: 'video/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'djenne-sanctuaire.webm';
+    a.click();
+    document.getElementById('snVideo')?.classList.remove('is-active');
+    _recorder = null;
+    window.GamepadKit?.toast?.('🎥 Vidéo enregistrée');
+  };
+  _recorder.start();
+  document.getElementById('snVideo')?.classList.add('is-active');
+  window.GamepadKit?.toast?.('🎥 Enregistrement en cours…');
+}
+
 function _initControls() {
   if (_controlsInited) return;
   _controlsInited = true;
@@ -750,6 +782,7 @@ function _initControls() {
     joyInput.x = x; joyInput.y = y;
   });
   btnQuit?.addEventListener('click', exit);
+  document.getElementById('snVideo')?.addEventListener('click', toggleRecord);
 
   /* ☰ Panneau lieux */
   const poiPanel = document.getElementById('snPoiPanel');
@@ -935,12 +968,16 @@ function update(dt) {
   dt = Math.min(dt, 0.05);
   if (dt <= 0) return;
 
-  // --- Manette : boutons (fermer une analyse, photo, lieux, quitter) ---
+  // --- Manette : boutons (photo, vidéo, fermer une analyse, lieux, quitter) ---
   const GP = window.GamepadKit;
   if (GP && GP.connected()) {
-    if (GP.justPressed('START')) { exit(); return; }
+    if (GP.justPressed('START') || GP.justPressed('B')) { exit(); return; }
     if (GP.justPressed('A')) document.querySelector('.sn-scan-result.visible .sn-scan-close')?.click();
-    if (GP.justPressed('X')) document.getElementById('snPhoto')?.click();
+    if (GP.justPressed('X') || GP.justPressed('LB')) {
+      document.getElementById('snPhoto')?.click();
+      GP.toast('📷 Capture enregistrée !');
+    }
+    if (GP.justPressed('RB')) toggleRecord();
     if (state === S_FPS) {
       if (GP.justPressed('LEFT'))  jumpTo('exterior');
       if (GP.justPressed('RIGHT')) jumpTo('interior');
@@ -999,7 +1036,7 @@ function enter() {
   // Aide manette (une fois par session, si une manette est branchée)
   if (window.GamepadKit?.connected() && !_gpHintShown) {
     _gpHintShown = true;
-    window.GamepadKit.toast('🎮 Manette : stick G marcher · stick D regarder · A fermer · X photo · ◀▶ lieux · START quitter');
+    window.GamepadKit.toast('🎮 Manette : stick G marcher · stick D regarder · A fermer · X/LB photo · RB vidéo · B quitter');
   }
 
   M.setGameUpdate(update);
@@ -1008,6 +1045,7 @@ function enter() {
 function exit() {
   if (!active) return;
   active = false; state = S_IDLE;
+  if (_recorder) { try { _recorder.stop(); } catch (_) {} }
   joyInput.x = joyInput.y = 0;
   keys.w = keys.a = keys.s = keys.d = false;
   lookDragId = null; lookOffsetYaw = 0; lookOffsetPitch = 0;

@@ -604,7 +604,7 @@ function enter(){
   // Aide manette (une fois par session, si une manette est branchée)
   if (window.GamepadKit?.connected() && !_gpHintShown){
     _gpHintShown = true;
-    window.GamepadKit.toast('🎮 Manette : sticks = vol · A photo · X galerie · Y modèle · B lieux · START quitter');
+    window.GamepadKit.toast('🎮 Manette : sticks = vol · A/LB photo · RB vidéo · Y modèle · B quitter');
   }
 
   // Bouton bascule de modèle (drone <-> vaisseau)
@@ -814,7 +814,9 @@ function triggerHaptic(){
 /* ---------- Manette (GamepadKit) ----------
    Sticks = vol (mêmes axes que les joysticks tactiles).
    Drone posé (caméra orbitale) : le stick droit fait tourner la caméra.
-   Boutons : A photo · X galerie · Y drone/vaisseau · B lieux · START quitter. */
+   Boutons : A/LB photo · RB vidéo · X galerie · Y drone/vaisseau ·
+             BACK points d'intérêt · B/START quitter.
+   Retourne true si la manette demande la sortie du mode jeu. */
 function applyGamepad(dt){
   const GP = window.GamepadKit;
   const g  = (GP && GP.connected()) ? GP.state() : null;
@@ -836,19 +838,27 @@ function applyGamepad(dt){
     if (input[k] < -1) input[k] = -1;
   }
 
-  if (!g) return;
-  if (GP.justPressed('A'))     takePhoto();
-  if (GP.justPressed('X'))     toggleGallery();
-  if (GP.justPressed('Y'))     setModel(activeModelId === 'vaisseau' ? 'drone' : 'vaisseau');
-  if (GP.justPressed('B'))     toggleList();
-  if (GP.justPressed('START')) exit();
+  if (!g) return false;
+  if (GP.justPressed('A') || GP.justPressed('LB')){      // 📷 photo
+    takePhoto();
+    GP.toast('📷 Photo prise !');
+  }
+  if (GP.justPressed('X'))    toggleGallery();           // ⭕ galerie
+  if (GP.justPressed('Y'))    setModel(activeModelId === 'vaisseau' ? 'drone' : 'vaisseau');
+  if (GP.justPressed('RB'))   toggleRecord();            // 🎥 démarrer / arrêter la vidéo
+  if (GP.justPressed('BACK')) toggleList();              // ☰ points d'intérêt
+  if (GP.justPressed('B') || GP.justPressed('START')){   // ✕ quitter
+    exit();
+    return true;
+  }
+  return false;
 }
 
 /* ---------- Boucle de vol ---------- */
 function update(dt){
   dt = Math.min(dt, 0.05);   // borne pour éviter les sauts
   if (dt <= 0) return;       // frame nulle : évite une vitesse NaN (division par dt plus bas)
-  applyGamepad(dt);
+  if (applyGamepad(dt)) return;   // manette : sortie demandée
   const _st = activeState();
   if (_st && _st.mixer){
     const _def = MODELS[activeModelId];
@@ -1091,9 +1101,11 @@ function toggleRecord(){
     a.href = URL.createObjectURL(blob); a.download = 'djenne-drone.webm'; a.click();
     btnVideo.classList.remove('is-active');
     recorder = null;
+    window.GamepadKit?.toast?.('🎥 Vidéo enregistrée');
   };
   recorder.start();
   btnVideo.classList.add('is-active');
+  window.GamepadKit?.toast?.('🎥 Enregistrement en cours…');
 }
 btnVideo?.addEventListener('click', toggleRecord);
 
