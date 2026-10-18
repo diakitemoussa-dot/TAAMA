@@ -54,10 +54,10 @@ const MISSIONS = [
   {
     id: 'M02', ch: 1, icon: '🏁', title: 'La Course du Sahel', mode: 'game', banco: 40,
     story: "Le Grand Crepissage commence toujours par le tour de veille : " +
-           "on inspecte les remparts du ciel. Traverse les 8 anneaux dorés du circuit, " +
-           "dans l'ordre ! Les meilleurs Gardiens bouclent le tour en moins de 40 secondes.",
+           "on inspecte les remparts du ciel. Traverse les 8 anneaux dorés du circuit — " +
+           "chaque anneau franchi passe au vert ! Les meilleurs Gardiens bouclent le tour en moins de 40 secondes.",
     objectives: [
-      { id: 'race',   label: 'Terminer le circuit des 8 anneaux' },
+      { id: 'race',   label: 'Traverser les 8 anneaux du circuit' },
       { id: 'silver', star: 2, label: 'Bonus · circuit en moins de 60 s' },
       { id: 'gold',   star: 3, label: 'Bonus · circuit en moins de 40 s' },
     ],
@@ -332,7 +332,10 @@ function renderObjectives(m){
     const cls = ok ? 'done' : (o.star ? 'bonus' : '');
     let extra = '';
     if (m.id === 'M01' && o.id === 'hover') extra = ` — ${Math.min(30, Math.floor(p.t))}/30 s`;
-    if (m.id === 'M02' && o.id === 'race')  extra = ` — ${Math.min(8, p.next || 0)}/8`;
+    if (m.id === 'M02' && o.id === 'race'){
+      const nRace = Array.isArray(p.rings) ? p.rings.filter(Boolean).length : Math.min(8, p.next || 0);
+      extra = ` — ${nRace}/8`;
+    }
     if (m.id === 'M05' && o.id === 'deliver') extra = ` — ${Math.min(2, p.delivered || 0)}/2`;
     h += `<div class="ms-obj ${cls}">${ok ? '✓' : (o.star ? '☆' : '○')} ${o.label}${extra}</div>`;
   }
@@ -454,11 +457,11 @@ function makeNumberSprite(n){
 }
 
 function applyRingState(r, st){
-  const c = st === 'done' ? 0x7fe3a5 : 0xf9d58b;
+  const c = st === 'done' ? 0x74e6a4 : 0xf9d58b;   // validé = vert bien visible
   r.mat.color.set(c);
   r.mat2.color.set(c);
-  r.mat.opacity  = st === 'done' ? 0.22 : st === 'next' ? 0.95 : 0.30;
-  r.mat2.opacity = st === 'done' ? 0.06 : st === 'next' ? 0.22 : 0.10;
+  r.mat.opacity  = st === 'done' ? 0.42 : st === 'next' ? 0.98 : 0.30;
+  r.mat2.opacity = st === 'done' ? 0.10 : st === 'next' ? 0.22 : 0.10;
 }
 
 function buildRings(){
@@ -467,9 +470,13 @@ function buildRings(){
   const M = window.MosqueScene;
   if (!z || !M) return;
 
+  // Ne jamais placer un anneau au-delà de la barrière invisible de vol (dôme × 0.62)
+  const barrier = (M.domeRadius || 600) * 0.62;
+  const rMax = Math.max(40, barrier * 0.92);
+
   for (let i = 0; i < 8; i++){
     const th = i * Math.PI / 4;
-    const rad = (i % 2 === 0) ? z.R * 0.92 : z.R * 1.35;   // slalom
+    const rad = Math.min((i % 2 === 0) ? z.R * 0.92 : z.R * 1.35, rMax);   // slalom
     const y = z.maxY + 14 + (i % 3) * 9;
 
     const g = new THREE.Group();
@@ -643,41 +650,70 @@ function tickM01(dt, pos, landed, p){
   if (p.obj.takeoff && p.obj.land) complete('M01');
 }
 
+/* Migration douce : ancien format p.next → tableau d'anneaux validés */
+function ensureRingsState(p){
+  if (Array.isArray(p.rings) && p.rings.length === 8) return;
+  p.rings = new Array(8).fill(false);
+  const n = Math.min(8, Math.max(0, p.next || 0));
+  for (let i = 0; i < n; i++) p.rings[i] = true;
+}
+
+function finishRaceM02(p, final){
+  p.finished = true;
+  if (p.t < 40) markObj('M02', 'gold', true);
+  if (p.t < 60) markObj('M02', 'silver', true);
+  const best = state.best.M02;
+  state.best.M02 = best ? Math.min(best, p.t) : p.t;
+  save();
+  toastBig(final);
+  complete('M02');
+}
+
 function tickM02(dt, pos, p){
   if (!p.started || p.finished) return;
   p.t += dt;
 
   if (!ringsBuilt) buildRings();
   if (!ringsBuilt) return;
-  const next = Math.min(p.next || 0, 7);
-
-  for (let i = 0; i < rings.length; i++){
-    const st = i < next ? 'done' : i === next ? 'next' : 'todo';
-    applyRingState(rings[i], st);
-    if (st === 'next'){
-      rings[i].group.scale.setScalar(1 + 0.06 * Math.sin(_tAcc * 5));
-    } else {
-      rings[i].group.scale.setScalar(1);
-    }
+  ensureRingsState(p);
+  if (p.rings.every(Boolean)){
+    save();
+    finishRaceM02(p, `🏁 CIRCUIT TERMINÉ ! ⏱ ${fmtTime(p.t)}`);
+    return;
   }
 
-  const nr = rings[next];
-  if (nr && pos.distanceTo(nr.center) < 16){
-    p.next = next + 1;
-    playSnd(sndBadge);
-    if (p.next >= 8){
-      p.finished = true;
-      if (p.t < 40) markObj('M02', 'gold', true);
-      if (p.t < 60) markObj('M02', 'silver', true);
-      const best = state.best.M02;
-      state.best.M02 = best ? Math.min(best, p.t) : p.t;
-      save();
-      complete('M02');
-    } else {
-      save();
-      toastInfo(`⭕ Anneau ${p.next}/8 ✓`);
-      updateBanner();
+  /* Validation libre : TOUT anneau traversé passe au vert (peu importe l'ordre).
+     L'anneau restant le plus proche pulse pour guider le pilote. */
+  const R_PASS = 18;
+  let changed = false;
+  for (let i = 0; i < rings.length; i++){
+    if (p.rings[i]) continue;
+    if (pos.distanceTo(rings[i].center) < R_PASS){
+      p.rings[i] = true;
+      changed = true;
+      playSnd(sndBadge);
+      const n = p.rings.filter(Boolean).length;
+      if (n >= 8){
+        save();
+        finishRaceM02(p, `🏁 CIRCUIT TERMINÉ ! ⏱ ${fmtTime(p.t)}`);
+        return;
+      }
+      toastInfo(`⭕ Anneau ${i + 1} validé ! (${n}/8)`);
     }
+  }
+  if (changed){ save(); updateBanner(); }
+
+  /* Apparence : prochain conseillé = anneau restant le plus proche */
+  let nearest = -1, nd = Infinity;
+  for (let i = 0; i < rings.length; i++){
+    if (p.rings[i]) continue;
+    const d = pos.distanceTo(rings[i].center);
+    if (d < nd){ nd = d; nearest = i; }
+  }
+  for (let i = 0; i < rings.length; i++){
+    const st = p.rings[i] ? 'done' : (i === nearest ? 'next' : 'todo');
+    applyRingState(rings[i], st);
+    rings[i].group.scale.setScalar(st === 'next' ? 1 + 0.06 * Math.sin(_tAcc * 5) : 1);
   }
 }
 
@@ -831,7 +867,7 @@ function onGameEnter(){
     if (!p.started && !p.finished) runCountdown(() => {
       p.started = true;
       save();
-      toastInfo('🏁 GO ! Traverse les 8 anneaux dans l\'ordre — le chrono tourne !');
+      toastInfo('🏁 GO ! Traverse les 8 anneaux — chaque anneau franchi passe au vert !');
     });
   }
 }
@@ -1240,5 +1276,15 @@ window.Missions = {
     force(id){ complete(id); },
     give(n){ state.banco += n; save(); updateBanner(); updateLog(); },
     state(){ return state; },
+    rings(){
+      const M = window.MosqueScene;
+      return {
+        built: ringsBuilt,
+        domeR: M ? M.domeRadius : null,
+        barrier: M ? Math.round((M.domeRadius || 600) * 0.62) : null,
+        centers: rings.map(r => r.center.toArray().map(v => Math.round(v))),
+        prog: prog('M02'),
+      };
+    },
   },
 };

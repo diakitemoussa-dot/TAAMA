@@ -213,7 +213,7 @@ avec briefing, objectifs multiples, étoiles et débriefing.
 | ID | Mission | Mécanique | Étoiles |
 |---|---|---|---|
 | M01 | 🚁 Premier vol | Décoller (10 m) + atterrir | ⭐ vol · ⭐⭐ 30 s en l'air · ⭐⭐⭐ 40 m d'altitude |
-| M02 | 🏁 La Course du Sahel | Circuit ordonné de 8 anneaux en slalom + compte à rebours + chrono | ⭐ finir · ⭐⭐ <60 s · ⭐⭐⭐ <40 s |
+| M02 | 🏁 La Course du Sahel | Circuit de 8 anneaux en slalom (chaque anneau traversé passe au vert, ordre libre) + compte à rebours + chrono | ⭐ finir · ⭐⭐ <60 s · ⭐⭐⭐ <40 s |
 | M03 | 📸 Safari Photo | 3 cibles à photographier (façade, porte, toit aux canaris) | ⭐ 3 photos · ⭐⭐ <2 min 30 · ⭐⭐⭐ + photo des œufs |
 | M04 | 🪺 Le Trésor des Tours | Radar œufs + inspection rapprochée | ⭐ scan · ⭐⭐ <30 m des œufs · ⭐⭐⭐ photo des œufs |
 | M05 | 🧱 L'Urgence de la Tour | Livraison : 2 boules de banco (chantier → sommet du toit) | ⭐ 2 livraisons · ⭐⭐ <2 min · ⭐⭐⭐ <1 min 20 |
@@ -221,7 +221,7 @@ avec briefing, objectifs multiples, étoiles et débriefing.
 ## Assistance en vol
 - **Balise lumineuse** (colonne de lumière dorée) qui marque l'objectif actif
   (cible photo, œufs, point de collecte / de livraison).
-- **Anneau suivant mis en surbrillance** dans la course (les autres s'estompent).
+- **Anneau le plus proche mis en surbrillance** dans la course (les autres s'estompent) ; les anneaux validés passent au **vert**.
 - **Balle de banco** visible qui suit le drone pendant le transport.
 
 ## Technique
