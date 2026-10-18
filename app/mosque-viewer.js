@@ -224,6 +224,7 @@ const doorTarget   = new THREE.Vector3();   // centre de la porte principale (mi
 const canarisTarget = new THREE.Vector3();  // centre des canaris du toit (missions)
 let   facadeDist   = 120;                   // distance caméra ↔ façade
 let   domeR        = 0;                      // rayon du dôme (limite)
+const skyboxMeshes = [];                     // meshes du dôme de ciel (skybox) — masqués définitivement
 const mosqueBox    = new THREE.Box3();       // boîte englobante de la mosquée (missions)
 
 /* Déplacement fluide de la caméra vers un point de vue (réutilise le travelling) */
@@ -266,6 +267,7 @@ loader.load(
     let mosque = null;
     let domeRadius = 0;
     const domeCenter = new THREE.Vector3();
+    const skyboxFound = [];                 // dôme de ciel repéré pendant le parcours
     root.traverse((o) => {
       if (o.isMesh) {
         const n = o.name || '';
@@ -278,6 +280,7 @@ loader.load(
           const ss = sb.getSize(new THREE.Vector3());
           domeRadius = Math.max(domeRadius, Math.max(ss.x, ss.y, ss.z) / 2);
           sb.getCenter(domeCenter);
+          skyboxFound.push(o);               // sera masqué : skybox supprimée
         }
         // Ombres naturelles sur tous les meshes sauf ciel/nuages
         if (!/Sky|Sphere/i.test(n)) {
@@ -287,6 +290,11 @@ loader.load(
       }
       if (!mosque && /Mosquee_Base/i.test(o.name)) mosque = o;
     });
+
+    // Skybox supprimée : le dôme de ciel ne s'affiche plus (le fond bleu + le fog
+    // atmosphérique prennent le relais). Les calculs internes (domeRadius, collines,
+    // barrière de vol, brouillard) continuent d'utiliser ses dimensions.
+    skyboxFound.forEach((m) => { m.visible = false; skyboxMeshes.push(m); });
 
     // Cadrage sur la mosquée (ou la scène entière en secours)
     const focus = mosque || root;
@@ -533,6 +541,9 @@ window.MosqueScene = {
   setAutoRotate(on){                    // rotation douce de la maquette (menu principal)
     controls.autoRotate = !!on;
     controls.autoRotateSpeed = 0.6;
+  },
+  setSkyboxVisible(on){                 // afficher/masquer le dôme de ciel (skybox)
+    skyboxMeshes.forEach((m) => { m.visible = !!on; });
   },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
   resumeLoop() { if (!raf) tick(); },
