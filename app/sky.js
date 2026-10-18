@@ -15,6 +15,8 @@
      GameSky.setSunDirection(x, y, z)      → déplace soleil + halo
      GameSky.setCloudsVisible(false)       → cache les nuages générés
      GameSky.setLegacyCloudsVisible(true)  → ré-affiche les nuages du modèle
+     GameSky.setSunHaloVisible(false)      → enlève le halo du soleil
+     GameSky.setExposure(0.6)              → adoucit le ciel (défaut 0.75)
    ========================================================== */
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
@@ -93,18 +95,26 @@ function init(M){
   sky.name = 'MS_Sky';
   sky.scale.setScalar(30000);                 // le shader force la profondeur au fond : jamais coupé
   const u = sky.material.uniforms;
-  u.turbidity.value       = 4.0;              // voile sahelien léger (brume de sable)
+  u.turbidity.value       = 3.4;              // voile sahelien léger (brume de sable)
   u.rayleigh.value        = 1.6;              // bleu du ciel
-  u.mieCoefficient.value  = 0.005;
-  u.mieDirectionalG.value = 0.8;
+  u.mieCoefficient.value  = 0.003;            // halo blanc autour du soleil (adouci)
+  u.mieDirectionalG.value = 0.68;             // diffusion avant plus douce
   u.sunPosition.value.copy(sunDir);
+
+  /* Exposition propre au ciel : sans tone mapping sur la scène, le soleil
+     peut paraître trop fort — on adoucit tout le ciel (réglable en direct). */
+  u.skyExposure = { value: 0.75 };
+  sky.material.fragmentShader =
+    'uniform float skyExposure;\n' + sky.material.fragmentShader
+      .replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( retColor * skyExposure, 1.0 );');
+
   scene.add(sky);
 
   /* ---------- 3) Halo de soleil (sprite additif) ---------- */
   sunHalo = new THREE.Sprite(new THREE.SpriteMaterial({
     map: makeGlowTexture(),
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.3,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     fog: false,
@@ -115,7 +125,7 @@ function init(M){
   const placeHalo = () => {
     const R = M.domeRadius || 400;
     sunHalo.position.copy(sunDir).multiplyScalar(R * 2.6);
-    const s = R * 0.7;
+    const s = R * 0.45;
     sunHalo.scale.set(s, s, 1);
   };
   placeHalo();
@@ -179,6 +189,8 @@ function init(M){
     },
     setCloudsVisible(on){ if (cloudGroup) cloudGroup.visible = !!on; },
     setLegacyCloudsVisible(on){ legacyClouds.forEach((m) => { m.visible = !!on; }); },
+    setSunHaloVisible(on){ if (sunHalo) sunHalo.visible = !!on; },
+    setExposure(v){ if (sky) sky.material.uniforms.skyExposure.value = Math.min(2, Math.max(0.05, v)); },
   };
 }
 
