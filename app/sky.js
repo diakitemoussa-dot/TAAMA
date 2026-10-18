@@ -7,6 +7,8 @@
    2) Couche de nuages générée : sprites moelleux (textures canvas),
       répartis en cercle autour du village, dérive lente en continu.
    3) Halo de soleil : sprite lumineux additif sur la direction du soleil.
+   4) Ciel nocturne : étoiles (700 points, rotation céleste) + lune,
+      opacités pilotées par le cycle jour/nuit (daycycle.js).
 
    Les nuages du modèle GLB sont masqués (remplacés) — réversibles via
    GameSky.setLegacyCloudsVisible(true).
@@ -19,6 +21,14 @@
      GameSky.setSunHaloOpacity(0.5)        → régler l'éclat du halo (0–1)
      GameSky.setExposure(0.6)              → adoucit le ciel (défaut 0.7)
      GameSky.setCloudTint(0xffd2a6)        → teinter les nuages (heure du jour)
+     GameSky.setCloudOpacity(0.7)          → opacité des nuages (cycle)
+     GameSky.setAtmosphere(9, 3)           → turbidité (brume) + rayleigh (bleu)
+     GameSky.setSunHaloScale(0.7)          → taille du halo
+     GameSky.setSunHaloColor(0xffb877)     → couleur du halo
+     GameSky.setStarsOpacity(0.9)          → étoiles (0–1)
+     GameSky.setStarsAngle(1.2)            → rotation céleste des étoiles
+     GameSky.setMoonOpacity(0.9)           → lune (0–1)
+     GameSky.setMoonDirection(x, y, z)     → position de la lune
    ========================================================== */
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
@@ -41,6 +51,10 @@ let sky = null;
 let sunHalo = null;
 let cloudGroup = null;
 let cloudsBuilt = false;
+let stars = null;
+let moonSprite = null;
+let haloScaleF = 1;                              // échelle du halo (pilotée par le cycle)
+const moonDir = new THREE.Vector3(0.5, 0.6, 0.6).normalize();
 const legacyClouds = [];
 
 /* ---------------- Textures générées (canvas) ---------------- */
@@ -100,6 +114,44 @@ function makeGlowTexture(){
   return tex;
 }
 
+function makeMoonTexture(){
+  const S = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+
+  // lueur douce autour de la lune
+  let g = ctx.createRadialGradient(S / 2, S / 2, S * 0.13, S / 2, S / 2, S / 2);
+  g.addColorStop(0, 'rgba(235,240,255,0.50)');
+  g.addColorStop(0.55, 'rgba(210,222,250,0.14)');
+  g.addColorStop(1, 'rgba(190,205,245,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+
+  // disque lunaire (pleine lune, léger décentrage lumineux)
+  g = ctx.createRadialGradient(S / 2 - S * 0.05, S / 2 - S * 0.05, S * 0.02, S / 2, S / 2, S * 0.20);
+  g.addColorStop(0, 'rgba(255,255,252,1)');
+  g.addColorStop(0.75, 'rgba(238,242,250,0.98)');
+  g.addColorStop(1, 'rgba(224,231,246,0.92)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(S / 2, S / 2, S * 0.20, 0, Math.PI * 2);
+  ctx.fill();
+
+  // « mers » lunaires (taches grises douces, positions fixes)
+  const spots = [[0.46, 0.45, 0.052], [0.57, 0.52, 0.042], [0.50, 0.59, 0.034], [0.61, 0.44, 0.028], [0.43, 0.55, 0.026]];
+  ctx.fillStyle = 'rgba(198,207,230,0.5)';
+  for (const [sx, sy, sr] of spots){
+    ctx.beginPath();
+    ctx.arc(S * sx, S * sy, S * sr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /* ---------------- Initialisation ---------------- */
 
 function init(M){
@@ -140,10 +192,67 @@ function init(M){
   const placeHalo = () => {
     const R = M.domeRadius || 400;
     sunHalo.position.copy(sunDir).multiplyScalar(R * 2.6);
-    const s = R * 0.55;
+    const s = R * 0.55 * haloScaleF;
     sunHalo.scale.set(s, s, 1);
   };
   placeHalo();
+
+  /* ---------- 4) Lune + étoiles (ciel nocturne, pilotés par daycycle.js) ---------- */
+  moonSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeMoonTexture(),
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    fog: false,
+  }));
+  moonSprite.name = 'MS_Moon';
+  scene.add(moonSprite);
+
+  const placeMoon = () => {
+    const R = M.domeRadius || 400;
+    moonSprite.position.copy(moonDir).multiplyScalar(R * 2.5);
+    const s = R * 0.2;
+    moonSprite.scale.set(s, s, 1);
+  };
+  placeMoon();
+
+  (function buildStars(){
+    const COUNT = 700;
+    const RADIUS = 3800;                    // sous le plan lointain de la caméra (far = 4000)
+    const pos = new Float32Array(COUNT * 3);
+    const col = new Float32Array(COUNT * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < COUNT; i++){
+      const theta = Math.random() * Math.PI * 2;
+      const y = Math.sqrt(1 - Math.random() * 0.92);      // demi-sphère au-dessus de l'horizon
+      const rxy = Math.sqrt(1 - y * y);
+      pos[i * 3]     = Math.cos(theta) * rxy * RADIUS;
+      pos[i * 3 + 1] = y * RADIUS;
+      pos[i * 3 + 2] = Math.sin(theta) * rxy * RADIUS;
+      const warm = Math.random();
+      c.setHSL(warm < 0.8 ? 0.58 : 0.09, 0.22, 0.6 + Math.random() * 0.4);   // étoiles froides / chaudes
+      const b = 0.3 + Math.random() * 0.7;                // étoiles plus ou moins brillantes
+      col[i * 3]     = c.r * b;
+      col[i * 3 + 1] = c.g * b;
+      col[i * 3 + 2] = c.b * b;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    stars = new THREE.Points(geo, new THREE.PointsMaterial({
+      size: 9,
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+    }));
+    stars.name = 'MS_Stars';
+    stars.frustumCulled = false;
+    scene.add(stars);
+  })();
 
   /* ---------- 2) Nuages générés (dès que la maquette est chargée) ---------- */
   const buildClouds = () => {
@@ -169,6 +278,7 @@ function init(M){
       });
       const sp = new THREE.Sprite(mat);
       sp.userData.tintMul = 0.85 + Math.random() * 0.15;   // variation de teinte gardée lors du teintage (DayCycle)
+      sp.userData.opMul   = 0.88 + Math.random() * 0.24;   // variation d'opacité (gardée par le cycle)
       const ang = Math.random() * Math.PI * 2;
       const rad = R * (0.30 + Math.random() * 0.62);
       const base = R * (0.15 + Math.random() * 0.20);
@@ -187,6 +297,7 @@ function init(M){
     });
 
     placeHalo();                               // rayon réel connu → halo bien proportionné
+    placeMoon();
   };
 
   /* ---------- Animation : dérive lente des nuages ---------- */
@@ -217,6 +328,23 @@ function init(M){
         if (s.material && s.material.color) s.material.color.copy(col).multiplyScalar(s.userData.tintMul || 1);
       });
     },
+    setCloudOpacity(f){                   // opacité globale des nuages (cycle)
+      if (!cloudGroup) return;
+      cloudGroup.children.forEach((s) => {
+        if (s.material) s.material.opacity = Math.max(0, Math.min(1, f * (s.userData.opMul || 1)));
+      });
+    },
+    setAtmosphere(t, r){                  // turbidité (brume) + rayleigh (bleu) du ciel
+      if (!sky) return;
+      sky.material.uniforms.turbidity.value = t;
+      sky.material.uniforms.rayleigh.value = r;
+    },
+    setSunHaloScale(f){ haloScaleF = Math.max(0.05, Math.min(3, f)); placeHalo(); },
+    setSunHaloColor(c){ if (sunHalo) sunHalo.material.color.set(c); },
+    setStarsOpacity(v){ if (stars) stars.material.opacity = Math.max(0, Math.min(1, v)); },
+    setStarsAngle(rad){ if (stars) stars.rotation.y = rad; },
+    setMoonDirection(x, y, z){ moonDir.set(x, y, z).normalize(); placeMoon(); },
+    setMoonOpacity(v){ if (moonSprite) moonSprite.material.opacity = Math.max(0, Math.min(1, v)); },
   };
 }
 

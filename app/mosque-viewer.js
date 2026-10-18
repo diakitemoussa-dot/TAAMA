@@ -98,7 +98,7 @@ finalComposer.addPass(new OutputPass());
 
 const hiddenSprites = [];                 // sprites (nuages/soleil) masqués pendant la passe de halo
 function darkenNonBloomed(obj){
-  if (obj.isSprite && obj.visible){
+  if ((obj.isSprite || obj.isPoints) && obj.visible){
     obj.visible = false;
     hiddenSprites.push(obj);
   }
@@ -146,6 +146,9 @@ const hemi = new THREE.HemisphereLight(0xffd9b0, 0xb98a5e, 1.0);   // reflets ch
 scene.add(hemi);
 const amb = new THREE.AmbientLight(0xfff1e0, 0.32);  // réduit pour que les ombres restent visibles
 scene.add(amb);
+const moonLight = new THREE.DirectionalLight(0xaec4f0, 0);  // clair de lune (piloté par daycycle.js)
+moonLight.position.set(160, 240, -160);
+scene.add(moonLight);
 
 /* ---------- Collines d'horizon (illusion de relief autour du village) ---------- */
 function addHills(center, R, groundY = 0) {
@@ -563,6 +566,7 @@ window.MosqueScene = {
   get sunLight(){ return sun; },        // lumières exposées pour le cycle jour/nuit (daycycle.js)
   get hemiLight(){ return hemi; },
   get ambLight(){ return amb; },
+  get moonLight(){ return moonLight; },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
   resumeLoop() { if (!raf) tick(); },
 };
