@@ -96,7 +96,12 @@ finalComposer.addPass(renderScene);
 finalComposer.addPass(mixPass);
 finalComposer.addPass(new OutputPass());
 
+const hiddenSprites = [];                 // sprites (nuages/soleil) masqués pendant la passe de halo
 function darkenNonBloomed(obj){
+  if (obj.isSprite && obj.visible){
+    obj.visible = false;
+    hiddenSprites.push(obj);
+  }
   if (obj.isMesh && bloomLayer.test(obj.layers) === false){
     savedMats[obj.uuid] = obj.material;
     obj.material = darkMat;
@@ -116,6 +121,8 @@ function renderSelectiveBloom(){
   scene.traverse(darkenNonBloomed);
   bloomComposer.render();
   scene.traverse(restoreMat);
+  hiddenSprites.forEach((s) => { s.visible = true; });
+  hiddenSprites.length = 0;
   scene.background = bg;
   scene.fog = fg;
   finalComposer.render();
@@ -206,6 +213,7 @@ let   hasSavedCam    = false;
 let introT = 0; let introDur = 2.8;
 let introSmooth = false;                      // true = easeInOutCubic (vols boutons), false = easeOutCubic (travelling d'ouverture)
 let mixer = null;                             // lecteur d'animations du GLB (nuages)
+const frameHooks = [];                        // hooks appelés chaque frame (ciel, nuages générés…)
 const camStart = new THREE.Vector3();
 const camEnd   = new THREE.Vector3();
 const target   = new THREE.Vector3();         // point visé en FIN de vol
@@ -479,6 +487,7 @@ const tick = () => {
   const dt = clock.getDelta();
 
   if (mixer) mixer.update(dt);                      // joue l'animation des nuages
+  for (const fn of frameHooks){ try { fn(dt); } catch (_) {} }   // hooks externes (ciel, nuages…)
 
   if (gameUpdate) {
     gameUpdate(dt);
@@ -544,6 +553,9 @@ window.MosqueScene = {
   },
   setSkyboxVisible(on){                 // afficher/masquer le dôme de ciel (skybox)
     skyboxMeshes.forEach((m) => { m.visible = !!on; });
+  },
+  addFrameHook(fn){                     // hook appelé chaque frame — fonction(dt)
+    if (typeof fn === 'function') frameHooks.push(fn);
   },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
   resumeLoop() { if (!raf) tick(); },
