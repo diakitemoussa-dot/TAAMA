@@ -21,10 +21,24 @@
   border: 1px solid rgba(249, 213, 139, .28);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  pointer-events: none;
+  pointer-events: auto;              /* cliquable : vitesse du temps */
+  cursor: pointer;
+  touch-action: manipulation;
   user-select: none;
+  transition: background .25s ease, border-color .25s ease;
   opacity: 0;
   animation: dcClockIn .9s ease 2.2s forwards;
+}
+.dc-clock:hover{
+  background: rgba(30, 20, 38, .72);
+  border-color: rgba(249, 213, 139, .6);
+}
+.dc-clock em{
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: .05em;
+  color: #f9d58b;
+  opacity: .9;
 }
 .dc-clock i{
   font-style: normal;

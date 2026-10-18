@@ -21,12 +21,15 @@
    DURÉE PRÉCISE : un jour complet (24 h in-game) = 480 s réelles
    par défaut (8 min). Réglable :
      DayCycle.setDuration(secondes) / setDurationMinutes(minutes)
+     DayCycle.setSpeed(4)           → temps ×4 (ou CLIC sur l'horloge :
+                                      ×1 → ×2 → ×4 → ×8 → ×1…)
 
    API :
      DayCycle.now()                 → heure in-game (0–24)
      DayCycle.setTime(6.05)         → aller à une heure précise
      DayCycle.setDuration(600)      → durée réelle d'un jour (s)
      DayCycle.setDurationMinutes(m)
+     DayCycle.setSpeed(4)           → vitesse du temps (aussi : clic sur l'horloge)
      DayCycle.pause() / DayCycle.resume()
      DayCycle.setClockVisible(false)
    ========================================================== */
@@ -37,7 +40,8 @@ const GS = window.GameSky;
 
 /* ---------- Réglages du cycle ---------- */
 const DAY_SECONDS = 480;    // durée réelle d'un jour complet (secondes)
-const START_HOUR  = 17.0;   // départ en fin d'après-midi : le coucher arrive vite
+const START_HOUR  = 6.05;   // départ à l'aube : lever → jour → coucher → nuit, en boucle
+const SPEEDS      = [1, 2, 4, 8];   // vitesses du temps (clic sur l'horloge)
 const MAX_ELEV    = 60;     // hauteur maximale du soleil (midi), en degrés
 const AZ_RISE     = 70;     // azimut du lever de soleil
 const AZ_SET      = 290;    // azimut du coucher de soleil
@@ -45,6 +49,7 @@ const MOON_MAX    = 55;     // hauteur maximale de la lune
 
 let hour = START_HOUR;
 let daySeconds = DAY_SECONDS;
+let speed = 1;              // multiplicateur de temps (bouton horloge)
 let running = true;
 
 /* ---------- Clés d'ambiance ---------- */
@@ -113,13 +118,22 @@ function azFor(h){
 /* ---------- Horloge in-game (chip bas-gauche au-dessus des boutons) ---------- */
 const CLOCK_ICON_DAY   = '\u2600';   // ☀
 const CLOCK_ICON_NIGHT = '\u263E';   // ☾
-let clockTxtEl = null, clockIcoEl = null, lastClockTxt = '';
+let clockTxtEl = null, clockIcoEl = null, clockSpdEl = null, lastClockTxt = '';
 const clockEl = document.createElement('div');
 clockEl.className = 'dc-clock';
 clockIcoEl = document.createElement('i');
 clockTxtEl = document.createElement('span');
+clockSpdEl = document.createElement('em');
 clockEl.appendChild(clockIcoEl);
 clockEl.appendChild(clockTxtEl);
+clockEl.appendChild(clockSpdEl);
+clockEl.title = 'Vitesse du temps — cliquer pour accélérer';
+clockEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const i = SPEEDS.indexOf(speed);
+  speed = SPEEDS[(i + 1) % SPEEDS.length];   // ×1 → ×2 → ×4 → ×8 → ×1…
+  lastClockTxt = '';                          // force la mise à jour de l'affichage
+});
 (document.getElementById('mosqueStage') || document.body).appendChild(clockEl);
 
 /* ---------- Application de l'ambiance ---------- */
@@ -188,6 +202,7 @@ function apply(){
     lastClockTxt = txt;
     clockTxtEl.textContent = txt;
     clockIcoEl.textContent = elev > 0 ? CLOCK_ICON_DAY : CLOCK_ICON_NIGHT;
+    clockSpdEl.textContent = speed > 1 ? '×' + speed : '';
   }
 }
 
@@ -197,7 +212,7 @@ if (!M || !M.scene || !GS || !M.sunLight){
 } else {
   M.addFrameHook((dt) => {
     if (!running) return;
-    hour = (hour + Math.min(dt, 0.25) * 24 / daySeconds) % 24;   // dt borné (retour d'onglet)
+    hour = (hour + Math.min(dt, 0.25) * speed * 24 / daySeconds) % 24;   // dt borné (retour d'onglet)
     apply();
   });
   apply();
@@ -215,5 +230,7 @@ window.DayCycle = {
   pause(){ running = false; },
   resume(){ running = true; },
   get running(){ return running; },
+  setSpeed(mult){ const v = Number(mult); speed = (v > 0 ? v : 1); lastClockTxt = ''; },
+  get speed(){ return speed; },
   setClockVisible(on){ clockEl.style.display = on ? '' : 'none'; },
 };
