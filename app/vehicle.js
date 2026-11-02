@@ -16,6 +16,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import * as WL from './water-logic.js?v=1';
 
 const M = window.MosqueScene;
 const URL_GLB = 'assets/models/voiture-djenne.glb?v=3';
@@ -527,6 +528,26 @@ function tickSequence(dt) {
   chaseCamera(dt, S.st === ST.DRIVE ? 1 : 0.55);
 }
 
+/* ---------- eau (app/water-fx.js) : traînée, gerbes, moteur noyé ---------- */
+const FLOAT_Y = 1.1;                                           // en eau profonde la caisse flotte : roues à ~1,1 m sous la surface (jamais entièrement immergée)
+function waterToast(msg, key, gap = 9000) { const t = performance.now(); if (t - (S[key] || -1e9) > gap) { S[key] = t; window.GamepadKit?.toast?.(msg); } }
+/** Dérive très lente vers la rive la moins profonde (voiture noyée) : direction recalculée toutes les 0,5 s. */
+function driftTick(dt, wsurf) {
+  S.driftT = (S.driftT || 0) - dt;
+  if (S.driftT <= 0) {
+    S.driftT = 0.5; let best = Infinity; S.dx = S.dz = 0;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2, x = pos.x + Math.cos(a) * 8, z = pos.z + Math.sin(a) * 8;
+      const sf = window.WaterFx.surfaceAt(x, z);
+      const g = sf === null ? null : groundAt(x, pos.y, z);
+      const d = sf === null ? 0 : (g === null ? Infinity : sf - g);
+      if (d < best) { best = d; S.dx = Math.cos(a); S.dz = Math.sin(a); }
+    }
+  }
+  const step = 0.45 * dt;
+  if (S.dx || S.dz) { if (!blockedAhead(S.dx, S.dz, step + 0.3, 0.75)) { pos.x += S.dx * step; pos.z += S.dz * step; } }
+}
+
 /* ---------- orbite autour de la voiture : stick droit (manette), glisser (souris / doigt) ; revient derrière la voiture au repos ---------- */
 const ORB_PIT_MIN = -0.25, ORB_PIT_MAX = 0.95;
 function orbitAdd(dyaw, dpit) {
@@ -625,6 +646,17 @@ function chaseCamera(dt, strength) {
 function drive(dt) {
   const inp = inputs();
   if (wantsToggle()) { startExit(); return; }
+  const WFX = window.WaterFx;
+  const wsurf = WFX ? WFX.surfaceAt(pos.x, pos.z) : null;
+  const wdepth = wsurf !== null ? WL.depth(wsurf, S.bed !== undefined ? S.bed : pos.y) : 0;
+  const wet = wdepth >= WL.CAR_WADE;
+  if (wet) {
+    if (!S.wet) { S.wet = true; waterToast('Le pick-up patine dans l\'eau', 'toastWet', 1e12); if (Math.abs(S.speed) > 2) WFX.splash(pos.x + Math.sin(S.yaw) * 1.5, wsurf, pos.z + Math.cos(S.yaw) * 1.5, Math.min(1.5, Math.abs(S.speed) / 12)); }
+  } else S.wet = false;
+  const drowned = WL.carDrowned(!!S.drowned, wdepth);
+  if (drowned && !S.drowned) waterToast('Moteur noyé : descends du pick-up', 'toastDrown');
+  S.drowned = drowned;
+  if (drowned) inp.thr = 0;                                      // moteur calé : plus d'accélération (le frein et la descente restent possibles)
   const GPk = window.GamepadKit;
   if (S.down.V || (GPk && GPk.connected && GPk.connected() && GPk.justPressed('R3'))) { S.camMode = S.camMode ? 0 : 1; }
   S.down.V = false;
@@ -644,6 +676,11 @@ function drive(dt) {
   if (inp.hand) S.speed -= Math.sign(S.speed) * Math.min(Math.abs(S.speed), BRAKE * 0.9 * dt);
   if (inp.thr < 0.02 && inp.brake < 0.02) S.speed -= Math.sign(S.speed) * Math.min(Math.abs(S.speed), (DRAG * Math.abs(S.speed) + ROLL_DRAG) * dt);
   S.speed = Math.max(-MAX_REV, Math.min(MAX_FWD, S.speed));
+  if (wet) {                                                     // traînée de l'eau : plafond de vitesse selon la profondeur + décélération ajoutée
+    const cap = WL.carSpeedCap(wdepth, MAX_FWD), as = Math.abs(S.speed), sg = Math.sign(S.speed);
+    if (as > cap) S.speed = sg * Math.max(cap, as - (32 + 3 * as) * dt);                  // plafond ferme : la poussée du moteur ne le dépasse pas
+    S.speed -= Math.sign(S.speed) * Math.min(Math.abs(S.speed), (0.8 + 1.8 * wdepth + (drowned ? 2.5 : 0)) * dt);
+  }
   // braquage progressif, plus faible à haute vitesse
   const lim = MAX_STEER * (1 - 0.55 * Math.min(1, Math.abs(S.speed) / MAX_FWD));
   S.steer += (inp.str * lim - S.steer) * (1 - Math.exp(-STEER_RATE * dt));
@@ -670,8 +707,10 @@ function drive(dt) {
     S.slope = (S.slope || 0) + (tp - (S.slope || 0)) * (1 - Math.exp(-6 * dt));                    // pente lissée (>0 = montée)
     S.pitch += (-tp - S.pitch) * (1 - Math.exp(-9 * dt));
     S.roll += (tr - S.roll) * (1 - Math.exp(-9 * dt));
-    pos.y += (avg - pos.y) * (1 - Math.exp(-14 * dt));
-  } else if (hs.length) { pos.y += (hs[0] - pos.y) * (1 - Math.exp(-8 * dt)); }
+    S.bed = avg;                                                 // sol réel sous la voiture (lit du fleuve compris)
+    pos.y += ((wsurf !== null ? Math.max(avg, wsurf - FLOAT_Y) : avg) - pos.y) * (1 - Math.exp(-14 * dt));
+  } else if (hs.length) { S.bed = hs[0]; pos.y += (hs[0] - pos.y) * (1 - Math.exp(-8 * dt)); }
+  if (drowned && wsurf !== null) driftTick(dt, wsurf);
   // ne sort pas du monde (limite large autour de la ville)
   if (pos.y < -20) place(PARK.x, PARK.z, PARK.yaw, true);
   S.spin += (S.speed * dt) / WHEEL_R;
@@ -684,8 +723,9 @@ function drive(dt) {
   const mixer = SM().mixer(); if (mixer) mixer.update(dt);
   chaseCamera(dt, 1);
   prompt(true, drivingHint());
-  dustTick(dt, !onPlatform() && Math.abs(S.speed) > 1.5 ? Math.min(1, (Math.abs(S.speed) - 1.5) / 7) : 0);
-  engineUpdate(true);
+  dustTick(dt, !wet && !onPlatform() && Math.abs(S.speed) > 1.5 ? Math.min(1, (Math.abs(S.speed) - 1.5) / 7) : 0);   // dans l'eau : gerbes à la place de la poussière
+  if (wet) WFX.vehicleFx(dt, { x: pos.x, z: pos.z, yaw: S.yaw, speed: S.speed, surface: wsurf, depth: wdepth });
+  engineUpdate(!drowned);
 }
 
 /* ---------- poussière ---------- */
@@ -816,7 +856,9 @@ function frame(dt) {
   }
   if (S.st === ST.PARKED) {
     // sol sous la voiture (les colliders ne sont prêts qu'une fois le sanctuaire ouvert)
-    const gy = groundAt(pos.x, pos.y + 2, pos.z); if (gy !== null) pos.y = Math.abs(gy - pos.y) > 0.6 ? gy : pos.y + (gy - pos.y) * Math.min(1, dt * 6);
+    let gy = groundAt(pos.x, pos.y + 2, pos.z);
+    if (gy !== null) { const ws = window.WaterFx ? window.WaterFx.surfaceAt(pos.x, pos.z) : null; if (ws !== null) gy = Math.max(gy, ws - FLOAT_Y); }   // garée en eau profonde : elle flotte, toujours visible
+    if (gy !== null) pos.y = Math.abs(gy - pos.y) > 0.6 ? gy : pos.y + (gy - pos.y) * Math.min(1, dt * 6);
     applyTransform();
     const api = sm.vehicle, st = doorStand(_v);
     const pp = api.pos;
@@ -862,6 +904,7 @@ window.Vehicle = {
              hand: (() => { const h = api.model() && api.model().getObjectByName('mixamorigLeftHand'); return h ? h.getWorldPosition(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2)) : null; })(),
              meshes: (() => { const m = api.model(); const out = {}; if (!m) return out; m.updateMatrixWorld(true); m.traverse((o) => { if (o.isSkinnedMesh) { o.skeleton.update(); o.computeBoundingBox(); const b = o.boundingBox.clone().applyMatrix4(o.matrixWorld); out[o.name] = [+(b.min.y - pos.y).toFixed(2), +(b.max.y - pos.y).toFixed(2)]; } }); return out; })(),
              root: api.root() ? api.root().position.toArray().map((v) => +v.toFixed(2)) : null, rootScale: api.root() ? api.root().scale.x : null, camMode: S.camMode, camT: +S.camT.toFixed(2), pitch: +S.pitch.toFixed(3), roll: +S.roll.toFixed(3), carY: +pos.y.toFixed(2), grp: car.group ? car.group.position.y : null,
+             water: { wet: !!S.wet, drowned: !!S.drowned, bed: S.bed === undefined ? null : +S.bed.toFixed(2) },
              weights: S.acts ? Object.fromEntries(Object.entries(S.acts).map(([k, v]) => [k, +v.getEffectiveWeight().toFixed(2)])) : null, st: S.st };
   },
 };

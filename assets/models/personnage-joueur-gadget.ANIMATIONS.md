@@ -93,3 +93,17 @@ Sauvegarde de l'ancienne version : `backups/personnage-joueur-gadget_AVANT_v2.gl
 - Méthode : export GLB depuis Blender (mode `ACTIONS`), puis **remplacement du seul clip** dans le GLB du jeu : `node tools/patch-glb-clip.mjs <cible.glb> <export.glb> Shoot_Gadget <sortie.glb>`. Vérification : `tools/glb-compare-clips.mjs` (les 11 autres clips restent identiques à 0,00) et `tools/glb-diff-structure.mjs`.
 - Ancien GLB sauvegardé : `backups/personnage-joueur-gadget_AVANT_shoot_v3.glb`.
 - Côté jeu (`app/sanctuary-mode.js`) : `GADGET_SHOT_TIMES = [0.17]`, `GADGET_SHOT_DURATION = 0.87`, `GADGET_SHOT_DAMAGE = 3` (même équilibre qu'avant : le drone, 6 PV, tombe en 2 tirs), `PLAYER_GLB_URL …?v=3`.
+
+## Ajout des clips de nage — 2026-11-02
+
+- Le GLB contient maintenant **14 clips** (les 12 précédents, inchangés, + `Swim` et `Swim_Idle`). Taille : 2,80 Mo → 3,44 Mo. URL côté jeu : `app/hero.js` (`FILE`) en `?v=4`.
+- Nouveaux clips (boucle, 30 fps, 65 os × translation/rotation/échelle, interpolation LINEAR) :
+
+| Clip | Durée | Boucle | Origine |
+|---|---|---|---|
+| `Swim` | 4,53 s (137 images) | oui | Mixamo – Swimming (nage à plat ventre, sur place), FBX sans modèle, retargeté par noms d'os |
+| `Swim_Idle` | 3,00 s (91 images) | oui | Mixamo – Treading Water (flottaison à la verticale, sur place), FBX sans modèle, retargeté par noms d'os |
+
+- Méthode : FBX → Blender 5.2 en arrière-plan → GLB d'animation (échantillonné à 30 fps) → canaux recopiés par nom d'os dans le GLB du jeu avec `@gltf-transform/core` (les squelettes de repos sont identiques, en centimètres, aucune conversion). Matériaux, textures, os, maillages et les 12 autres clips : inchangés. Les FBX Mixamo ne sont pas dans le projet (conditions Mixamo : pas de redistribution des animations seules).
+- Repères (espace du modèle, origine = pieds au repos, +Z = avant, Hips au repos 0,92 m) : `Swim` Hips y ≈ 0,65 m, corps à plat ventre dirigé vers +Z, tête y ≈ 0,78, pieds y ≈ 0,5–0,7 ; `Swim_Idle` Hips y ≈ 0,93 m, tête y ≈ 1,40, épaules y ≈ 1,35, bras tendus vers l'avant.
+- Sauvegarde de l'ancien GLB : `Documents/Djenne3D/mixamo/personnage-joueur-gadget.ORIGINAL.glb`.

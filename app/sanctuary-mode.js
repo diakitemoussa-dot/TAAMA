@@ -9,6 +9,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import * as Aim from './aim-system.js?v=6';
+import * as WL from './water-logic.js?v=1';
 import * as DroneAI from './drone-n-ai.js?v=2';
 import { installHeadFade } from './head-fade.js?v=1';
 
@@ -1310,8 +1311,131 @@ function _holdAimPose() {
 /* Au volant (montée, conduite, descente) : le personnage ne peut rien faire d'autre — ni sauter, ni s'agenouiller, ni viser, ni tirer */
 function _inVehicle() { return !!(_vehicleCtl && _vehicleCtl.active()); }
 
+/* ---------- Eau : pataugeage et nage (app/water-fx.js : surface + effets ; app/water-logic.js : seuils) ---------- */
+// Clips de nage cherchés dans le GLB (noms en minuscules). Aucun ? repli : idle + corps penché + bras simulés.
+const SWIM_MOVE_NAMES = ['swim', 'swimming', 'nage', 'swim_forward', 'freestyle'];
+const SWIM_IDLE_NAMES = ['swim_idle', 'swim idle', 'treading water', 'treading_water', 'tread', 'tread_water', 'nage_idle'];
+const SWIM_TILT = THREE.MathUtils.degToRad(55);       // inclinaison du corps vers l'avant en nage sans clip dédié
+const SWIM_PIVOT = 0.95;                              // hauteur du bassin (m) : le corps pivote autour
+let _swimming = false, _waterState = 'dry', _waterSurf = null, _waterGroundY = -Infinity;
+let _swimT = 0, _swimTilt = 0, _swimDeep = false, _swimProne = false, _swimDepth = Infinity, _swimArmPh = 0, _swimToastDone = false, _wakeT = 0, _footT = 0, _swimBaseY = null;
+let _swimMoveName = '', _swimIdleName = '';
+const _swimArmBones = [];
+
+function _findSwimClips() {
+  let idle = SWIM_IDLE_NAMES.find((n) => _playerActions[n]) || '';
+  let move = SWIM_MOVE_NAMES.find((n) => _playerActions[n]) || '';
+  if (!idle || !move) for (const k of Object.keys(_playerActions)) {
+    if (!/swim|tread|nage/.test(k)) continue;
+    if (/idle|tread/.test(k)) idle = idle || k; else move = move || k;
+  }
+  if (window.__noSwimClips) { idle = ''; move = ''; }                 // diagnostic : force le repli sans clip
+  _swimIdleName = idle; _swimMoveName = move;
+}
+/** Remet le personnage à zéro (clips, couches, inclinaison) à l'entrée / la sortie de la nage. */
+function _swimResetBody() {
+  if (_playerShootLayer) _cancelShootLayer();
+  _playerJumping = false; _playerKneeling = false; _playerKneelingPrev = ''; _gadgetShooting = false;
+  if (_playerMixer) { _playerMixer.stopAllAction(); }
+  _playerCurrentAction = ''; _playerLowerName = ''; _playerUpperShootName = ''; _playerShootLayer = false; _playerLayeredShootAction = null; _aimHold = false;
+  if (_playerModel) {
+    if (_swimBaseY === null) _swimBaseY = _playerModel.position.y;
+    _playerModel.rotation.x = 0; _playerModel.position.y = _swimBaseY; _playerModel.position.z = 0;
+  }
+  _swimTilt = 0;
+}
+function _setSwimming(on) {
+  if (on === _swimming) return;
+  _swimming = on;
+  _swimResetBody();
+  if (_playerShadow) _playerShadow.visible = !on;
+  if (on) {
+    _findSwimClips(); _swimT = 0; _wakeT = 0; _swimDeep = false;
+    if (_aiming) _setAiming(false);
+    if (!_swimToastDone) { _swimToastDone = true; window.GamepadKit?.toast?.('Tu nages'); }
+  } else if (_playerReady) _playAction('idle', { fade: 0.2 });
+  try { window.dispatchEvent(new CustomEvent('player:swim', { detail: { on } })); } catch (_) {}
+}
+/** Remet l'état d'eau à sec (sortie du mode, montée en voiture). */
+function _forceDry() {
+  _waterState = 'dry'; _waterSurf = null;
+  if (_swimming) _setSwimming(false);
+}
+/** État du joueur dans l'eau (une fois par image, avant le déplacement) : pataugeage, nage, éclaboussures, sillage. */
+function _tickWater(dt, moving, running) {
+  const FX = window.WaterFx;
+  const prev = _waterState, prevSurf = _waterSurf;
+  let st = 'dry', surf = null;
+  if (FX && !_inVehicle() && !_playerDying) {
+    surf = FX.surfaceAt(playerPos.x, playerPos.z);
+    if (surf !== null) {
+      const feet = playerPos.y - EYE_HEIGHT;
+      st = (prev === 'dry' && feet > surf + 0.4) ? 'dry' : WL.waterState(prev, WL.depth(surf, _waterGroundY));   // en l'air bien au-dessus de l'eau : pas d'eau
+      if (st === 'dry') surf = null;
+    }
+  }
+  _waterState = st; _waterSurf = surf;
+  if (st === 'swim') {
+    _swimDepth = WL.depth(surf, _waterGroundY);
+    _swimDeep = WL.deepPose(_swimDeep, _swimDepth);
+    _swimProne = !!_swimMoveName && WL.swimPose(moving, _swimDeep) === 'prone';
+  }
+  const nowSwim = st === 'swim';
+  if (nowSwim !== _swimming) _setSwimming(nowSwim);
+  if (!FX) return;
+  const x = playerPos.x, z = playerPos.z;
+  if (st !== 'dry' && prev === 'dry') FX.splash(x, surf, z, (nowSwim ? 1.0 : 0.7) + Math.min(0.5, Math.max(0, -_velY) / 18));      // entrée dans l'eau
+  else if (st === 'swim' && prev === 'wade') FX.splash(x, surf, z, 0.5);
+  else if (st === 'dry' && prev !== 'dry' && prevSurf !== null) FX.splash(x, prevSurf, z, 0.45);                                  // sortie
+  if (st === 'wade' && moving) {
+    _footT -= dt;
+    if (_footT <= 0) { _footT = running ? 0.2 : 0.3; FX.footSplash(x, surf, z); }
+  } else if (st === 'swim') {
+    _wakeT -= dt;
+    if (_wakeT <= 0) { _wakeT = moving ? 0.35 : 0.9; FX.wake(x, surf, z, moving ? 1 : 0.4); }
+  }
+}
+/** Bras simulés (crawl) : les épaules tournent autour de l'axe latéral du personnage, en opposition. */
+function _applySwimArms(phase) {
+  if (!_playerModel) return;
+  if (!_swimArmBones.length) {
+    for (const n of ['mixamorigLeftArm', 'mixamorigRightArm']) { const b = _playerModel.getObjectByName(n); if (b) _swimArmBones.push(b); }
+    if (!_swimArmBones.length) return;
+  }
+  const lx = Math.cos(playerYaw), lz = -Math.sin(playerYaw);
+  for (let i = 0; i < _swimArmBones.length; i++) {
+    const bone = _swimArmBones[i];
+    const ang = -Math.PI * 0.62 + Math.sin(phase + i * Math.PI) * 0.95;                     // bras tendus vers l'avant, en va-et-vient
+    bone.parent.updateWorldMatrix(true, false);
+    bone.parent.getWorldQuaternion(_aimQP); _aimQPi.copy(_aimQP).invert();
+    _aimQR.setFromAxisAngle(_aimAxisV.set(lx, 0, lz), ang * _swimTilt / SWIM_TILT);
+    _aimQT.copy(_aimQPi).multiply(_aimQR).multiply(_aimQP);
+    bone.quaternion.premultiply(_aimQT);
+  }
+}
+function _updateSwimAnimation(dt, moving, running) {
+  if (_playerShootLayer) _cancelShootLayer();
+  let want = 'idle', clip = false;
+  const upright = WL.swimPose(moving, _swimDeep) === 'upright';     // vertical seulement à l'arrêt en eau profonde
+  if (!upright && _swimMoveName) { want = _swimMoveName; clip = true; }
+  else if (_swimIdleName || _swimMoveName) { want = (upright && _swimIdleName) || _swimMoveName || _swimIdleName; clip = true; }
+  _playAction(want, { fade: 0.25 });
+  if (_playerCurrentAction === want && _playerActions[want]) _playerActions[want].setEffectiveTimeScale(!clip && moving ? 0.8 : 1);
+  _mixerUpdate(dt);
+  // repli sans clip de nage : corps penché vers l'avant (autour du bassin), bras qui brassent, flottement déjà donné par la hauteur
+  const fallback = !clip && moving, k = 1 - Math.exp(-6 * dt);
+  _swimTilt += ((fallback ? SWIM_TILT : 0) - _swimTilt) * k;
+  if (_playerModel) {
+    const c = Math.cos(_swimTilt), sn = Math.sin(_swimTilt);
+    _playerModel.rotation.x = _swimTilt;
+    _playerModel.position.y = (_swimBaseY ?? 0) + SWIM_PIVOT * (1 - c);
+    _playerModel.position.z = -SWIM_PIVOT * sn;
+  }
+  if (fallback || _swimTilt > 0.05) { _swimArmPh += dt * (running ? 7 : 5); _applySwimArms(_swimArmPh); }
+}
+
 function _tryJump() {
-  if (_inVehicle()) return;
+  if (_inVehicle() || _swimming) return;
   if (!_playerReady || _playerJumping || _gadgetShooting || _playerKneeling) return;
   if (!_playerActions.jump) return;
   _playerJumping = true;
@@ -1323,7 +1447,7 @@ function _tryJump() {
 
 /* ---------- Bascule genoux à terre (bouton X / touche K) ---------- */
 function _toggleKneeling() {
-  if (_inVehicle()) return;
+  if (_inVehicle() || _swimming) return;
   if (!_playerReady || _gadgetShooting || _playerJumping || _playerDying) return;
   if (_playerShootLayer && _aimHold) _cancelShootLayer();
   if (!_playerKneeling) {
@@ -1407,6 +1531,7 @@ function _updatePlayerAnimation(dt, moving, running) {
     _mixerUpdate(dt);
     return;
   }
+  if (_swimming) { _updateSwimAnimation(dt, moving, running); return; }
   if (_playerKneeling && _playerShootLayer && _aimHold) _cancelShootLayer();
   // Tir agenouillé : le clip complet reste actif, seule la rafale est temporisée.
   if (_playerKneeling && _gadgetShooting) {
@@ -1697,7 +1822,7 @@ function _gadgetAimFallback() {
 function _gadgetUnlocked() { try { return localStorage.getItem('taama.gadget') === '1'; } catch (_) { return false; } }
 
 function _startGadgetShot(side) {
-  if (_inVehicle()) return;
+  if (_inVehicle() || _swimming) return;
   if (!_gadgetUnlocked()) return;
   if (!active || state !== S_FPS || !_playerReady || _playerJumping || _gadgetShooting || _playerDying) return;
   if (_gadgetCooldown > 0) return;
@@ -4107,6 +4232,8 @@ function _computeDesiredCamera(out, dt = 0) {
     }
   }
 
+  // Ne pas passer sous la surface de l'eau quand le joueur patauge ou nage.
+  if (_waterSurf !== null) out.y = Math.max(out.y, _waterSurf + 0.3);
   // Ne pas passer sous le sol.
   out.y = Math.max(out.y, playerPos.y - EYE_HEIGHT + 0.35);
   return out;
@@ -4583,7 +4710,7 @@ function _fireAimedShot() {
 }
 
 function _setAiming(on){
-  if (on && _inVehicle()) on = false;
+  if (on && (_inVehicle() || _swimming)) on = false;
   if (on && !_gadgetUnlocked()) on = false;
   _ensureAimReticle();
   if (on && !_aiming) _aimSavedPitch = playerPitch;
@@ -4669,6 +4796,8 @@ function tickFPS(dt) {
     return;
   }
 
+  _tickWater(dt, isMoving, running);
+
   // Avant caméra F = (sin,0,cos) ; droite écran R = (-cos,0,sin).
   const sy = Math.sin(cameraYaw), cy = Math.cos(cameraYaw);
   _fwd.set(sy, 0, cy);
@@ -4677,7 +4806,7 @@ function tickFPS(dt) {
 
   if (isMoving) {
     const mag = Math.min(1, inMag);
-    _move.normalize().multiplyScalar((running ? PLAYER_RUN_SPEED : WALK_SPEED) * mag);
+    _move.normalize().multiplyScalar((running ? PLAYER_RUN_SPEED : WALK_SPEED) * mag * (_swimming ? WL.swimSpeedMul(running, _swimDepth) : 1));
     if (colliders && colliders.length) movePlayer(dt);
 
     // Le personnage pivote en douceur vers sa direction de déplacement,
@@ -4699,19 +4828,27 @@ function tickFPS(dt) {
     playerYaw += dYaw * Math.min(1, PLAYER_TURN_RATE * dt);
   }
 
-  if (isMoving && !_playerJumping) {
+  if (isMoving && !_playerJumping && !_swimming) {
     _walkSound.playbackRate = running ? 1.35 : 1;
     _startWalk();
   } else {
     _stopWalk();
   }
 
-  if (colliders && colliders.length) {
+  if (_swimming && colliders && colliders.length) {
+    // Nage : tenu à la surface (pieds ≈ surface − 1,15 m), le sol ne tire plus vers le fond
+    _velY = 0;
+    const fl = groundUnder(); _waterGroundY = fl > -Infinity ? fl - EYE_HEIGHT : -Infinity;
+    playerPos.y += (WL.swimFeetY(_waterSurf, _swimT, _waterGroundY, _swimProne) + EYE_HEIGHT - playerPos.y) * Math.min(1, dt * 7);
+    _swimT += dt;
+    depenetrate();
+  } else if (colliders && colliders.length) {
     // Gravité
     _velY -= GRAVITY * dt;
     playerPos.y += _velY * dt;
 
     const floorY = groundUnder();
+    _waterGroundY = floorY > -Infinity ? floorY - EYE_HEIGHT : -Infinity;
     if (floorY === -Infinity && !_playerJumping && playerPos.y > -5) {
       // aucun sol détecté sous le joueur (le terrain de la place n'est pas encore chargé) : on le retient au lieu de le laisser tomber
       playerPos.y -= _velY * dt; _velY = 0;
@@ -4790,7 +4927,7 @@ function update(dt) {
   dt = Math.min(dt, 0.05);
   if (dt <= 0) return;
   if (window.__storyFreeze) return;                // scène plein écran de l'histoire (labo, dossier : app/dispositif1.js) : le monde 3D est gelé
-  if (_gadgetNode) _gadgetNode.visible = _gadgetUnlocked() && !(window.Vehicle && window.Vehicle.state === 'drive');   // pas de gadget avant le dispositif 1 (ni au volant)
+  if (_gadgetNode) _gadgetNode.visible = _gadgetUnlocked() && !_swimming && !(window.Vehicle && window.Vehicle.state === 'drive');   // pas de gadget avant le dispositif 1 (ni au volant)
 
   if (_gadgetCooldown > 0) _gadgetCooldown = Math.max(0, _gadgetCooldown - dt);
   _updateGadgetFx(dt);
@@ -4874,6 +5011,7 @@ function update(dt) {
     _updatePlayerAnimation(dt, false, false);
   } else if (state === S_FPS && _vehicleCtl && _vehicleCtl.active()) {
     _stopWalk(); _playerRunning = false;         // plus de bruit de pas au volant
+    if (_swimming || _waterState !== 'dry') _forceDry();
     _vehicleCtl.tick(dt);                       // véhicule (app/vehicle.js) : monte/descend/conduit — il pilote le joueur et la caméra
   } else if (state === S_FPS) {
     tickFPS(dt);
@@ -4986,6 +5124,7 @@ function enter() {
 function exit() {
   if (!active) return;
   active = false; state = S_IDLE;
+  _forceDry();
   setTimeout(() => window.dispatchEvent(new CustomEvent('sanctuary:exit')), 0);
   _aimMouseRight = false;
   _resetAim();
@@ -5094,6 +5233,9 @@ function _camLocal(boneName) {
 }
 
 window.SanctuaryMode = {
+  // nage (app/water-fx.js) : true tant que le joueur nage ; événement window « player:swim » { on }
+  get swimming() { return _swimming; },
+  get waterState() { return _waterState; },
   // diagnostic : force le fondu de la tête (null = rend la main au jeu)
   debugForceHeadFade: (v) => { _headFadeForce = v; },
   // diagnostic : téléporte le personnage (test de l'IA de la Sentinelle)
@@ -5148,6 +5290,7 @@ window.SanctuaryMode = {
     shooting: _gadgetShooting,
     sideShot: _gadgetSideShot,
     jumping: _playerJumping,
+    swimming: _swimming, waterState: _waterState, waterSurf: _waterSurf, swimClips: [_swimMoveName, _swimIdleName], swimTilt: _swimTilt,
     kneeling: _playerKneeling,
     dying: _playerDying,
     lower: _playerLowerName,

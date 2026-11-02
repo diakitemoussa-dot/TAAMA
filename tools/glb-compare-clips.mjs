@@ -3,10 +3,11 @@
  * Usage : node tools/glb-compare-clips.mjs <ancien.glb> <nouveau.glb>
  * Pour chaque clip commun : écart max sur les valeurs (translation, rotation, échelle) et sur les temps.
  */
-import { NodeIO } from '@gltf-transform/core';
+import { NodeIO } from '@gltf-transform/core'; import { ALL_EXTENSIONS } from '@gltf-transform/extensions'; import { MeshoptDecoder } from 'meshoptimizer';
 
 const [, , fa, fb] = process.argv;
-const io = new NodeIO();
+await MeshoptDecoder.ready;
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });   // lit aussi les variantes Meshopt
 const [A, B] = await Promise.all([io.read(fa), io.read(fb)]);
 const byName = (doc) => Object.fromEntries(doc.getRoot().listAnimations().map((a) => [a.getName(), a]));
 const a = byName(A), b = byName(B);
@@ -40,5 +41,7 @@ for (const name of Object.keys(a)) {
     va.forEach((v, i) => { dv = Math.max(dv, Math.abs(v - vb[i])); });
     n++;
   }
-  console.log(`  ${name.padEnd(24)} canaux comparés ${String(n).padStart(3)} | sans équivalent ${miss} | longueurs ≠ ${lenDiff} | écart max valeurs ${dv.toExponential(2)} | temps ${dt.toExponential(2)}`);
+  const durOf = (an) => Math.max(...an.listChannels().map((c) => { const t = c.getSampler().getInput().getArray(); return t[t.length - 1]; }));
+  const nCh = `${a[name].listChannels().length}/${b[name].listChannels().length}`, dur = `${durOf(a[name]).toFixed(3)}/${durOf(b[name]).toFixed(3)}`;
+  console.log(`  ${name.padEnd(24)} canaux ${nCh} durée ${dur} comparés ${String(n).padStart(3)} | sans équivalent ${miss} | longueurs ≠ ${lenDiff} | écart max valeurs ${dv.toExponential(2)} | temps ${dt.toExponential(2)}`);
 }
