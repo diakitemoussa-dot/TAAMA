@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-import { heroUrl } from './hero.js?v=1';
+import { heroUrl } from './hero.js?v=2';
 const DRONE_URL = 'assets/models/drone.glb';
 const DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
 const CLIP = 'idle_look';

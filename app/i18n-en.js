@@ -11,8 +11,6 @@
 
 export const EN = {
   'Homme': 'Man',
-  'Femme': 'Woman',
-  'Curieuse, débrouillarde, attirée par les nouvelles technologies. Elle observe, manipule ses équipements et décide vite.': 'Curious, resourceful, drawn to new technologies. She observes, handles her equipment and decides fast.',
   'Exploration libre': 'Free exploration',
   'Non': 'No',
   'Oui': 'Yes',

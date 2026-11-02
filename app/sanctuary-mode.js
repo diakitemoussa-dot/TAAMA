@@ -25,7 +25,7 @@ const _gltfDir = new GLTFLoader();
 _gltfDir.setDRACOLoader(_draco);
 
 /* ---------- Personnage joueur (GLB animé, 3e personne) ---------- */
-import { heroUrl } from './hero.js?v=1';
+import { heroUrl } from './hero.js?v=2';
 let _loadedHeroUrl = null;
 const _gltfPlayer   = new GLTFLoader();
 

@@ -29,8 +29,7 @@ import * as I18n from './i18n.js';
 import { t, translateTree } from './i18n.js';
 import { sendProfile } from './player-sync.js';
 import { SEQUENCES } from './tapama-core.js';
-import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=3';
-import { getHero, setHero } from './hero.js?v=1';
+import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=4';
 
 const NEW_UI = window.__NEW_UI !== false;
 const STAGE_W = 1440;
@@ -929,7 +928,7 @@ function toggleSubtitles() {
    PARTIE : nouvelle partie, reprise, pause
    ========================================================== */
 
-/* Nouvelle partie : clés de progression de l'histoire à effacer (hors profil joueur taama.player.v1 et personnage taama.hero) */
+/* Nouvelle partie : clés de progression de l'histoire à effacer (hors profil joueur taama.player.v1) */
 const NEW_GAME_KEYS = ['taama.dispositif1', 'taama.dispositif2', 'taama.vol', 'taama.piste', 'taama.revelation', 'taama.acte', 'taama.d1.spotted',
   'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.chapitre1', 'taama.next'];
 
@@ -1211,9 +1210,9 @@ function setupMain(root) {
     const sub = $(cont, '[data-bind="seqLabel"]');
     if (sub) sub.textContent = t('Aucune sauvegarde');
   }
-  // carte « Ton équipe » : affiche le personnage choisi (Homme / Femme) ; le choix se fait dans « Nouvelle partie »
+  // carte « Ton équipe » : affiche le personnage jouable
   const line = $$(root, 'div').find((d) => d.firstElementChild && d.firstElementChild.tagName === 'SPAN' && d.firstElementChild.textContent.trim() === 'Personnage');
-  if (line) line.lastChild.textContent = ' · ' + t(getHero() === 'femme' ? 'Femme' : 'Homme');
+  if (line) line.lastChild.textContent = ' · ' + t('Homme');
 }
 
 function setupNewGame(root) {
@@ -1223,43 +1222,6 @@ function setupNewGame(root) {
   const warn = $(root, '[data-warn]');
   if (warn && !save) warn.style.display = 'none';
   paintConfirm(root);
-  setupHeroChoice(root);
-}
-
-/* Choix du personnage : Homme / Femme (même armature et mêmes animations ; le modèle 3D du cadre change aussitôt) */
-const HERO_TEXT = {
-  homme: 'Curieux, débrouillard, attiré par les nouvelles technologies. Il observe, manipule ses équipements et décide vite.',
-  femme: 'Curieuse, débrouillarde, attirée par les nouvelles technologies. Elle observe, manipule ses équipements et décide vite.',
-};
-function setupHeroChoice(root) {
-  const label = $$(root, 'span').find((s) => s.textContent.trim() === 'Personnage');
-  const card = label && label.closest('.card');
-  if (!card || card.querySelector('[data-hero-pick]')) return;
-  const col = label.parentElement.parentElement;                         // colonne de texte de la carte
-  const desc = Array.from(col.children).find((c) => c.tagName === 'DIV' && /Curieu/.test(c.textContent) && !c.querySelector('span'));
-  const bar = document.createElement('div');
-  bar.setAttribute('data-hero-pick', ''); bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Choisir le personnage');
-  bar.style.cssText = 'display:flex;gap:10px';
-  const btns = {};
-  for (const [id, text] of [['homme', 'Homme'], ['femme', 'Femme']]) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.setAttribute('data-act', 'hero:' + id); b.textContent = text; b.setAttribute('aria-pressed', 'false');
-    b.style.cssText = "font:700 15px 'Open Sans',system-ui,sans-serif;padding:8px 26px;border-radius:14px;cursor:pointer;border:2px solid #F9D58B";
-    btns[id] = b; bar.appendChild(b);
-  }
-  const paint = () => {
-    const h = getHero();
-    for (const id of Object.keys(btns)) {
-      const on = id === h;
-      btns[id].setAttribute('aria-pressed', String(on));
-      btns[id].style.background = on ? '#F9D58B' : 'rgba(248,243,234,.12)';
-      btns[id].style.color = on ? '#55415D' : '#F8F3EA';
-    }
-    if (desc) desc.textContent = t(HERO_TEXT[h]);
-  };
-  bar.addEventListener('click', (e) => { const b = e.target.closest('[data-act^="hero:"]'); if (!b) return; e.stopPropagation(); setHero(b.dataset.act.slice(5)); paint(); });
-  col.insertBefore(bar, col.children[2] || null);
-  paint();
 }
 
 function paintConfirm(root) {
