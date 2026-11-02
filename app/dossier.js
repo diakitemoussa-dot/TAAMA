@@ -13,7 +13,7 @@
 import { t } from './i18n.js';
 import { fillName } from './player-profile.js';
 
-const CSS_URL = new URL('../styles/dossier.css', import.meta.url).href;
+const CSS_URL = new URL('../styles/dossier.css', import.meta.url).href + '?v=3';
 const IMG = (p) => new URL('../assets/images/' + p, import.meta.url).href;
 const SAVE_KEY = 'taama.dossier';
 

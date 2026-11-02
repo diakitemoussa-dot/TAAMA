@@ -522,7 +522,7 @@ class Annule extends Error {}
 function ensureCss() {
   if (cssPromise) return cssPromise;
   cssPromise = new Promise((resolve) => {
-    const href = new URL('../styles/laboratoire.css', import.meta.url).href;
+    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=6';
     let link = [...document.querySelectorAll('link[rel="stylesheet"]')].find((l) => /laboratoire\.css/.test(l.getAttribute('href') || ''));
     if (link) { resolve(); return; }
     link = document.createElement('link');
@@ -570,7 +570,7 @@ function buildUI(stage) {
     <header class="lab-top">
       <div class="lab-title"><span class="lab-kicker">Laboratoire de Tapama</span><b id="labStageName"></b></div>
       <ol class="lab-locks" id="labLocks" aria-label="Verrous"></ol>
-      <button type="button" class="lab-btn lab-glass lab-relire" id="labRelire"><span>Relire</span><kbd>H</kbd></button>
+      <button type="button" class="lab-btn lab-glass lab-relire" id="labRelire" aria-label="Relire les messages de Tapama"><span class="lab-ico" aria-hidden="true">💬</span><span class="lab-l">Relire</span><kbd>H</kbd></button>
     </header>
 
     <aside class="lab-visio" id="labVisio" aria-live="polite">
@@ -835,11 +835,11 @@ function renderEnigme(e, n, total) {
   }
   const status = el('div', 'lab-status');
   status.setAttribute('aria-live', 'polite');
-  const help = el('button', 'lab-btn lab-glass lab-indice', 'Demander un indice à Tapama');
+  const help = el('button', 'lab-btn lab-glass lab-indice');
   help.type = 'button';
-  help.append(el('kbd', null, 'I'));
   const dots = el('span', 'lab-hdots');
-  help.prepend(dots);
+  help.append(dots, el('span', 'lab-ico', '💡'), el('span', 'lab-l-long', 'Demander un indice à Tapama'), el('span', 'lab-l-short', 'Indice'), el('kbd', null, 'I'));
+  help.querySelector('.lab-ico').setAttribute('aria-hidden', 'true');
   const foot = el('div', 'lab-p-foot');
   foot.append(help);
   panel.append(top, q, row, pad, status, foot);
@@ -863,8 +863,9 @@ function updateHelpButton() {
   c.dots.replaceChildren();
   for (let i = 0; i < 2; i++) c.dots.appendChild(el('i', i < c.hints ? 'on' : ''));
   c.help.setAttribute('aria-label', `${t(c.hints >= 2 ? 'Demander la réponse à Tapama' : 'Demander un indice à Tapama')} (${c.hints}/2)`);
-  const txt = [...c.help.childNodes].find((n) => n.nodeType === 3);
-  if (txt) txt.textContent = t(c.hints >= 2 ? 'Demander la réponse à Tapama' : 'Demander un indice à Tapama');
+  const lg = c.help.querySelector('.lab-l-long'), sh = c.help.querySelector('.lab-l-short');
+  if (lg) lg.textContent = t(c.hints >= 2 ? 'Demander la réponse à Tapama' : 'Demander un indice à Tapama');
+  if (sh) sh.textContent = t(c.hints >= 2 ? 'Réponse' : 'Indice');
   void label;
 }
 

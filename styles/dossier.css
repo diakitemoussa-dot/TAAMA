@@ -8,6 +8,8 @@
   --ds-blue:#1E90FF; --ds-ice:#9FD4FF; --ds-gold:#C9A24B; --ds-white:#EDEFF2; --ds-mute:#9AA3AF;
   --ds-violet:#55415D; --ds-cream:#F8F3EA; --ds-ocre:#F9D58B; --ds-lilac:#C3A5C7;
   position:fixed; inset:0; z-index:9200;
+  height:100vh; height:100dvh;
+  overscroll-behavior:contain; -webkit-tap-highlight-color:transparent;
   font-family:'Open Sans', system-ui, sans-serif; color:var(--ds-white);
   opacity:0; transition:opacity .35s ease;
   -webkit-user-select:none; user-select:none;
@@ -217,6 +219,89 @@
   .ds-hero{ grid-template-columns:120px 1fr; }
   .ds-msg{ font-size:.82rem; }
 }
+/* ---------- Tactile : pas de zoom au double appui, pas de défilement de la page ---------- */
+.ds-btn, .ds-tab{ touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.ds-pages, .ds-msgs{ overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+
+/* ==========================================================
+   PAYSAGE COURT (téléphone couché, barre Safari visible) :
+   2 colonnes — le document à gauche (défilement interne), la messagerie de
+   Tapama à droite — et barre de titre + onglets 1-4 sur une seule ligne.
+   Le portrait (≤ 820 px de large, haut) garde sa disposition empilée.
+   ========================================================== */
+@media (max-height:520px) and (orientation:landscape){
+  .ds-desk{ padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+  .ds-win{ border-radius:0; border:0; display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:40px minmax(0,1fr); transform:none; }
+  .ds-task, .ds-secure, .ds-dots, .ds-hint, .ds-load{ display:none; }
+  /* ligne unique : fil d'Ariane + onglets */
+  .ds-title{ grid-column:1; grid-row:1; height:40px; padding:0 8px 0 12px; gap:8px; font-size:.7rem; letter-spacing:.06em; border-right:0; }
+  .ds-path{ overflow:visible; }
+  .ds-tabs{ grid-column:2; grid-row:1; height:40px; padding:0 8px 0 0; align-items:flex-end; gap:4px; background:linear-gradient(180deg,#232d3d,#161d29); border-bottom:1px solid var(--ds-line); }
+  .ds-tab{ min-height:36px; min-width:44px; justify-content:center; padding:0 10px; font-size:.74rem; }
+  .ds-tab-t{ display:none; }
+  .ds-tab.on .ds-tab-t{ display:inline; }
+  /* corps : document | messagerie */
+  .ds-body{ grid-column:1 / -1; grid-row:2; grid-template-columns:minmax(0,1fr) clamp(240px,34%,340px); grid-template-rows:minmax(0,1fr); }
+  .ds-pages{ padding:10px 14px max(10px,env(safe-area-inset-bottom)); }
+  .ds-chat{ border-left:1px solid rgba(248,243,234,.25); border-top:0; max-height:none; padding-right:0; }
+  .ds-chat-head{ padding:6px 10px; gap:8px; }
+  .ds-av{ width:38px; height:38px; border-width:2px; box-shadow:none; }
+  .ds-who b{ font-size:.88rem; }
+  .ds-who span{ font-size:.7rem; }
+  .ds-msgs{ min-height:0; padding:8px 10px; gap:8px; }
+  .ds-msg{ max-width:100%; padding:8px 11px; font-size:.84rem; line-height:1.4; }
+  .ds-actions{ padding:8px 10px max(8px,env(safe-area-inset-bottom)); gap:8px; border-top:1px solid rgba(248,243,234,.18); }
+  .ds-btn{ min-height:44px; padding:0 12px; font-size:.86rem; }
+  .ds-btn.ds-primary{ font-size:.92rem; }
+  /* contenu du document, plus serré */
+  .ds-kick{ font-size:.68rem; }
+  .ds-h{ font-size:clamp(1.25rem,5.4dvh,1.7rem); margin:2px 0 6px; }
+  .ds-lead{ font-size:.84rem; line-height:1.45; margin-bottom:8px; }
+  .ds-card{ padding:10px 12px; }
+  .ds-card h3{ font-size:.72rem; }
+  .ds-card p{ font-size:.82rem; line-height:1.4; margin-bottom:8px; }
+  .ds-cols{ gap:10px; margin-top:10px; grid-template-columns:1fr 1fr; }
+  .ds-hero{ grid-template-columns:min(30dvh,128px) 1fr; gap:14px; justify-items:stretch; }
+  .ds-logo-wrap{ width:100%; border-radius:12px; }
+  .ds-motto{ font-size:.95rem; padding:6px 12px; min-height:0; }
+  .ds-org{ gap:5px; }
+  .ds-org li{ font-size:.8rem; }
+  .ds-org span{ font-size:.76rem; }
+  .ds-pdg{ grid-template-columns:min(30dvh,128px) 1fr; gap:14px; }
+  .ds-portrait{ width:100%; margin:0; border-radius:12px; }
+  .ds-portrait img{ max-height:62dvh; }
+  .ds-stamp{ top:16px; right:-34px; padding:1px 34px; font-size:.5rem; letter-spacing:.04em; transform:rotate(38deg); }
+  .ds-dl{ margin-bottom:8px; }
+  .ds-dl div{ grid-template-columns:86px 1fr; gap:10px; padding:5px 0; }
+  .ds-dl dd{ font-size:.82rem; line-height:1.4; }
+  .ds-quote{ font-size:.84rem; padding:8px 12px; margin-bottom:8px; }
+  .ds-note{ font-size:.8rem; padding:8px 12px; }
+  .ds-layers{ gap:8px; }
+  .ds-layer-b{ font-size:.84rem; padding:8px 12px; }
+  .ds-layer-h{ padding:5px 12px; }
+  .ds-cols-rob{ grid-template-columns:1fr 1fr; gap:10px; }
+  .ds-robots-img, .ds-base-img{ max-height:34dvh; width:auto; max-width:100%; margin-left:auto; margin-right:auto; }
+  .ds-base-img{ margin-bottom:8px; }
+  .ds-meth{ margin-top:8px; gap:6px; }
+  .ds-meth li{ font-size:.8rem; }
+  .ds-gadget{ margin-top:8px; padding:8px 12px; gap:10px; }
+  .ds-gadget small{ font-size:.76rem; }
+  .ds-tr-logo{ width:min(84px,22dvh); }
+  .ds-tr-file{ font-size:.95rem; }
+}
+/* très court (< 380 px de haut) */
+@media (max-height:380px) and (orientation:landscape){
+  .ds-win{ grid-template-rows:36px minmax(0,1fr); }
+  .ds-title, .ds-tabs{ height:36px; }
+  .ds-tab{ min-height:34px; }
+  .ds-chat-head{ padding:4px 10px; }
+  .ds-av{ width:32px; height:32px; }
+  .ds-pages{ padding:8px 12px max(8px,env(safe-area-inset-bottom)); }
+  .ds-msg{ padding:7px 10px; font-size:.82rem; line-height:1.35; }
+  .ds-hero, .ds-pdg{ grid-template-columns:min(28dvh,110px) 1fr; gap:12px; }
+  .ds-robots-img, .ds-base-img{ max-height:32dvh; }
+}
+
 @media (prefers-reduced-motion:reduce){
   .ds-page.play .ds-rv{ animation:none; opacity:1; transform:none; }
   .ds-page.play::before{ display:none; }
