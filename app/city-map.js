@@ -54,7 +54,9 @@ function init() {
   const nTag = document.createElement('span'); nTag.className = 'cm-n'; nTag.textContent = 'N'; box.appendChild(nTag);
   const hint = document.createElement('span'); hint.className = 'cm-hint'; hint.textContent = 'Carte'; box.appendChild(hint);
   const ui = document.createElement('div'); ui.className = 'cm-ui';
-  ui.innerHTML = '<div class="cm-title">Djenné</div>' +
+  ui.innerHTML = '<div class="cm-topbar"></div><div class="cm-bar"><span class="cm-title">Djenné</span>' +
+    '<button type="button" class="cm-tg cm-tg-places" aria-expanded="false">Lieux</button>' +
+    '<button type="button" class="cm-tg cm-tg-leg" aria-expanded="false">Légende</button></div>' +
     '<div class="cm-legend"><span><i style="background:#f4cf5a;border-radius:50%"></i>Vous</span>' +
     '<span><i style="background:#d6be96;border:2px solid #785c3c"></i>Grande Mosquée</span>' +
     '<span><i style="background:#966c4e"></i>Maisons</span><span><i style="background:#4a808e"></i>Fleuve</span>' +
@@ -63,8 +65,9 @@ function init() {
     '<span><i style="background:#ffd34d;border-radius:2px;height:5px;vertical-align:2px"></i>Itinéraire</span></div>' +
     '<div class="cm-places"><div class="cm-places-t">Lieux · clic : itinéraire</div><div class="cm-places-l"></div></div>' +
     '<div class="cm-route"><b class="cm-route-name"></b><span class="cm-route-info"></span><button type="button" class="cm-route-x">Effacer</button></div>' +
-    '<div class="cm-key">Glisser · molette : déplacer / zoomer · C : me recentrer · M ou Échap : fermer<br>' +
-    '<b>🎮</b> stick G déplacer · RT/LT zoom · A recentrer · B fermer</div>';
+    '<div class="cm-hint-t">Glisse pour déplacer · pince pour zoomer</div>' +
+    '<div class="cm-key"><span class="cm-key-kb">Glisser · molette : déplacer / zoomer · C : me recentrer · M ou Échap : fermer<br></span>' +
+    '<span class="cm-key-pad"><b>🎮</b> stick G déplacer · RT/LT zoom · A recentrer · B fermer</span></div>';
   const closeBtn = document.createElement('button'); closeBtn.className = 'cm-close'; closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', 'Réduire la carte'); closeBtn.textContent = '×'; ui.appendChild(closeBtn);
   const tools = document.createElement('div'); tools.className = 'cm-tools';
@@ -72,6 +75,16 @@ function init() {
   const bIn = mkTool('+', 'Zoom avant'), bOut = mkTool('−', 'Zoom arrière'), bMe = mkTool('⌖', 'Me recentrer');
   ui.appendChild(tools);
   box.appendChild(ui);
+  const tgPlaces = ui.querySelector('.cm-tg-places'), tgLeg = ui.querySelector('.cm-tg-leg');
+  // mode compact (téléphone / tablette / écran court) : la carte prend tout l'écran utile, panneaux repliables autour
+  const mqCompact = window.matchMedia ? window.matchMedia('(max-height: 520px), (pointer: coarse)') : { matches: false };
+  const compact = () => mqCompact.matches;
+  const setPanel = (cls, btn, on) => { box.classList.toggle(cls, on); btn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+  const closePanels = () => { setPanel('pl-open', tgPlaces, false); setPanel('leg-open', tgLeg, false); };
+  tgPlaces.addEventListener('click', (e) => { e.stopPropagation(); setPanel('pl-open', tgPlaces, !box.classList.contains('pl-open')); setPanel('leg-open', tgLeg, false); });
+  tgLeg.addEventListener('click', (e) => { e.stopPropagation(); setPanel('leg-open', tgLeg, !box.classList.contains('leg-open')); setPanel('pl-open', tgPlaces, false); });
+  let hasPad = false;
+  const syncPad = () => { const GP = window.GamepadKit, v = !!(GP && GP.connected && GP.connected()); if (v !== hasPad) { hasPad = v; box.classList.toggle('has-pad', v); } };
   document.body.append(backdrop, box);
   document.body.classList.add('has-citymap');
 
@@ -120,12 +133,20 @@ function init() {
     if (!sel.route) return false;
     let a = 1e9, b = -1e9, c = 1e9, d = -1e9;
     for (const q of sel.route.pts) { a = Math.min(a, q[0]); b = Math.max(b, q[0]); c = Math.min(c, q[1]); d = Math.max(d, q[1]); }
-    view.ce = (a + b) / 2; view.cn = (c + d) / 2; view.half = Math.max(160, Math.max(b - a, d - c) * 0.62 + 60); clampView();
+    // cadre l'itinéraire dans la zone VISIBLE (hors barre du haut, boutons, fiche d'itinéraire en mode compact)
+    const ins = insets(), cw = cv.clientWidth || 1, ch = cv.clientHeight || 1, S = Math.min(cw, ch);
+    const wv = Math.max(60, cw - ins.L - ins.R), hv = Math.max(60, ch - ins.T - ins.B);
+    const hE = ((b - a) * 0.62 + 60) * S / wv, hN = ((d - c) * 0.62 + 60) * S / hv;
+    view.half = Math.max(160, hE, hN);
+    const mpp = 2 * view.half / S;
+    view.ce = (a + b) / 2 - (ins.L - ins.R) / 2 * mpp; view.cn = (c + d) / 2 + (ins.T - ins.B) / 2 * mpp;
+    clampView();
     return true;
   }
   function selectPlace(id, fit = true) {
     if (id === sel.id) { clearRoute(); return; }                   // second clic : retire l'itinéraire
     sel.id = id; sel.route = null; sel.from = null;
+    if (compact()) closePanels();                                  // le tiroir ne masque pas l'itinéraire
     recomputeRoute(true);
     if (fit) fitRoute();                                           // cadre l'itinéraire dans la grande carte
     markPlacesActive(); draw(true);
@@ -163,18 +184,28 @@ function init() {
   for (const t of ['pointerdown', 'pointermove']) ui.addEventListener(t, (e) => { if (e.target.closest('.cm-places, .cm-route')) e.stopPropagation(); });
 
   /* ---------- vue ---------- */
+  // `view.half` = demi-côté (m réels) de la plus PETITE dimension du cadre ; la grande carte compacte est rectangulaire
+  const asp = () => { const w = cv.width || 1, h = cv.height || 1, m = Math.min(w, h); return { x: w / m, y: h / m }; };
+  /** marges (px CSS) occupées par l'interface autour de la carte, mesurées dans le DOM (mode compact seulement) */
+  function insets() {
+    if (!open || !compact()) return { L: 0, R: 0, T: 0, B: 0 };
+    const cr = cv.getBoundingClientRect(), tr = tools.getBoundingClientRect(), bar = ui.querySelector('.cm-topbar').getBoundingClientRect();
+    const rt = barEl.classList.contains('on') ? barEl.getBoundingClientRect() : null;
+    return { L: 8, R: Math.max(0, cr.right - tr.left) + 6, T: Math.max(0, bar.bottom - cr.top) + 6, B: rt ? Math.max(0, cr.bottom - rt.top) + 6 : 8 };
+  }
   function clampView() {
-    view.half = Math.max(MIN_HALF, Math.min(HALF, view.half));
-    const lim = HALF - view.half;
-    view.ce = Math.max(-lim, Math.min(lim, view.ce));
-    view.cn = Math.max(-lim, Math.min(lim, view.cn));
+    const A = asp();
+    view.half = Math.max(MIN_HALF, Math.min(HALF / Math.max(A.x, A.y), view.half));
+    const limE = Math.max(0, HALF - view.half * A.x), limN = Math.max(0, HALF - view.half * A.y);
+    view.ce = Math.max(-limE, Math.min(limE, view.ce));
+    view.cn = Math.max(-limN, Math.min(limN, view.cn));
   }
   /** zoom d'un facteur f (<1 = avant) en gardant fixe le point (u, v) de l'écran (0..1) */
   function zoomAt(f, u = 0.5, v = 0.5) {
-    const h0 = view.half;
-    const we = view.ce + (u - 0.5) * 2 * h0, wn = view.cn - (v - 0.5) * 2 * h0;
-    view.half = Math.max(MIN_HALF, Math.min(HALF, h0 * f));
-    view.ce = we - (u - 0.5) * 2 * view.half; view.cn = wn + (v - 0.5) * 2 * view.half;
+    const A = asp(), h0 = view.half;
+    const we = view.ce + (u - 0.5) * 2 * h0 * A.x, wn = view.cn - (v - 0.5) * 2 * h0 * A.y;
+    view.half = Math.max(MIN_HALF, Math.min(HALF / Math.max(A.x, A.y), h0 * f));
+    view.ce = we - (u - 0.5) * 2 * view.half * A.x; view.cn = wn + (v - 0.5) * 2 * view.half * A.y;
     clampView();
   }
   function recenter(half) {
@@ -191,6 +222,7 @@ function init() {
     backdrop.classList.toggle('is-on', open);
     box.setAttribute('aria-label', open ? 'Carte de Djenné' : 'Carte de Djenné — cliquer pour agrandir');
     held.clear();
+    if (open) { closePanels(); syncPad(); resizeCanvas(); }        // le canvas prend sa taille (plein cadre en compact) avant le calcul de la vue
     if (open) {
       try { document.exitPointerLock?.(); } catch (_) {}
       buildPlacesList(); loadRouter();
@@ -218,30 +250,40 @@ function init() {
   bMe.addEventListener('click', (e) => { e.stopPropagation(); recenter(); });
 
   /* ---------- souris / tactile sur la grande carte ---------- */
-  const ptrs = new Map(); let drag = null, pinch = null;
+  const ptrs = new Map(); let drag = null, pinch = null, multi = false, lastTap = null, dblAt = 0;
   const rect = () => cv.getBoundingClientRect();
+  const mpp0 = () => { const r = rect(); return (2 * view.half) / Math.min(r.width, r.height); };   // mètres par pixel écran
+  const midOf = () => { const [a, b] = [...ptrs.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1 }; };
   cv.addEventListener('pointerdown', (e) => {
     if (!open) return;
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, ce: view.ce, cn: view.cn };
-    else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, half: view.half }; drag = null; }
+    if (ptrs.size === 1) { drag = { x: e.clientX, y: e.clientY, ce: view.ce, cn: view.cn }; multi = false; }
+    else if (ptrs.size === 2) { pinch = midOf(); drag = null; multi = true; }
     cv.classList.add('is-drag');
   });
   cv.addEventListener('pointermove', (e) => {
     if (!open || !ptrs.has(e.pointerId)) return;
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pinch && ptrs.size >= 2) {
-      const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-      view.half = pinch.half * pinch.d / d; clampView();
+    if (pinch && ptrs.size >= 2) {                                 // pincement : zoom autour du milieu des deux doigts + déplacement
+      const m = midOf(), r = rect();
+      view.ce -= (m.x - pinch.x) * mpp0(); view.cn += (m.y - pinch.y) * mpp0();
+      zoomAt(pinch.d / m.d, (m.x - r.left) / r.width, (m.y - r.top) / r.height);
+      pinch = m;
     } else if (drag) {
-      const r = rect(), mpp = (2 * view.half) / r.width;          // mètres par pixel écran
-      view.ce = drag.ce - (e.clientX - drag.x) * mpp; view.cn = drag.cn + (e.clientY - drag.y) * mpp; clampView();
+      const k = mpp0();
+      view.ce = drag.ce - (e.clientX - drag.x) * k; view.cn = drag.cn + (e.clientY - drag.y) * k; clampView();
     }
   });
   const endPtr = (e) => {
-    if (e.type === 'pointerup' && drag && ptrs.size === 1 && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6 && !pinch) {
-      const r = rect(), sc = cv.width / r.width, px = (e.clientX - r.left) * sc, py = (e.clientY - r.top) * sc;
+    if (e.type === 'pointerup' && drag && ptrs.size === 1 && !multi && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) {
+      const r = rect(), sc = cv.width / r.width, px = (e.clientX - r.left) * sc, py = (e.clientY - r.top) * sc, now = performance.now();
+      if (e.pointerType === 'touch' && lastTap && now - lastTap.t < 450 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
+        lastTap = null; dblAt = now;                               // double tape : zoom avant, sans (dé)sélectionner de lieu
+        ptrs.delete(e.pointerId); drag = null; cv.classList.remove('is-drag');
+        zoomAt(0.5, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); return;
+      }
+      lastTap = { t: now, x: e.clientX, y: e.clientY };
       let best = null, bd = 1e9;
       for (const h of hits) { const d = Math.hypot(h.x - px, h.y - py); if (d < h.r * 1.5 && d < bd) { bd = d; best = h; } }
       if (best) { ptrs.delete(e.pointerId); drag = null; cv.classList.remove('is-drag'); selectPlace(best.id, false); return; }
@@ -249,7 +291,7 @@ function init() {
     ptrs.delete(e.pointerId);
     if (ptrs.size < 2) pinch = null;
     if (ptrs.size === 1) { const [p] = [...ptrs.values()]; drag = { x: p.x, y: p.y, ce: view.ce, cn: view.cn }; }
-    if (ptrs.size === 0) { drag = null; cv.classList.remove('is-drag'); }
+    if (ptrs.size === 0) { drag = null; multi = false; cv.classList.remove('is-drag'); }
   };
   cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
   box.addEventListener('wheel', (e) => {
@@ -261,7 +303,7 @@ function init() {
     zoomAt(Math.exp(Math.max(-300, Math.min(300, dy)) * 0.0016), u, v);
   }, { passive: false });
   cv.addEventListener('dblclick', (e) => {
-    if (!open) return;
+    if (!open || performance.now() - dblAt < 700) return;          // déjà géré par la double tape tactile
     const r = rect(); zoomAt(0.5, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
   });
 
@@ -288,11 +330,12 @@ function init() {
   /* ---------- dessin ---------- */
   function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const css = open ? Math.min(window.innerWidth * 0.99, window.innerHeight * 0.98) : box.clientWidth || 168;
-    const px = Math.max(96, Math.round(css * dpr));
-    if (cv.width !== px) { cv.width = px; cv.height = px; }
+    let w, h;
+    if (open && compact()) { w = Math.max(96, Math.round((cv.clientWidth || window.innerWidth) * dpr)); h = Math.max(96, Math.round((cv.clientHeight || window.innerHeight) * dpr)); }
+    else { const css = open ? Math.min(window.innerWidth * 0.99, window.innerHeight * 0.98) : box.clientWidth || 168; w = h = Math.max(96, Math.round(css * dpr)); }
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   }
-  window.addEventListener('resize', () => { resizeCanvas(); draw(true); });
+  window.addEventListener('resize', () => { resizeCanvas(); if (open) clampView(); draw(true); });
 
   function playerReal() {
     const p = M.camera.position, r = gameToReal(p.x, p.z);
@@ -309,31 +352,41 @@ function init() {
   function draw(force) {
     if (!imgReady) return;
     resizeCanvas();
-    const S = cv.width;
+    const W = cv.width, H = cv.height, S = Math.min(W, H);           // S = unité d'échelle (plus petite dimension)
+    const cp = open && compact(), dp = Math.min(window.devicePixelRatio || 1, 2), fl = (css) => (cp ? css * dp : 0);   // planchers lisibles (px CSS) en mode compact
+    const ins = cp ? insets() : null, vis = cp
+      ? { x0: ins.L * dp + 10 * dp, y0: ins.T * dp + 10 * dp, x1: W - ins.R * dp - 4 * dp, y1: H - ins.B * dp }
+      : { x0: S * 0.06, y0: S * 0.06, x1: S * 0.94, y1: S * 0.94 };   // zone où se posent les repères de bord
+    // point du bord de la zone visible dans la direction `ang`, replié de `m` px vers l'intérieur
+    const edgePt = (ang, m = 0) => {
+      const cx = (vis.x0 + vis.x1) / 2, cy = (vis.y0 + vis.y1) / 2, hw = (vis.x1 - vis.x0) / 2 - m, hh = (vis.y1 - vis.y0) / 2 - m;
+      const c = Math.cos(ang), sn = Math.sin(ang), t = Math.min(Math.abs(c) > 1e-6 ? hw / Math.abs(c) : 1e9, Math.abs(sn) > 1e-6 ? hh / Math.abs(sn) : 1e9);
+      return [cx + c * t, cy + sn * t, cx, cy];
+    };
     const pl = playerReal();
     const half = open ? view.half : MINI_HALF;
+    const hx = half * W / S, hy = half * H / S;                      // demi-étendues (m) horizontale et verticale
     let ce = open ? view.ce : pl.e, cn = open ? view.cn : pl.n;
-    const lim = HALF - half; ce = Math.max(-lim, Math.min(lim, ce)); cn = Math.max(-lim, Math.min(lim, cn));
-    const key = `${open}|${S}|${ce.toFixed(1)}|${cn.toFixed(1)}|${half.toFixed(1)}|${pl.e.toFixed(1)}|${pl.n.toFixed(1)}|${pl.heading.toFixed(2)}`;
+    const limE = Math.max(0, HALF - hx), limN = Math.max(0, HALF - hy); ce = Math.max(-limE, Math.min(limE, ce)); cn = Math.max(-limN, Math.min(limN, cn));
+    const key = `${open}|${W}x${H}|${ce.toFixed(1)}|${cn.toFixed(1)}|${half.toFixed(1)}|${pl.e.toFixed(1)}|${pl.n.toFixed(1)}|${pl.heading.toFixed(2)}`;
     if (!force && key === lastKey && !(sel.id && sel.route)) return;
     lastKey = key;
     if (sel.id) recomputeRoute(false);
     hits = [];
 
-    const srcHalfPx = half * PPM;
-    const sx = IMG / 2 + ce * PPM - srcHalfPx, sy = IMG / 2 - cn * PPM - srcHalfPx;
-    ctx.clearRect(0, 0, S, S);
+    const sx = IMG / 2 + ce * PPM - hx * PPM, sy = IMG / 2 - cn * PPM - hy * PPM;
+    ctx.clearRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, sx, sy, srcHalfPx * 2, srcHalfPx * 2, 0, 0, S, S);
-    const toC = (e, n) => [((e - ce) / (2 * half) + 0.5) * S, (0.5 - (n - cn) / (2 * half)) * S];
+    ctx.drawImage(img, sx, sy, hx * PPM * 2, hy * PPM * 2, 0, 0, W, H);
+    const toC = (e, n) => [((e - ce) / (2 * hx) + 0.5) * W, (0.5 - (n - cn) / (2 * hy)) * H];
 
     // itinéraire vers le lieu choisi : liseré sombre + trait doré animé
     if (sel.id && sel.route && sel.route.pts.length > 1) {
       ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       const path = () => { ctx.beginPath(); sel.route.pts.forEach((q, i) => { const [x, y] = toC(q[0], q[1]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); };
-      ctx.strokeStyle = 'rgba(40,28,48,.92)'; ctx.lineWidth = Math.max(5, S * (open ? 0.0105 : 0.022)); path(); ctx.stroke();
-      ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = Math.max(3, S * (open ? 0.0062 : 0.013));
-      ctx.setLineDash([S * 0.02, S * 0.012]); ctx.lineDashOffset = -(performance.now() / 40) % 1000; path(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(40,28,48,.92)'; ctx.lineWidth = Math.max(5, fl(7), S * (open ? 0.0105 : 0.022)); path(); ctx.stroke();
+      ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = Math.max(3, fl(4), S * (open ? 0.0062 : 0.013));
+      ctx.setLineDash([Math.max(S * 0.02, fl(10)), Math.max(S * 0.012, fl(6))]); ctx.lineDashOffset = -(performance.now() / 40) % 1000; path(); ctx.stroke();
       ctx.restore();
     }
 
@@ -345,19 +398,20 @@ function init() {
     ctx.beginPath(); ctx.rect(mx - rs, my - rs, rs * 2, rs * 2); ctx.fill(); ctx.stroke();
     ctx.restore();
     if (open) {
-      const fs = Math.round(S * 0.021);
+      const fs = Math.max(Math.round(S * 0.021), fl(12));
       ctx.save(); ctx.font = `700 ${fs}px Rajdhani, sans-serif`; ctx.textAlign = 'center';
       ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(40,28,48,.9)'; ctx.fillStyle = '#ffe9b0';
       ctx.strokeText('Grande Mosquée', mx, my - rs - S * 0.012); ctx.fillText('Grande Mosquée', mx, my - rs - S * 0.012);
       // échelle : longueur « ronde » qui tient dans ~22 % de la largeur
-      const bar = niceBar(half * 2 * 0.22), barLen = bar / (2 * half) * S, bx = S - barLen - S * 0.04, by = S - S * 0.045;
+      const bar = niceBar(hx * 2 * 0.22), barLen = bar / (2 * hx) * W, bx = (cp ? vis.x1 - fl(10) : W - S * 0.04) - barLen, by = cp ? vis.y1 - fl(10) : H - S * 0.045;
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(40,28,48,.9)'; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + barLen, by); ctx.stroke();
       ctx.lineWidth = 2.5; ctx.strokeStyle = '#ffe9b0'; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + barLen, by); ctx.stroke();
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(40,28,48,.9)'; ctx.fillStyle = '#ffe9b0';
       const lbl = bar >= 1000 ? (bar / 1000) + ' km' : bar + ' m';
-      ctx.strokeText(lbl, bx + barLen / 2, by - S * 0.012); ctx.fillText(lbl, bx + barLen / 2, by - S * 0.012);
-      ctx.font = `700 ${Math.round(S * 0.03)}px Rajdhani, sans-serif`;
-      ctx.strokeText('N ↑', S - S * 0.07, S * 0.11); ctx.fillText('N ↑', S - S * 0.07, S * 0.11);
+      ctx.strokeText(lbl, bx + barLen / 2, by - Math.max(S * 0.012, fl(5))); ctx.fillText(lbl, bx + barLen / 2, by - Math.max(S * 0.012, fl(5)));
+      ctx.font = `700 ${Math.max(Math.round(S * 0.03), fl(15))}px Rajdhani, sans-serif`;
+      const nx = cp ? vis.x1 - fl(24) : W - S * 0.07, ny = cp ? vis.y0 + fl(12) : S * 0.11;
+      ctx.strokeText('N ↑', nx, ny); ctx.fillText('N ↑', nx, ny);
       ctx.restore();
     }
 
@@ -365,22 +419,24 @@ function init() {
     const nb = window.NeantisBase;
     if (nb && nb.loaded) {
       const r = gameToReal(nb.center.x, nb.center.z), [bx, by] = toC(r.e, r.n);
-      const sz = open ? Math.max(S * 0.03, 14) : Math.max(S * 0.07, 11);
-      if (bx > -sz && bx < S + sz && by > -sz && by < S + sz) {
+      const sz = open ? Math.max(S * 0.03, 14, fl(11)) : Math.max(S * 0.07, 11);
+      if (bx > -sz && bx < W + sz && by > -sz && by < H + sz) {
         ctx.save(); ctx.translate(bx, by);
         ctx.fillStyle = '#10131c'; ctx.strokeStyle = '#37a3ff'; ctx.lineWidth = Math.max(2, S * 0.005);
         ctx.beginPath(); ctx.roundRect(-sz, -sz, sz * 2, sz * 2, sz * 0.3); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#5db8ff'; ctx.font = `800 ${Math.round(sz * 1.5)}px Rajdhani, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('N', 0, sz * 0.06);
         if (open) {
-          ctx.textBaseline = 'alphabetic'; ctx.font = `700 ${Math.round(S * 0.02)}px Rajdhani, sans-serif`;
+          ctx.textBaseline = 'alphabetic'; ctx.font = `700 ${Math.max(Math.round(S * 0.02), fl(12))}px Rajdhani, sans-serif`;
           ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(16,19,28,.95)'; ctx.fillStyle = '#9fd4ff';
           ctx.strokeText('Zone NÉANTIS', 0, sz + S * 0.024); ctx.fillText('Zone NÉANTIS', 0, sz + S * 0.024);
         }
         ctx.restore();
       } else {                                                      // base hors vue : repère sur le bord + distance
-        const ang = Math.atan2(by - S / 2, bx - S / 2), R = open ? S * 0.44 : S * 0.39, k = open ? S * 0.03 : S * 0.07;
-        const ex = S / 2 + Math.cos(ang) * R, ey = S / 2 + Math.sin(ang) * R;
+        const k = open ? Math.max(S * 0.03, fl(11)) : S * 0.07;
+        let ex, ey, ang;
+        if (open) { const c0 = edgePt(0, 0); ang = Math.atan2(by - c0[3], bx - c0[2]); [ex, ey] = edgePt(ang, k * 2.2); }
+        else { ang = Math.atan2(by - H / 2, bx - W / 2); ex = W / 2 + Math.cos(ang) * S * 0.39; ey = H / 2 + Math.sin(ang) * S * 0.39; }
         ctx.save(); ctx.translate(ex, ey);
         ctx.save(); ctx.rotate(ang);                                // pointe vers la base
         ctx.fillStyle = '#37a3ff'; ctx.strokeStyle = '#10131c'; ctx.lineWidth = Math.max(2, S * 0.004);
@@ -392,10 +448,10 @@ function init() {
         ctx.fillText('N', 0, k * 0.06);
         if (open) {
           const dm = Math.round(Math.hypot(r.e - pl.e, r.n - pl.n) / 10) * 10;
-          ctx.textBaseline = 'alphabetic'; ctx.font = `700 ${Math.round(S * 0.02)}px Rajdhani, sans-serif`;
+          ctx.textBaseline = 'alphabetic'; ctx.font = `700 ${Math.max(Math.round(S * 0.02), fl(12))}px Rajdhani, sans-serif`;
           ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(16,19,28,.95)'; ctx.fillStyle = '#9fd4ff';
           const txt = 'NÉANTIS · ' + (dm >= 1000 ? (dm / 1000).toFixed(1) + ' km' : dm + ' m');
-          const ty = ey > S / 2 ? -k - S * 0.012 : k + S * 0.026;
+          const ty = ey > H / 2 ? -k - S * 0.012 : k + Math.max(S * 0.026, fl(14));
           ctx.strokeText(txt, 0, ty); ctx.fillText(txt, 0, ty);
         }
         ctx.restore();
@@ -404,11 +460,11 @@ function init() {
 
     // lieux célèbres : pastilles cliquables (grande carte) ; le lieu choisi est mis en avant, sinon repère sur le bord
     if (open) {
-      const fs2 = Math.round(S * 0.019), rr = Math.max(S * 0.013, 8);
+      const fs2 = Math.max(Math.round(S * 0.019), fl(12)), rr = Math.max(S * 0.013, 8, fl(7));
       for (const p of places()) {
         if (p.id === 'mosquee') { const [x, y] = toC(0, 0); hits.push({ id: p.id, x, y, r: Math.max(rs, rr) }); continue; }
-        const [x, y] = toC(p.e, p.n), on = p.id === sel.id, inside = x > -rr && x < S + rr && y > -rr && y < S + rr;
-        if (p.id === 'neantis') { if (inside) hits.push({ id: p.id, x, y, r: Math.max(S * 0.03, 14) }); }
+        const [x, y] = toC(p.e, p.n), on = p.id === sel.id, inside = x > -rr && x < W + rr && y > -rr && y < H + rr;
+        if (p.id === 'neantis') { if (inside) hits.push({ id: p.id, x, y, r: Math.max(S * 0.03, 14, fl(16)) }); }
         else if (inside) {
           ctx.save(); ctx.translate(x, y);
           ctx.fillStyle = on ? '#ffd34d' : '#fff3c9'; ctx.strokeStyle = '#3a2a46'; ctx.lineWidth = Math.max(2, S * 0.004);
@@ -417,11 +473,11 @@ function init() {
           ctx.font = `700 ${fs2}px Rajdhani, sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(40,28,48,.92)'; ctx.fillStyle = on ? '#ffe9a0' : '#fff3c9';
           ctx.strokeText(p.short, 0, rr * 2.3); ctx.fillText(p.short, 0, rr * 2.3);
           ctx.restore();
-          hits.push({ id: p.id, x, y, r: rr * 1.6 });
+          hits.push({ id: p.id, x, y, r: Math.max(rr * 1.6, fl(15)) });
         }
         if (on && !inside) {                                       // lieu choisi hors de la vue : flèche au bord
-          const ang = Math.atan2(y - S / 2, x - S / 2), R = S * 0.45, k = S * 0.022;
-          ctx.save(); ctx.translate(S / 2 + Math.cos(ang) * R, S / 2 + Math.sin(ang) * R); ctx.rotate(ang);
+          const k = Math.max(S * 0.022, fl(9)), c0 = edgePt(0, 0), ang = Math.atan2(y - c0[3], x - c0[2]), ep = edgePt(ang, k * 1.8);
+          ctx.save(); ctx.translate(ep[0], ep[1]); ctx.rotate(ang);
           ctx.fillStyle = '#ffd34d'; ctx.strokeStyle = '#3a2a46'; ctx.lineWidth = 3;
           ctx.beginPath(); ctx.moveTo(k * 1.6, 0); ctx.lineTo(-k, -k * 0.9); ctx.lineTo(-k * 0.4, 0); ctx.lineTo(-k, k * 0.9); ctx.closePath(); ctx.stroke(); ctx.fill();
           ctx.rotate(-ang); ctx.font = `700 ${fs2}px Rajdhani, sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(40,28,48,.92)'; ctx.fillStyle = '#ffe9a0';
@@ -433,18 +489,18 @@ function init() {
 
     // joueur : flèche orientée selon la caméra (si dans la vue)
     const [px, py] = toC(pl.e, pl.n);
-    if (px > -40 && px < S + 40 && py > -40 && py < S + 40) {
-      const a = open ? Math.max(S * 0.02, 10) : Math.max(S * 0.035, 9);
+    if (px > -40 && px < W + 40 && py > -40 && py < H + 40) {
+      const a = open ? Math.max(S * 0.02, 10, fl(9)) : Math.max(S * 0.035, 9);
       ctx.save(); ctx.translate(px, py); ctx.rotate(pl.heading);
       ctx.lineWidth = Math.max(2, S * 0.006); ctx.strokeStyle = '#3a2a46'; ctx.fillStyle = '#f4cf5a';
       ctx.beginPath(); ctx.moveTo(0, -a * 1.15); ctx.lineTo(a * 0.78, a * 0.85); ctx.lineTo(0, a * 0.4); ctx.lineTo(-a * 0.78, a * 0.85); ctx.closePath();
       ctx.stroke(); ctx.fill();
       ctx.restore();
     } else if (open) {                                              // joueur hors vue : repère sur le bord
-      const ang = Math.atan2(py - S / 2, px - S / 2), R = S * 0.46;
-      ctx.save(); ctx.translate(S / 2 + Math.cos(ang) * R, S / 2 + Math.sin(ang) * R); ctx.rotate(ang + Math.PI / 2);
+      const c0 = edgePt(0, 0), ang = Math.atan2(py - c0[3], px - c0[2]), ep = edgePt(ang, Math.max(S * 0.03, fl(14))), q = Math.max(S, fl(300));
+      ctx.save(); ctx.translate(ep[0], ep[1]); ctx.rotate(ang + Math.PI / 2);
       ctx.fillStyle = '#f4cf5a'; ctx.strokeStyle = '#3a2a46'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(0, -S * 0.025); ctx.lineTo(S * 0.02, S * 0.015); ctx.lineTo(-S * 0.02, S * 0.015); ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, -q * 0.025); ctx.lineTo(q * 0.02, q * 0.015); ctx.lineTo(-q * 0.02, q * 0.015); ctx.closePath(); ctx.stroke(); ctx.fill();
       ctx.restore();
     }
   }
@@ -452,6 +508,7 @@ function init() {
   /* ---------- manette / clavier tenu : appliqués à chaque image ---------- */
   function applyInputs(dt) {
     const GP = window.GamepadKit, raw = GP && GP.raw;
+    syncPad();
     let ex = 0, ny = 0, zf = 0;
     for (const k of held) { const d = PAN_KEYS[k]; if (d) { ex += d[0]; ny += d[1]; } }
     if (raw && GP.connected()) {

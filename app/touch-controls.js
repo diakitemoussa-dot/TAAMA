@@ -190,6 +190,7 @@ function releaseAll() {
   latched.clear();
   axes.mx = axes.my = axes.lx = axes.ly = axes.rx = axes.ry = 0; pushAxes();
   for (const s of stickState.values()) s.reset && s.reset();
+  activeBtnPointers = 0; lookPtr = null; lookLast = null;       // les doigts sont oubliés : sinon un doigt « fantôme » empêche pour toujours de redessiner les commandes
 }
 
 /* ---------- Axes (sticks) ---------- */
@@ -433,6 +434,7 @@ function placeClock(live) {
 }
 
 /* ---------- Boucle de surveillance (~8 Hz) ---------- */
+let lastForce = 0;
 function tick() {
   if (!root) return;
   const on = enabled();
@@ -445,6 +447,9 @@ function tick() {
     if (!target) { releaseAll(); renderedMode = null; render(); }
     else if (!activeBtnPointers && lookPtr === null) { releaseAll(); renderedMode = target; render(); }
   } else if (target && target !== renderedMode) maybeRerender();
+  if (shownMode && !editorOn && !field.querySelector('.tc-ctl') && !activeBtnPointers && performance.now() - lastForce > 1000) {   // visibles attendues mais rien dans le DOM (état coincé) : on redessine
+    lastForce = performance.now(); releaseAll(); renderedMode = shownMode; render();
+  }
   root.hidden = !shownMode && !por;
   field.hidden = !shownMode;
   rotateEl.hidden = !por;
