@@ -30,6 +30,9 @@ sources/blender/
 screenshots/
 test-*.png
 
+# Exception: images du jeu (intro, menus, Tapama)
+!assets/images/**
+
 # Exception: images utilisées dans les projets
 !projects/active/**/asset/image/**
 !shared/assets/**/

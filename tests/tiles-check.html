@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>test tuiles</title>
+<style>
+  html,body{margin:0;background:#111;color:#eee;font:12px/1.4 monospace}
+  #out{position:fixed;top:0;left:0;padding:8px;background:#000a;z-index:2;white-space:pre}
+  canvas{display:block}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "/node_modules/three/build/three.module.js",
+  "three/addons/": "/node_modules/three/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<pre id="out">init…</pre>
+<script type="module">
+/* Vérification fonctionnelle : charge TOUTES les tuiles (rayon infini) puis
+   contrôle le nombre de triangles, la boîte englobante et les nœuds clés. */
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { TileStreamer } from '../app/spatial-streaming.js';
+
+const out = document.getElementById('out');
+const log = (s) => { out.textContent += '\n' + s; console.log(s); };
+window.onerror = (e) => log('ERREUR: ' + e);
+window.addEventListener('unhandledrejection', (e) => log('PROMESSE REJETÉE: ' + (e.reason?.stack || e.reason)));
+
+const W = 900, H = 560;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9ec8e8);
+const camera = new THREE.PerspectiveCamera(52, W / H, 0.5, 4000);
+
+scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x8a7355, 2.2));
+const sun = new THREE.DirectionalLight(0xfff0d0, 2.2);
+sun.position.set(120, 180, 90);
+scene.add(sun);
+
+const draco = new DRACOLoader();
+draco.setDecoderPath('/node_modules/three/examples/jsm/libs/draco/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+
+const t0 = performance.now();
+const streamer = new TileStreamer({
+  scene, camera, loader, renderer,
+  indexUrl: '../assets/models/tiles/index.json',
+  loadRadius: 1e9, unloadRadius: 1e12, nearRadius: 1e9,
+  maxConcurrent: 6, hud: false,
+});
+
+try {
+  const { root, animations } = await streamer.init();
+  log('index + cœur OK en ' + Math.round(performance.now() - t0) + ' ms — anims : ' + animations.length);
+
+  for (let i = 0; i < 200; i++) {
+    streamer.update(1);
+    const s = streamer.stats();
+    if (s.loaded + s.errors >= s.total) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  const s = streamer.stats();
+  log(`tuiles ${s.loaded}/${s.total} (erreurs ${s.errors}) — ${(s.bytes / 1048576).toFixed(2)} Mo — ${s.tris.toLocaleString('fr-FR')} tris`);
+  log('non chargées : ' + (streamer.tiles.filter((t) => t.state !== 'loaded').map((t) => `${t.id}[${t.state}]`).join(', ') || 'aucune'));
+
+  // statistiques de la scène
+  let meshes = 0, tris = 0;
+  const box = new THREE.Box3();
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    meshes++;
+    const g = o.geometry;
+    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    box.expandByObject(o);
+  });
+  log(`scène : ${meshes} meshes, ${Math.round(tris).toLocaleString('fr-FR')} tris, bbox [${box.min.toArray().map((v) => v.toFixed(0))}] → [${box.max.toArray().map((v) => v.toFixed(0))}]`);
+
+  // nœuds clés (les noms sont assainis par GLTFLoader : Sphere.001 → Sphere001)
+  for (const re of [/Mosquee_Base/, /Minarets/, /Porte_Principale/, /Poteaux/, /Torons_Externes/, /Canaris/, /Sphere/i, /Cloud/i]) {
+    let found = false;
+    root.traverse((o) => { if (re.test(o.name)) found = true; });
+    log(`  ${re.source} : ${found ? 'OK' : 'MANQUANT'}`);
+  }
+
+  // caméra = vue d'ouverture du jeu
+  const mosq = root.getObjectByName('Mosquee_Base') || root;
+  const mb = new THREE.Box3().setFromObject(mosq);
+  const center = mb.getCenter(new THREE.Vector3());
+  camera.position.set(-89.087, 81.493, 239.01);
+  camera.lookAt(center.x, center.y + 10, center.z);
+
+  renderer.render(scene, camera);
+  renderer.render(scene, camera);
+  const info = renderer.info.render;
+  log(`rendu : ${info.triangles.toLocaleString('fr-FR')} tris dessinés, ${info.calls} draw calls`);
+  log('\nOK');
+  document.title = 'OK';
+} catch (e) {
+  log('ÉCHEC : ' + (e?.stack || e));
+  document.title = 'FAIL';
+}
+window.__done = true;
+</script>
+</body>
+</html>

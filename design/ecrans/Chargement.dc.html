@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Écran de chargement</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.card{border-radius:24px;border:1px solid rgba(248,243,234,.45);background:rgba(248,243,234,.12)}
+.step{display:flex;align-items:center;gap:14px;height:44px;padding:0 16px;border-radius:14px;font-size:16px}
+</style>
+</helmet>
+<div style="position:relative;width:1440px;height:810px;overflow:hidden;background:#55415D;font-family:'Open Sans',system-ui,sans-serif;color:#F8F3EA">
+
+<img src="/_blob/ead7075047fea84b5a3e1bd4523adc9d" alt="" style="position:absolute;left:-40px;top:-40px;width:1520px;height:890px;object-fit:cover;filter:blur(16px)">
+<div style="position:absolute;left:0;top:0;width:1440px;height:810px;background:rgba(85,65,93,.82)"></div>
+
+<div style="position:absolute;left:96px;top:72px;display:flex;align-items:center;gap:14px">
+<svg width="40" height="40" viewBox="0 0 44 44" fill="none" stroke="#F9D58B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="22" cy="22" r="18"/><polygon points="22,8 27,22 22,36 17,22"/><circle cx="22" cy="22" r="2.5" fill="#F9D58B"/></svg>
+<div style="font-family:'Rubik',sans-serif;font-weight:800;font-size:30px;letter-spacing:.08em">TAAMA</div>
+</div>
+
+<section aria-label="Progression" style="position:absolute;left:96px;right:96px;bottom:56px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+<span style="font-size:18px;font-weight:600">Chargement de la maquette de Djenné…</span>
+<span style="font-family:'Rubik',sans-serif;font-weight:800;font-size:30px;color:#F9D58B">62 %</span>
+</div>
+<div style="height:14px;border-radius:7px;background:rgba(248,243,234,.25);overflow:hidden"><div style="width:62%;height:100%;border-radius:7px;background:#F9D58B"></div></div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":810}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

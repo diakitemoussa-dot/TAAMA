@@ -33,15 +33,9 @@ root.innerHTML = `
       </header>
 
       <div class="gm-grid">
-        <button type="button" class="gm-card gm-card--missions" id="gmMissions">
-          <span class="gm-ico" aria-hidden="true">🎯</span>
-          <span class="gm-card-txt"><b>MISSIONS</b><i id="gmMissionsInfo">…</i></span>
-          <span class="gm-badge" id="gmMissionsBadge">⛁ 0</span>
-        </button>
-
         <button type="button" class="gm-card" id="gmFree">
           <span class="gm-ico" aria-hidden="true">🕊️</span>
-          <span class="gm-card-txt"><b>EXPLORATION LIBRE</b><i>Drone, sanctuaire et AR — à ton rythme</i></span>
+          <span class="gm-card-txt"><b>EXPLORATION LIBRE</b><i>Ferme le menu et explore la maquette</i></span>
         </button>
 
         <button type="button" class="gm-card" id="gmModels">
@@ -49,9 +43,9 @@ root.innerHTML = `
           <span class="gm-card-txt"><b>DRONE & MODÈLES</b><i id="gmModelsInfo">…</i></span>
         </button>
 
-        <button type="button" class="gm-card" id="gmCarnet">
-          <span class="gm-ico" aria-hidden="true">📜</span>
-          <span class="gm-card-txt"><b>CARNET DE MISSIONS</b><i id="gmCarnetInfo">…</i></span>
+        <button type="button" class="gm-card" id="gmTapama">
+          <span class="gm-ico" aria-hidden="true">📞</span>
+          <span class="gm-card-txt"><b>L'APPEL DE TAPAMA</b><i>Séquence 3 — la chercheuse te contacte</i></span>
         </button>
 
         <button type="button" class="gm-card gm-card--soon" id="gmPerson">
@@ -112,28 +106,6 @@ function gmToast(msg){
 /* ---------------- Sync des infos ---------------- */
 
 function sync(){
-  const r = window.Missions?.resumeInfo?.() || {
-    mode: null, current: null, banco: 0, stars: 0, maxStars: 15, doneCount: 0,
-  };
-
-  const infoEl  = document.getElementById('gmMissionsInfo');
-  const badgeEl = document.getElementById('gmMissionsBadge');
-  if (infoEl && badgeEl){
-    if (r.mode === 'missions' && r.current){
-      infoEl.textContent = `Reprendre : ${r.current.id} · ${r.current.title}`;
-    } else if (r.doneCount > 0 && !r.current){
-      infoEl.textContent = 'Chapitre 1 terminé — chapitres 2 à 4 en préparation';
-    } else {
-      infoEl.textContent = '5 missions · 4 chapitres — deviens Grand Gardien';
-    }
-    badgeEl.textContent = `⛁ ${r.banco} · ★ ${r.stars}/${r.maxStars}`;
-  }
-
-  const carnetInfo = document.getElementById('gmCarnetInfo');
-  if (carnetInfo){
-    carnetInfo.textContent = `⛁ ${r.banco} · ★ ${r.stars}/${r.maxStars} · ${r.doneCount}/5 missions accomplies`;
-  }
-
   selected = window.DroneGame?.getModel?.() || selected;
   syncModels();
 
@@ -170,7 +142,6 @@ function show(){
   menuEl.hidden = false;
   requestAnimationFrame(() => menuEl.classList.add('on'));
   window.MosqueScene?.setAutoRotate?.(true);
-  window.Missions?.setMenuOpen?.(true);
 }
 
 function hide(){
@@ -181,21 +152,14 @@ function hide(){
   menuEl.classList.remove('on');
   setTimeout(() => { menuEl.hidden = true; }, 520);
   window.MosqueScene?.setAutoRotate?.(false);
-  window.Missions?.setMenuOpen?.(false);
 }
 
 /* ---------------- Câblage ---------------- */
 
 document.getElementById('gmBackdrop')?.addEventListener('click', hide);
 
-document.getElementById('gmMissions')?.addEventListener('click', () => {
-  hide();
-  window.Missions?.startMissions?.();
-});
-
 document.getElementById('gmFree')?.addEventListener('click', () => {
   hide();
-  window.Missions?.startFree?.();
 });
 
 document.getElementById('gmModels')?.addEventListener('click', () => {
@@ -215,9 +179,11 @@ document.getElementById('gmModelsFly')?.addEventListener('click', () => {
   window.DroneGame?.enter?.();
 });
 
-document.getElementById('gmCarnet')?.addEventListener('click', () => {
+// Carnet supprimé (mode exploration libre)
+
+document.getElementById('gmTapama')?.addEventListener('click', () => {
   hide();
-  window.Missions?.openLog?.();
+  window.Tapama?.play('appel');
 });
 
 document.getElementById('gmPerson')?.addEventListener('click', () =>
@@ -236,7 +202,11 @@ function injectMenuButton(){
   b.className = 'mq-btn mq-btn--ghost';
   b.id = 'gmOpen';
   b.textContent = '⌂ MENU';
-  b.addEventListener('click', () => show());
+  // Nouvelle interface : ⌂ MENU ouvre la pause ; sinon l'ancien menu 360°
+  b.addEventListener('click', () => {
+    if (window.GameUI && window.GameUI.isInGame && window.GameUI.isInGame()) window.GameUI.openPause();
+    else show();
+  });
   wrap.appendChild(b);
 }
 injectMenuButton();

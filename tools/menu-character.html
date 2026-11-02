@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Personnage du menu — banc d'essai</title>
+<style>html,body{margin:0;background:transparent;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+/* Personnage du menu : GLB du joueur + drone arrimé sur le pad du sac (même méthode que le sanctuaire),
+   animation « idle_look » (long repos), plateau tournant autour de l'axe vertical (Z dans Blender, Y dans three.js).
+   Paramètres d'URL : angle (°), t (s dans l'animation), w, h. */
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+const q = new URLSearchParams(location.search);
+const W = Number(q.get('w')) || 900, H = Number(q.get('h')) || 1200;
+const ANGLE = (Number(q.get('angle')) || 0) * Math.PI / 180;
+const T = Number(q.get('t')) || 2;
+const CLIP = (q.get('clip') || 'idle_look').toLowerCase();
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(21, W / H, 0.1, 50);
+camera.position.set(0, 1.0, 5.6);
+camera.lookAt(0, 0.9, 0);
+
+// Lumière du couchant : clé chaude à gauche, remplissage froid à droite, contre-jour doux.
+scene.add(new THREE.HemisphereLight(0xffe2c0, 0x4a3350, 0.9));
+const key = new THREE.DirectionalLight(0xffc88a, 3.0);
+key.position.set(-3, 3.2, 3.5);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9ab4ff, 0.9);
+fill.position.set(3.5, 1.4, 2.0);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffe0b0, 2.0);
+rim.position.set(1.5, 2.5, -3.5);
+scene.add(rim);
+
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+
+const [player, drone] = await Promise.all([
+  load('../assets/models/personnage-joueur-gadget.glb'),
+  load('../assets/models/drone.glb'),
+]);
+
+const model = player.scene;
+model.updateMatrixWorld(true);
+const box = new THREE.Box3().setFromObject(model);
+const size = box.getSize(new THREE.Vector3());
+if (size.y > 0.01) model.scale.multiplyScalar(1.78 / size.y);
+model.updateMatrixWorld(true);
+box.setFromObject(model);
+model.position.y -= box.min.y;
+
+// Drone sur le pad du sac (mêmes constantes que sanctuary-mode.js).
+const dm = drone.scene;
+dm.rotation.set(0, 0, 0);
+dm.updateMatrixWorld(true);
+dm.position.sub(new THREE.Box3().setFromObject(dm).getCenter(new THREE.Vector3()));
+dm.traverse((o) => { if (/^PropDisc_HELICE_/i.test(o.name || '')) o.scale.setScalar(0.0001); });
+const dockGroup = new THREE.Group();
+dockGroup.add(dm);
+dockGroup.position.set(0, 0.0539, 0);
+dockGroup.scale.setScalar(0.19);
+const pad = model.getObjectByName('DroneLandingPad');
+if (pad) pad.add(dockGroup);
+
+model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+
+// Plateau tournant : le groupe pivote autour de l'axe vertical.
+const turntable = new THREE.Group();
+turntable.add(model);
+turntable.rotation.y = ANGLE;
+scene.add(turntable);
+
+const mixer = new THREE.AnimationMixer(model);
+const clip = player.animations.find((c) => String(c.name).trim().toLowerCase() === CLIP);
+if (clip) {
+  const action = mixer.clipAction(clip);
+  action.play();
+  mixer.setTime(T % clip.duration);
+}
+window.__info = {
+  clips: player.animations.map((c) => `${c.name} ${c.duration.toFixed(2)}s`),
+  clipFound: !!clip, padFound: !!pad, gadget: !!model.getObjectByName('Gadget_Nexus'),
+};
+renderer.render(scene, camera);
+window.__ready = true;
+</script>
+</body>
+</html>

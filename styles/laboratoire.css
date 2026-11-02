@@ -1,0 +1,366 @@
+/* ==========================================================
+   LABORATOIRE DE TAPAMA — décor SVG + énigmes + projection
+   Palette : brun/ocre/sable, jaune doré #F9D58B, violet de la charte
+   #55415D (comme les bulles de Tapama), accents bleu électrique #1E90FF.
+   z-index 8500 : sous les dialogues de Tapama (9000) qui s'affichent par-dessus.
+   ========================================================== */
+
+.lab-root{
+  --lab-gold: #F9D58B;
+  --lab-gold-d: #C9A24B;
+  --lab-violet: #55415D;
+  --lab-cream: #F8F3EA;
+  --lab-blue: #1E90FF;
+  --lab-ice: #9FD4FF;
+  --lab-ink: #1b1410;
+  position: fixed; inset: 0; z-index: 8500;
+  overflow: hidden;
+  background: #1b1410;
+  color: var(--lab-cream);
+  font-family: 'Open Sans', system-ui, sans-serif;
+  opacity: 0; transition: opacity .45s ease;
+}
+.lab-root.on{ opacity: 1; }
+.lab-root *{ box-sizing: border-box; }
+.lab-root [hidden]{ display: none !important; }
+.lab-root img{ user-select: none; -webkit-user-drag: none; }
+
+/* ---------- Scène (16:9, recadrée « cover ») ---------- */
+.lab-scene{
+  position: absolute; left: 50%; top: 50%;
+  width: max(100vw, 177.78vh); height: max(56.25vw, 100vh);
+  transform: translate(-50%, -50%);
+}
+.lab-svg{ position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: filter .8s ease; }
+.lab-root.is-dim .lab-svg, .lab-root.is-dim .lab-device{ filter: brightness(.34) saturate(.8); }
+.lab-root.is-dim .lab-top, .lab-root.is-dim .lab-visio-screen{ opacity: .5; transition: opacity .6s; }
+
+.lab-led{ transition: fill .4s, filter .4s; }
+.lab-led.on{ fill: #62e08a; stroke: #b9ffd0; filter: drop-shadow(0 0 6px #62e08a); }
+.lab-alc-ring{ animation: labRing 6s linear infinite; transform-origin: center; }
+@keyframes labRing{ to{ stroke-dashoffset: -110; } }
+
+/* alvéole cible (HTML, pour le glisser-déposer) */
+.lab-slot{
+  position: absolute; aspect-ratio: 1; transform: translate(-50%, -50%);
+  border-radius: 50%; pointer-events: none;
+  transition: box-shadow .25s, background .25s;
+}
+.lab-root.wants-device .lab-slot{
+  animation: labSlot 1.6s ease-in-out infinite;
+}
+@keyframes labSlot{
+  0%,100%{ box-shadow: 0 0 0 2px rgba(159,212,255,.25), 0 0 18px 2px rgba(30,144,255,.35); }
+  50%{ box-shadow: 0 0 0 4px rgba(159,212,255,.65), 0 0 46px 10px rgba(30,144,255,.7); }
+}
+.lab-slot.is-over{ background: radial-gradient(circle, rgba(159,212,255,.35), transparent 70%); animation: none; box-shadow: 0 0 0 4px #9fd4ff, 0 0 60px 14px rgba(30,144,255,.85); }
+
+/* dispositif */
+.lab-device{
+  position: absolute; aspect-ratio: 1; transform: translate(-50%, -50%);
+  cursor: grab; touch-action: none;
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,.55));
+  transition: filter .3s;
+  z-index: 3;
+}
+.lab-device svg{ width: 100%; height: 100%; display: block; }
+.lab-root.wants-device .lab-device:not(.is-fixed){ animation: labFloat 2.2s ease-in-out infinite; filter: drop-shadow(0 0 16px rgba(249,213,139,.8)) drop-shadow(0 8px 10px rgba(0,0,0,.5)); }
+.lab-device.is-drag{ cursor: grabbing; animation: none !important; transition: none; z-index: 6; }
+@keyframes labFloat{ 0%,100%{ translate: 0 0; } 50%{ translate: 0 -10px; } }
+.lab-device.is-placing{ transition: left .55s cubic-bezier(.3,1.4,.5,1), top .55s cubic-bezier(.3,1.4,.5,1), transform .55s; transform: translate(-50%, -50%) scale(.82); pointer-events: none; }
+.lab-device.is-seated{ transform: translate(-50%, -50%) scale(.82); pointer-events: none; filter: drop-shadow(0 0 14px rgba(30,144,255,.9)); }
+.lab-device.is-fixed{ transform: translate(-50%, -50%) scale(.82); pointer-events: none; filter: drop-shadow(0 0 14px rgba(30,144,255,.9)); }
+.lab-root.is-armed .lab-device.is-seated{ animation: labGlow 2.4s ease-in-out infinite; }
+@keyframes labGlow{ 0%,100%{ filter: drop-shadow(0 0 10px rgba(30,144,255,.7)); } 50%{ filter: drop-shadow(0 0 26px rgba(159,212,255,1)); } }
+
+/* ---------- En-tête ---------- */
+.lab-top{
+  position: absolute; left: 0; right: 0; top: 0;
+  display: flex; align-items: center; gap: 18px;
+  padding: 14px clamp(14px, 3vw, 40px);
+  background: linear-gradient(180deg, rgba(20,12,8,.72), rgba(20,12,8,0));
+  pointer-events: none;
+}
+.lab-top > *{ pointer-events: auto; }
+.lab-title{ display: flex; flex-direction: column; margin-right: auto; margin-left: min(30vw, 290px); }
+.lab-title b{ font-family: 'Rubik', sans-serif; font-size: 1.15rem; color: var(--lab-gold); letter-spacing: .03em; }
+.lab-kicker{
+  font-family: 'Rubik', sans-serif; font-size: .72rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--lab-gold);
+}
+.lab-locks{ display: flex; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.lab-lock{ color: #8a6a55; transition: color .4s; position: relative; }
+.lab-lock .shackle{ transform-origin: 18px 12px; transition: transform .45s cubic-bezier(.3,1.6,.5,1); }
+.lab-lock.is-open{ color: #62e08a; filter: drop-shadow(0 0 7px rgba(98,224,138,.7)); }
+.lab-lock.is-open .shackle{ transform: translateY(-4px) rotate(-38deg); }
+.lab-lock.pop{ animation: labPop .7s ease; }
+@keyframes labPop{ 0%{ transform: scale(1) rotate(0); } 25%{ transform: scale(1.5) rotate(-12deg); } 50%{ transform: scale(1.35) rotate(10deg); } 100%{ transform: scale(1) rotate(0); } }
+
+/* ---------- Boutons ---------- */
+.lab-btn{
+  font-family: 'Open Sans', system-ui, sans-serif; font-weight: 700; font-size: .92rem;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 44px; padding: 0 18px; border-radius: 14px; cursor: pointer;
+  color: var(--lab-cream); background: rgba(85,65,93,.82);
+  border: 1px solid rgba(248,243,234,.55);
+}
+.lab-btn:hover{ filter: brightness(1.14); }
+.lab-btn:focus-visible, .lab-key:focus-visible, .lab-answer input:focus-visible{ outline: 3px solid var(--lab-cream); outline-offset: 3px; }
+.lab-btn kbd, .lab-btn .lbl{ font: inherit; }
+.lab-btn kbd{
+  font-size: .76rem; padding: 1px 8px; border-radius: 7px;
+  border: 1px solid currentColor; opacity: .85;
+}
+.lab-gold{ background: var(--lab-gold); color: var(--lab-violet); border: 0; box-shadow: 0 0 0 3px rgba(248,243,234,.5); }
+.lab-gold kbd{ border-color: var(--lab-violet); }
+.lab-glass{ background: rgba(27,20,16,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.lab-big{ min-height: 56px; font-size: 1.1rem; padding: 0 28px; border-radius: 18px; }
+.lab-chip{
+  display: inline-block; font-size: .76rem; font-weight: 700; padding: 3px 12px;
+  border-radius: 999px; border: 1px solid rgba(248,243,234,.55);
+}
+
+/* ---------- Visio de Tapama (portrait 2D + bulle) ---------- */
+.lab-visio{
+  position: absolute; left: clamp(12px, 2.6vw, 40px); top: clamp(56px, 8vh, 84px);
+  width: min(270px, 25vw); display: flex; flex-direction: column; gap: 10px;
+}
+.lab-visio-screen{
+  position: relative; width: 100%; aspect-ratio: 1 / 1.05; overflow: hidden;
+  border-radius: 20px; border: 3px solid #2a313d;
+  background: linear-gradient(180deg, #14263a, #0a1420);
+  box-shadow: 0 0 0 2px var(--lab-gold-d), 0 0 34px rgba(30,144,255,.45), 0 14px 30px rgba(0,0,0,.5);
+}
+.lab-visio-screen::after{ content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 4px); pointer-events: none; }
+.lab-visio-screen img{ position: absolute; left: 50%; bottom: -4%; height: 112%; width: auto; transform: translateX(-50%); object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0,0,0,.4)); }
+.lab-visio[data-mood="inquiete"] .lab-visio-screen{ box-shadow: 0 0 0 2px #e0614f, 0 0 34px rgba(224,97,79,.4), 0 14px 30px rgba(0,0,0,.5); }
+.lab-live{
+  position: absolute; left: 10px; top: 10px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+  padding: 3px 9px; border-radius: 999px; background: rgba(10,14,20,.7); color: #ffd0ca;
+}
+.lab-live i{ width: 8px; height: 8px; border-radius: 50%; background: #ff5a4a; animation: labBlink 1.4s infinite; }
+@keyframes labBlink{ 50%{ opacity: .25; } }
+
+.lab-bubble{
+  padding: 14px 16px 14px; border-radius: 20px;
+  background: rgba(85,65,93,.95); border: 2px solid var(--lab-gold);
+  box-shadow: 0 14px 36px rgba(20,12,8,.5);
+}
+.lab-bubble.pop{ animation: labBubble .35s ease; }
+@keyframes labBubble{ from{ transform: translateY(8px) scale(.97); opacity: .3; } to{ transform: none; opacity: 1; } }
+.lab-b-name{ font-family: 'Rubik', sans-serif; font-weight: 800; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--lab-gold); margin-bottom: 4px; }
+.lab-bubble p{ margin: 0; font-size: .98rem; line-height: 1.45; min-height: 2.9em; }
+.lab-b-actions{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.lab-b-actions:empty{ display: none; }
+.lab-b-actions .lab-btn{ min-height: 38px; font-size: .85rem; padding: 0 12px; }
+
+/* ---------- Panneau (placement / énigmes) ---------- */
+.lab-panel{
+  position: absolute; right: clamp(12px, 3vw, 44px); top: clamp(64px, 9vh, 96px);
+  width: min(430px, 40vw); max-height: calc(100vh - 110px); overflow: auto;
+  padding: 20px 22px; border-radius: 26px;
+  background: linear-gradient(180deg, rgba(20,16,12,.9), rgba(12,18,28,.92));
+  border: 2px solid var(--lab-gold-d);
+  box-shadow: 0 0 0 1px rgba(30,144,255,.4), 0 0 44px rgba(30,144,255,.28), 0 20px 50px rgba(0,0,0,.55);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  animation: labPanelIn .45s ease both;
+}
+@keyframes labPanelIn{ from{ transform: translateX(26px); opacity: 0; } to{ transform: none; opacity: 1; } }
+.lab-panel.shake{ animation: labShake .45s ease; }
+@keyframes labShake{ 0%,100%{ transform: none; } 18%{ transform: translateX(-9px); } 40%{ transform: translateX(8px); } 62%{ transform: translateX(-6px); } 82%{ transform: translateX(4px); } }
+.lab-panel.is-win{ box-shadow: 0 0 0 2px #62e08a, 0 0 54px rgba(98,224,138,.55), 0 20px 50px rgba(0,0,0,.55); border-color: #62e08a; transition: box-shadow .3s, border-color .3s; }
+.lab-p-top{ display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.lab-q{ font-family: 'Rubik', sans-serif; font-weight: 600; font-size: 1.12rem; line-height: 1.4; margin: 0 0 16px; color: var(--lab-cream); }
+.lab-hint-text{ margin: 0 0 18px; opacity: .85; line-height: 1.5; }
+
+.lab-answer{ display: flex; gap: 10px; margin-bottom: 12px; }
+.lab-answer input{
+  flex: 1; min-width: 0; height: 54px; padding: 0 16px;
+  font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: .08em; text-align: center;
+  color: var(--lab-ice); background: #07111b; caret-color: var(--lab-gold);
+  border: 2px solid #2a4a6a; border-radius: 14px;
+}
+.lab-answer input:focus{ border-color: var(--lab-blue); box-shadow: 0 0 18px rgba(30,144,255,.5); }
+.lab-answer input::placeholder{ color: #4c6a85; font-weight: 600; letter-spacing: 0; font-size: 1rem; }
+.lab-valider{ min-height: 54px; }
+
+.lab-keypad{ display: grid; gap: 7px; margin-bottom: 12px; }
+.lab-keypad.is-num{ grid-template-columns: repeat(3, 1fr); }
+.lab-keypad.is-abc{ grid-template-columns: repeat(9, 1fr); gap: 5px; }
+.lab-key{
+  font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 1.15rem; text-transform: uppercase;
+  min-height: 46px; border-radius: 12px; cursor: pointer; color: var(--lab-cream);
+  background: linear-gradient(180deg, #2f3744, #1d232d); border: 1px solid #44506a;
+  box-shadow: 0 3px 0 #0d1118;
+}
+.lab-keypad.is-abc .lab-key{ min-height: 40px; font-size: .95rem; }
+.lab-key:active{ transform: translateY(2px); box-shadow: 0 1px 0 #0d1118; }
+.lab-key.enter{ background: linear-gradient(180deg, #f9d58b, #c9a24b); color: var(--lab-violet); border-color: #f9d58b; }
+.lab-key.back{ background: linear-gradient(180deg, #5a3a34, #3a2420); }
+.lab-keypad.is-abc .enter, .lab-keypad.is-abc .back{ grid-column: span 2; }
+
+.lab-status{ min-height: 1.3em; font-weight: 700; font-size: .92rem; margin-bottom: 8px; }
+.lab-status.is-bad{ color: #ff9a8c; }
+.lab-p-foot{ display: flex; }
+.lab-indice{ width: 100%; }
+.lab-hdots{ display: inline-flex; gap: 4px; }
+.lab-hdots i{ width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--lab-gold); }
+.lab-hdots i.on{ background: var(--lab-gold); }
+
+/* étincelles du verrou qui saute */
+.lab-sparks{ position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 5; }
+.lab-panel .lab-sparks{ top: 20%; }
+.lab-sparks i{
+  position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--c);
+  box-shadow: 0 0 8px var(--c);
+  animation: labSpark .9s ease-out forwards;
+}
+@keyframes labSpark{ from{ transform: translate(0,0) scale(1); opacity: 1; } to{ transform: translate(var(--x), var(--y)) scale(.2); opacity: 0; } }
+
+/* ---------- Historique ---------- */
+.lab-history{
+  position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  background: rgba(14,9,6,.78); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); padding: 20px;
+}
+.lab-h-list{ width: min(640px, 92vw); max-height: 62vh; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.lab-h-row{ padding: 12px 16px; border-radius: 16px; background: rgba(85,65,93,.95); border: 1px solid var(--lab-gold); line-height: 1.45; }
+.lab-h-row.is-player{ border-color: #C3A5C7; background: rgba(60,46,66,.95); }
+.lab-h-row b{ display: block; font-family: 'Rubik', sans-serif; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--lab-gold); margin-bottom: 2px; }
+.lab-h-empty{ opacity: .8; text-align: center; }
+
+/* ---------- Tapama tape sur son clavier ---------- */
+.lab-typing{
+  position: absolute; left: 50%; bottom: clamp(24px, 9vh, 90px); transform: translate(-50%, 20px); z-index: 12;
+  opacity: 0; transition: opacity .3s, transform .3s;
+}
+.lab-typing.on{ opacity: 1; transform: translate(-50%, 0); }
+.lab-typing-card{
+  display: flex; align-items: center; gap: 18px; padding: 14px 22px; border-radius: 22px;
+  background: rgba(12,18,28,.92); border: 2px solid var(--lab-blue); box-shadow: 0 0 40px rgba(30,144,255,.45);
+}
+.lab-typing-card img{ width: 92px; height: 92px; object-fit: cover; object-position: top; border-radius: 16px; background: #14263a; animation: labType .28s ease-in-out infinite alternate; }
+@keyframes labType{ to{ transform: translateY(3px) rotate(-1.2deg); } }
+.lab-typing-card b{ font-family: 'Rubik', sans-serif; color: var(--lab-ice); display: block; margin-bottom: 8px; }
+.lab-kbd{ display: grid; grid-template-columns: repeat(12, 18px); gap: 4px; }
+.lab-kbd i{ height: 16px; border-radius: 4px; background: #2a313d; border: 1px solid #44506a; transition: background .06s, box-shadow .06s; }
+.lab-kbd i.hit{ background: var(--lab-ice); box-shadow: 0 0 8px var(--lab-blue); }
+
+/* ---------- Hologramme / projection ---------- */
+.lab-holo{
+  position: absolute; left: 44%; top: 4%; width: 34%; transform: translateX(-50%);
+  aspect-ratio: 16 / 9; z-index: 4; opacity: 0; transition: opacity .5s;
+  pointer-events: none;
+}
+.lab-holo.on{ opacity: 1; }
+.lab-holo.is-big{ left: 50%; top: 2%; width: 66%; aspect-ratio: 16 / 8.2; }
+.lab-beam{
+  position: absolute; left: 14%; right: 14%; bottom: -34%; height: 66%;
+  background: linear-gradient(0deg, rgba(30,144,255,.75), rgba(30,144,255,0));
+  clip-path: polygon(34% 100%, 66% 100%, 100% 0, 0 0);
+  filter: blur(6px); opacity: .75; animation: labFlick 2.2s steps(1) infinite;
+}
+.lab-holo-screen{
+  position: absolute; inset: 0; overflow: hidden; border-radius: 10px;
+  border: 1px solid rgba(159,212,255,.7);
+  box-shadow: 0 0 30px 4px rgba(30,144,255,.65), inset 0 0 40px rgba(30,144,255,.45);
+  background: rgba(8,26,46,.55);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse at center, #000 62%, transparent 100%);
+  animation: labFlick 1.7s steps(1) infinite;
+}
+.lab-holo video{
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: sepia(1) hue-rotate(175deg) saturate(3.2) brightness(1.05) contrast(1.15);
+  mix-blend-mode: screen; opacity: .9;
+}
+.lab-holo.is-map video, .lab-holo:not(.is-video) video{ display: none; }
+.lab-holo.no-video .lab-holo-screen{ background: radial-gradient(circle at 50% 60%, rgba(30,144,255,.55), rgba(8,26,46,.7)); }
+.lab-noise{ position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; mix-blend-mode: screen; }
+.lab-holo-scan{ position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(120,200,255,.16) 0 1px, transparent 1px 4px); animation: labScan 3s linear infinite; }
+@keyframes labScan{ to{ background-position: 0 40px; } }
+@keyframes labFlick{ 0%{opacity:1} 7%{opacity:.82} 9%{opacity:1} 34%{opacity:.9} 36%{opacity:1} 71%{opacity:.78} 73%{opacity:1} 90%{opacity:.94} 100%{opacity:1} }
+.lab-holo.glitch .lab-holo-screen{ animation: labGlitch .22s steps(2) infinite; }
+@keyframes labGlitch{
+  0%{ transform: translate(0,0) skewX(0); filter: hue-rotate(0); }
+  25%{ transform: translate(-9px, 2px) skewX(6deg); filter: hue-rotate(40deg) brightness(1.4); }
+  50%{ transform: translate(7px, -3px) skewX(-8deg); clip-path: inset(0 0 40% 0); }
+  75%{ transform: translate(-3px, 4px) skewX(3deg); clip-path: inset(30% 0 0 0); filter: hue-rotate(-40deg); }
+  100%{ transform: translate(0,0); }
+}
+.lab-holo.cut{ opacity: 0 !important; transition: none; }
+
+/* carte d'Afrique de l'Ouest */
+.lab-holo-map{ position: absolute; inset: 4% 3%; }
+.lab-map{ width: 100%; height: 100%; display: block; }
+.lab-map-grid line{ stroke: rgba(159,212,255,.14); stroke-width: 1; }
+.lab-map-fill{ fill: rgba(30,144,255,.14); opacity: 0; transition: opacity 1.6s ease 1.2s; }
+.lab-map-line{ fill: none; stroke: #9fd4ff; stroke-width: 3; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 5px #1e90ff); }
+.lab-map-river{ fill: none; stroke: #f9d58b; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 4px #f9d58b); opacity: .9; }
+.lab-city{ opacity: 0; }
+.lab-city circle{ fill: #9fd4ff; filter: drop-shadow(0 0 5px #1e90ff); }
+.lab-city.big circle{ fill: #f9d58b; filter: drop-shadow(0 0 8px #f9d58b); }
+.lab-city .pulse{ fill: none; stroke: #f9d58b; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: labPulse 1.6s ease-out infinite; }
+@keyframes labPulse{ from{ transform: scale(1); opacity: 1; } to{ transform: scale(4.2); opacity: 0; } }
+.lab-city text{ fill: #cfeaff; font: 600 15px 'Rubik', sans-serif; letter-spacing: .06em; paint-order: stroke; stroke: rgba(5,12,20,.8); stroke-width: 3px; }
+.lab-city text.big{ fill: #f9d58b; font-size: 20px; font-weight: 800; }
+.lab-holo.draw .lab-map-fill{ opacity: 1; }
+.lab-holo.draw .lab-map-line{ animation: labDraw 3.2s ease forwards; }
+.lab-holo.draw .lab-map-river{ animation: labDraw 2.4s ease 1.2s forwards; }
+.lab-holo.draw .lab-city{ animation: labCity .5s ease var(--d) forwards; }
+@keyframes labDraw{ to{ stroke-dashoffset: 0; } }
+@keyframes labCity{ from{ opacity: 0; transform: translateY(6px); } to{ opacity: 1; transform: none; } }
+
+/* ---------- Coupure, urgence ---------- */
+.lab-blackout{ position: absolute; inset: 0; z-index: 15; background: #000; opacity: 0; pointer-events: none; transition: opacity .05s; }
+.lab-blackout.on{ opacity: 1; }
+.lab-emergency{
+  position: absolute; inset: 0; z-index: 9; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(255,40,30,0) 25%, rgba(190,10,10,.55) 100%);
+  mix-blend-mode: multiply;
+}
+.lab-root.is-emergency .lab-emergency{ opacity: 1; animation: labAlarm 1.4s ease-in-out infinite; }
+.lab-root.is-emergency .lab-svg{ filter: brightness(.5) saturate(.7) sepia(.5) hue-rotate(-30deg); }
+@keyframes labAlarm{ 0%,100%{ opacity: .45; } 50%{ opacity: 1; } }
+
+.lab-sr{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- Portrait : la scène est centrée sur la machine ---------- */
+@media (max-aspect-ratio: 1/1){
+  .lab-scene{ transform: translate(-43.75%, -50%); }
+}
+@media (max-aspect-ratio: 5/8){
+  .lab-root{ background: linear-gradient(180deg, #4a3326 0, #3b2a21 62%, #2d1f16 100%); }
+  .lab-scene{ width: 240vw; height: 135vw; top: 100px; transform: translate(-43.75%, 0); }
+}
+
+/* ---------- Petits écrans ---------- */
+@media (max-width: 860px){
+  .lab-title{ margin-left: 0; }
+  .lab-top{ gap: 10px; padding: 10px 12px; }
+  .lab-title b{ font-size: .95rem; }
+  .lab-relire span{ display: none; }
+  .lab-visio{ left: 10px; top: 56px; width: min(46vw, 190px); }
+  .lab-visio-screen{ display: none; }
+  .lab-visio .lab-bubble{ padding: 10px 12px; }
+  .lab-bubble p{ font-size: .9rem; min-height: 0; }
+  .lab-panel{
+    left: 10px; right: 10px; top: auto; bottom: 10px; width: auto; max-height: 62vh; padding: 14px;
+    border-radius: 20px;
+  }
+  .lab-visio{ width: calc(100vw - 20px); max-width: none; }
+  .lab-q{ font-size: .98rem; margin-bottom: 10px; }
+  .lab-key{ min-height: 40px; }
+  .lab-keypad.is-num{ grid-template-columns: repeat(6, 1fr); }
+  .lab-holo{ width: 80%; left: 50%; }
+  .lab-holo.is-big{ width: 96%; }
+  .lab-kbd{ grid-template-columns: repeat(12, 12px); }
+  .lab-typing-card{ padding: 10px 14px; }
+}
+@media (max-width: 860px) and (max-height: 520px){
+  .lab-panel{ max-height: 70vh; }
+}
+@media (prefers-reduced-motion: reduce){
+  .lab-root *{ animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+}

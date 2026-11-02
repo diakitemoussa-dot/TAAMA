@@ -102,26 +102,97 @@ const MISSIONS = [
     talisman: { id: 'sauveur-tour', icon: '🧱', name: 'Sauveur de la Tour' },
   },
 
+  /* ----- Chapitre 2 — Les Secrets du Sanctuaire (5 missions à pied) ----- */
+  {
+    id: 'M06', ch: 2, icon: '🚪', title: 'Franchir la porte', mode: 'sanctuary', banco: 30, timer: '2:00',
+    story: "Te voilà dans la maison de Dieu, Gardien. Ici, on laisse ses sandales au seuil " +
+           "et son impatience dehors. Va saluer la grande porte du nord — celle des fidèles, " +
+           "près de l'entrée principale — puis reviens te recueillir dans la salle de prière. " +
+           "Un pas après l'autre, comme la caravane.",
+    objectives: [
+      { id: 'entree', label: "Scanner l'entrée principale (côté nord)" },
+      { id: 'retour', label: 'Revenir dans la salle de prière' },
+      { id: 'photo',  star: 2, label: "Bonus · photo de la grande porte (📷 tout près)" },
+      { id: 'eclair', star: 3, label: 'Bonus · rituel bouclé en moins de 2 min' },
+    ],
+    talisman: { id: 'seuil-sanctuaire', icon: '🚪', name: 'Seuil du Sanctuaire' },
+    hint: "Sors saluer l'entrée nord, puis reviens dans la salle de prière.",
+  },
+  {
+    id: 'M07', ch: 2, icon: '🌙', title: 'La Veillée des tombeaux', mode: 'sanctuary', banco: 40,
+    story: "Sur la terrasse reposent deux gardiens de jadis : Almany Ismaïla, grand imam du " +
+           "XVIIIe siècle, et une tombe plus petite dont le nom s'est perdu. La tradition veut " +
+           "qu'on vienne y demander la baraka. Analyse les deux tombeaux, puis reste un instant " +
+           "en silence : la veillée appartient à ceux qui savent attendre.",
+    objectives: [
+      { id: 'tomb',  label: 'Scanner les grands tombeaux de la terrasse' },
+      { id: 'petit', label: 'Scanner le petit tombeau' },
+      { id: 'recul', star: 2, label: 'Bonus · 5 s de recueillement immobile près des tombeaux' },
+      { id: 'photo', star: 3, label: 'Bonus · photo de la terrasse des tombeaux (📷)' },
+    ],
+    talisman: { id: 'veilleur-tombes', icon: '🌙', name: 'Veilleur des Tombes' },
+    hint: 'Approche-toi tout près des deux tombes pour lancer les analyses.',
+  },
+  {
+    id: 'M08', ch: 2, icon: '🕌', title: "La Place de l'Imam", mode: 'sanctuary', banco: 50, timer: '4:00',
+    story: "Le mihrab, tourné vers La Mecque, est le cœur de la mosquée : c'est de là que " +
+           "l'imam guide la prière et que, le vendredi, sa voix — la khouṭba — porte jusqu'à la " +
+           "cour. Trouve la place de l'Imam, analyse-la, puis recueille-toi cinq secondes : " +
+           "le silence aussi fait partie du savoir.",
+    objectives: [
+      { id: 'imam',    label: "Trouver et scanner la place de l'Imam" },
+      { id: 'khoutba', label: 'Se recueillir 5 s au mihrab' },
+      { id: 'photo',   star: 2, label: "Bonus · photo de la place de l'Imam (📷 tout près)" },
+      { id: 'vite',    star: 3, label: 'Bonus · bouclé en moins de 4 min' },
+    ],
+    talisman: { id: 'voix-qibla', icon: '🧭', name: 'Voix de la Qibla' },
+    hint: 'Le mihrab se trouve dans la salle de prière.',
+  },
+  {
+    id: 'M09', ch: 2, icon: '⛰️', title: 'Le Toit du Monde', mode: 'sanctuary', banco: 60, timer: '2:00',
+    story: "Prends le passage qui grimpe vers la terrasse : là-haut, entre les canaris d'eau " +
+           "et les œufs d'autruche, tu verras Djenné comme les maçons la voient la veille du " +
+           "crépissage. Monte, respire l'air du Sahel, puis redescends — éloigne-toi d'abord " +
+           "de la porte du toit : elle ne s'ouvre qu'à ceux qui reviennent. " +
+           "Un Gardien connaît le chemin des deux côtés.",
+    objectives: [
+      { id: 'roof',  label: 'Monter sur le toit par la porte du passage' },
+      { id: 'floor', label: 'Redescendre par la porte du toit' },
+      { id: 'photo', star: 2, label: 'Bonus · photo de Djenné depuis le toit (📷)' },
+      { id: 'alerte', star: 3, label: 'Bonus · aller-retour en moins de 2 min' },
+    ],
+    talisman: { id: 'toit-du-monde', icon: '⛰️', name: 'Toit du Monde' },
+    hint: 'La porte du passage se trouve côté est de la mosquée.',
+  },
+  {
+    id: 'M10', ch: 2, icon: '🧭', title: 'La Ronde de Veille', mode: 'sanctuary', banco: 80, timer: '5:00',
+    story: "La veille de la fête, le Gardien fait sa ronde : un regard sur chaque trésor du " +
+           "sanctuaire, comme les anciens comptaient les pas autour de la mosquée. " +
+           "Boucle la ronde — les tombeaux, la place de l'Imam et l'entrée — sans jamais " +
+           "toucher au raccourci du menu ☰. C'est à pied qu'on mérite le titre.",
+    objectives: [
+      { id: 'ronde',     label: 'Boucler la ronde : analyser les 4 trésors du sanctuaire' },
+      { id: 'expresse',  star: 2, label: 'Bonus · ronde bouclée en moins de 5 min' },
+      { id: 'pardessus', star: 3, label: 'Bonus · ronde sans téléportation (menu ☰)' },
+    ],
+    talisman: { id: 'ronde-gardien', icon: '🧭', name: 'Ronde du Gardien' },
+    hint: 'Les 4 analyses : tombeaux, petit tombeau, place de l’Imam et entrée.',
+  },
+
   /* ----- Chapitres suivants — en préparation ----- */
-  { id: 'M06', ch: 2, icon: '🚪', title: 'Franchir la porte', mode: 'sanctuary', locked: true, banco: 20,
-    story: '', objectives: [], hint: 'Entre dans le sanctuaire et atteins la salle de prière.' },
-  { id: 'M07', ch: 2, icon: '🌙', title: 'La Veillée des tombeaux', mode: 'sanctuary', locked: true, banco: 30,
-    story: '', objectives: [], hint: 'Scanne les tombeaux dans le sanctuaire.' },
-  { id: 'M08', ch: 2, icon: '🕌', title: "La Place de l'Imam", mode: 'sanctuary', locked: true, banco: 40,
-    story: '', objectives: [], hint: "Trouve et scanne la place de l'Imam." },
-  { id: 'M09', ch: 2, icon: '⛰️', title: 'Le Toit du Monde', mode: 'sanctuary', locked: true, banco: 50,
-    story: '', objectives: [], hint: 'Prends le portail vers le toit et photographie la ville.' },
-  { id: 'M10', ch: 3, icon: '📚', title: 'Le Quiz du Patrimoine', mode: 'quiz', locked: true, banco: 60,
+  { id: 'M11', ch: 3, icon: '📚', title: 'Le Quiz du Patrimoine', mode: 'quiz', soon: true, banco: 60,
     story: '', objectives: [], hint: 'Réponds correctement à 5 questions.' },
-  { id: 'M11', ch: 4, icon: '🛠️', title: 'Le Grand Crepissage', mode: 'game', locked: true, banco: 60,
+  { id: 'M12', ch: 4, icon: '🛠️', title: 'Le Grand Crepissage', mode: 'game', soon: true, banco: 60,
     story: '', objectives: [], hint: 'Regarde la vidéo du crépissage et livre le banco.' },
-  { id: 'M12', ch: 4, icon: '📱', title: 'Ramène la Mosquée chez toi', mode: 'ar', locked: true, banco: 40,
+  { id: 'M13', ch: 4, icon: '📱', title: 'Ramène la Mosquée chez toi', mode: 'ar', soon: true, banco: 40,
     story: '', objectives: [], hint: 'Place la mosquée en AR chez toi.' },
-  { id: 'M13', ch: 4, icon: '🏆', title: 'Diplôme de Gardien', mode: 'quiz', locked: true, banco: 0,
+  { id: 'M14', ch: 4, icon: '🏆', title: 'Diplôme de Gardien', mode: 'quiz', soon: true, banco: 0,
     story: '', objectives: [], hint: 'Termine toutes les missions pour obtenir ton diplôme.' },
 ];
 
 const MAX_STARS_CH1 = MISSIONS.filter(m => m.ch === 1).length * 3;   // 15
+const OPEN_MISSIONS  = MISSIONS.filter(m => !m.soon);                // chapitres jouables
+const MAX_STARS_OPEN = OPEN_MISSIONS.length * 3;                     // 30
 
 /* ==========================================================
    2. ÉTAT + PERSISTANCE (v2 — progression remise à plat)
@@ -169,6 +240,14 @@ function rankOf(banco){
 }
 function starSum(){ return Object.values(state.stars).reduce((a, b) => a + b, 0); }
 
+/* Déverrouillage progressif : le Chapitre 2 s'ouvre quand le Chapitre 1 est terminé.
+   Les missions « soon » (chapitres en préparation) restent verrouillées. */
+function refreshLocks(){
+  const ch1Done = MISSIONS.filter(m => m.ch === 1).every(m => state.done[m.id]);
+  for (const m of MISSIONS) m.locked = m.soon ? true : (m.ch > 1 && !ch1Done);
+}
+refreshLocks();
+
 /* ==========================================================
    3. SONS
    ========================================================== */
@@ -204,7 +283,7 @@ root.innerHTML = `
       <p class="ms-choice-sub">Le Maître Maçon t'attend avant la fête du Grand Crepissage.</p>
       <button type="button" class="ms-choice-btn ms-choice-missions" id="msChoiceMissions">
         <span class="ms-choice-ico">📜</span>
-        <span class="ms-choice-txt"><b>MISSIONS</b><i id="msChoiceInfo">5 missions · 4 chapitres</i></span>
+        <span class="ms-choice-txt"><b>MISSIONS</b><i id="msChoiceInfo">10 missions · 4 chapitres</i></span>
       </button>
       <button type="button" class="ms-choice-btn" id="msChoiceFree">
         <span class="ms-choice-ico">🧭</span>
@@ -337,6 +416,9 @@ function renderObjectives(m){
       extra = ` — ${nRace}/8`;
     }
     if (m.id === 'M05' && o.id === 'deliver') extra = ` — ${Math.min(2, p.delivered || 0)}/2`;
+    if (m.id === 'M07' && o.id === 'recul')   extra = ` — ${Math.min(5, Math.floor(p.recul || 0))}/5 s`;
+    if (m.id === 'M08' && o.id === 'khoutba') extra = ` — ${Math.min(5, Math.floor(p.khoutba || 0))}/5 s`;
+    if (m.id === 'M10' && o.id === 'ronde')   extra = ` — ${sanctRondeN(p)}/4`;
     h += `<div class="ms-obj ${cls}">${ok ? '✓' : (o.star ? '☆' : '○')} ${o.label}${extra}</div>`;
   }
   return h;
@@ -344,13 +426,18 @@ function renderObjectives(m){
 
 function updateTimerUI(id, p){
   if (!timerEl) return;
-  const show = p && p.started && !p.finished && p.t > 0 &&
-               (id === 'M02' || id === 'M03' || id === 'M05');
+  const m = missionById(id);
+  const sanct = !!(m && m.mode === 'sanctuary' && !m.soon);
+  const t = sanct ? (_sxId === id ? _sxT : 0) : (p ? (p.t || 0) : 0);
+  const show = p && !p.finished && t > 0 && (
+    sanct ? !!m.timer : (id === 'M02' || id === 'M03' || id === 'M05')
+  );
   if (!show){ timerEl.hidden = true; return; }
   const goals = id === 'M02' ? ' · 🥇 <40 s · 🥈 <60 s'
               : id === 'M05' ? ' · 🥇 <1:20 · 🥈 <2:00'
+              : sanct ? ' · 🥇 < ' + m.timer
               : ' · 🥈 <2:30';
-  const txt = '⏱ ' + fmtTime(p.t) + goals;
+  const txt = '⏱ ' + fmtTime(t) + goals;
   if (txt !== _lastTimerTxt){ timerEl.textContent = txt; _lastTimerTxt = txt; }
   timerEl.hidden = false;
 }
@@ -365,11 +452,11 @@ function updateBanner(){
 
   if (!cur){
     pillEl.innerHTML =
-      `<span class="ms-b-ico">🏆</span><span class="ms-b-name">Chapitre 1 terminé !</span>` +
+      `<span class="ms-b-ico">🏆</span><span class="ms-b-name">Aventures terminées !</span>` +
       `<span class="ms-b-banco">${banco}</span>`;
-    objsEl.innerHTML = `<div class="ms-obj done">✓ ${starSum()}/${MAX_STARS_CH1} étoiles</div>`;
+    objsEl.innerHTML = `<div class="ms-obj done">✓ ${starSum()}/${MAX_STARS_OPEN} étoiles</div>`;
     timerEl.hidden = true;
-    hintEl.textContent = 'Chapitres 2 à 4 en préparation — continue à explorer en attendant !';
+    hintEl.textContent = 'La suite (quiz, crépissage, AR, diplôme) arrive bientôt — continue à explorer !';
     return;
   }
 
@@ -382,6 +469,9 @@ function updateBanner(){
 
   let h = '';
   if (cur.mode === 'game' && !inGame) h = 'Lance le mode GAME (bouton en bas à gauche) — ou ouvre le briefing 📖 depuis le carnet.';
+  if (cur.mode === 'sanctuary' && !(window.SanctuaryMode && window.SanctuaryMode.isActive())){
+    h = 'Ouvre le briefing 📖 (carnet 🥇) ou entre dans le sanctuaire pour commencer.';
+  }
   hintEl.textContent = h;
 }
 
@@ -880,6 +970,171 @@ function onGameExit(){
 }
 
 /* ==========================================================
+   8 bis. MISSIONS DU SANCTUAIRE (à pied, avec le personnage)
+   ----------------------------------------------------------
+   Le mode sanctuaire (sanctuary-mode.js) signale ses événements :
+     Missions.onSanctuaryEnter() / onSanctuaryExit()
+     Missions.onSanctuaryTick(dt, pos, { inside, tomb })
+     Missions.onSanctuaryEvent('scan',   'tomb'|'petit'|'imam'|'entree')
+     Missions.onSanctuaryEvent('portal', 'roof'|'floor')
+     Missions.onSanctuaryEvent('photo',  { x, y, z })
+     Missions.onSanctuaryEvent('visit',  'interior'|'exterior')  (menu ☰)
+   ========================================================== */
+
+const SANCT_PHOTO_R = { M06: 14, M07: 14, M08: 9 };   // portée du bonus photo (m)
+
+let   _sxT = 0;          // chrono de la mission sanctuaire en cours (temps de jeu)
+let   _sxId = null;      // id de la mission chronométrée
+let   _haveLastPos = false;
+const _lastPos = new THREE.Vector3();
+
+function sanctSpots(){
+  try { return window.SanctuaryMode?.spots?.() || null; } catch (_) { return null; }
+}
+function sanctScans(p){ return p.scans || (p.scans = {}); }
+function sanctRondeN(p){ return ['tomb','petit','imam','entree'].filter(k => sanctScans(p)[k]).length; }
+
+function finishSanct(m){
+  const p = prog(m.id);
+  if (p.finished || state.done[m.id]) return;
+  p.finished = true;
+  const t = _sxId === m.id ? _sxT : 0;
+  if (m.id === 'M06' && t > 0 && t < 120) markObj('M06', 'eclair', true);
+  if (m.id === 'M08' && t > 0 && t < 240) markObj('M08', 'vite', true);
+  if (m.id === 'M09' && t > 0 && t < 120) markObj('M09', 'alerte', true);
+  if (m.id === 'M10'){
+    if (t > 0 && t < 300) markObj('M10', 'expresse', true);
+    if (p.notel !== false) markObj('M10', 'pardessus', true);
+  }
+  save();
+  playSnd(sndWin);
+  complete(m.id);
+}
+
+function onSanctuaryEnter(){ _haveLastPos = false; updateBanner(); }
+function onSanctuaryExit(){  _haveLastPos = false; updateBanner(); }
+
+function onSanctuaryTick(dt, pos, info){
+  if (state.mode !== 'missions' || !pos || !dt) return;
+  const cur = currentMission();
+  if (!cur || cur.mode !== 'sanctuary' || cur.soon) return;
+  const p = prog(cur.id);
+
+  /* Chrono : repart de zéro à chaque nouvelle mission sanctuaire */
+  if (_sxId !== cur.id){ _sxId = cur.id; _sxT = 0; }
+  if (!p.finished) _sxT += dt;
+
+  /* Vitesse du personnage (pour les temps de recueillement) */
+  let speed = 0;
+  if (_haveLastPos && dt > 0) speed = _lastPos.distanceTo(pos) / dt;
+  _lastPos.copy(pos); _haveLastPos = true;
+
+  if (p.finished) return;
+  const inf = info || {};
+
+  if (cur.id === 'M06'){
+    if (p.obj.entree && !p.obj.retour && inf.inside) markObj('M06', 'retour');
+    if (p.obj.entree && p.obj.retour) finishSanct(cur);
+    return;
+  }
+
+  if (cur.id === 'M07' && !p.obj.recul){
+    const sp = sanctSpots();
+    const c  = inf.tomb || (sp && (sp.tomb || sp.petit));
+    if (c){
+      if (pos.distanceTo(c) < 6 && speed < 0.5){
+        p.recul = (p.recul || 0) + dt;
+        if (p.recul >= 5){ save(); markObj('M07', 'recul'); }
+        else { const s = Math.floor(p.recul); if (s !== p._reculShown){ p._reculShown = s; updateBanner(); } }
+      } else p.recul = 0;
+    }
+    return;
+  }
+
+  if (cur.id === 'M08' && !p.obj.khoutba){
+    const sp = sanctSpots();
+    const c  = sp && sp.imam;
+    if (c){
+      if (pos.distanceTo(c) < 5 && speed < 0.5){
+        p.khoutba = (p.khoutba || 0) + dt;
+        if (p.khoutba >= 5){
+          save(); markObj('M08', 'khoutba');
+          if (p.obj.imam) finishSanct(cur);
+        } else { const s = Math.floor(p.khoutba); if (s !== p._khoutbaShown){ p._khoutbaShown = s; updateBanner(); } }
+      } else p.khoutba = 0;
+    }
+    return;
+  }
+
+  if (cur.id === 'M10'){
+    /* La ronde se valide par les analyses (voir onSanctuaryEvent). */
+  }
+}
+
+function onSanctuaryEvent(kind, data){
+  if (state.mode !== 'missions') return;
+  const cur = currentMission();
+  if (!cur || cur.mode !== 'sanctuary' || cur.soon) return;
+  const p = prog(cur.id);
+  if (p.finished) return;
+
+  if (kind === 'scan'){
+    if (cur.id === 'M06' && data === 'entree') markObj('M06', 'entree');
+    if (cur.id === 'M07'){
+      if (data === 'tomb')  markObj('M07', 'tomb');
+      if (data === 'petit') markObj('M07', 'petit');
+      if (p.obj.tomb && p.obj.petit) finishSanct(cur);
+    }
+    if (cur.id === 'M08' && data === 'imam'){
+      markObj('M08', 'imam');
+      if (p.obj.khoutba) finishSanct(cur);
+    }
+    if (cur.id === 'M10' && ['tomb','petit','imam','entree'].includes(data)){
+      const sc = sanctScans(p);
+      if (!sc[data]){ sc[data] = true; save(); }
+      const n = sanctRondeN(p);
+      if (n >= 4){ markObj('M10', 'ronde'); finishSanct(cur); }
+      else { toastInfo(`🧭 Ronde : ${n}/4 trésors analysés`); updateBanner(); }
+    }
+    return;
+  }
+
+  if (kind === 'portal' && cur.id === 'M09'){
+    if (data === 'roof') markObj('M09', 'roof');
+    else if (data === 'floor' && p.obj.roof){ markObj('M09', 'floor'); finishSanct(cur); }
+    return;
+  }
+
+  if (kind === 'photo' && data){
+    if (cur.id === 'M09'){
+      if (data.y > 14) markObj('M09', 'photo');
+      return;
+    }
+    const r = SANCT_PHOTO_R[cur.id];
+    if (!r) return;
+    const sp = sanctSpots();
+    const target = cur.id === 'M06' ? sp && sp.entree
+                 : cur.id === 'M07' ? sp && (sp.tomb || sp.petit)
+                 : cur.id === 'M08' ? sp && sp.imam
+                 : null;
+    if (target){
+      const dx = data.x - target.x, dy = data.y - target.y, dz = data.z - target.z;
+      if (Math.sqrt(dx * dx + dy * dy + dz * dz) <= r) markObj(cur.id, 'photo');
+    }
+    return;
+  }
+
+  if (kind === 'visit' && cur.id === 'M10' && p.notel !== false){
+    p.notel = false;
+    save();
+    if (!p._notelWarned){
+      p._notelWarned = true;
+      toastInfo('🧭 Raccourci utilisé — le bonus « ronde sans téléportation » est perdu.');
+    }
+  }
+}
+
+/* ==========================================================
    9. FIN DE MISSION : étoiles, grades, débriefing
    ========================================================== */
 
@@ -894,6 +1149,7 @@ function complete(id){
   if (!m || state.done[id]) return;
 
   state.done[id] = true;
+  refreshLocks();
   const stars = computeStars(m);
   state.stars[id] = Math.max(state.stars[id] || 0, stars);
   const prevRank = rankOf(state.banco);
@@ -904,6 +1160,9 @@ function complete(id){
 
   if (newRank.n !== prevRank.n){
     setTimeout(() => { playSnd(sndBadge); toastBig(`🎖 PROMOTION — ${newRank.ic} ${newRank.n} !`); }, 3800);
+  }
+  if (id === 'M05'){
+    setTimeout(() => { playSnd(sndBadge); toastBig('🕌 CHAPITRE 2 DÉBLOQUÉ — Les Secrets du Sanctuaire !'); }, 4600);
   }
 
   refreshRings();
@@ -940,6 +1199,8 @@ function showDebrief(m, stars){
     if (state.best.M02) stats += ` · Record : ${fmtTime(state.best.M02)}`;
   } else if (m.id === 'M05' && p.t > 0){
     stats = `⏱ Livraison bouclée en <b>${fmtTime(p.t)}</b>`;
+  } else if (m.mode === 'sanctuary' && _sxId === m.id && _sxT > 0){
+    stats = `🕌 Rituel bouclé en <b>${fmtTime(_sxT)}</b>`;
   } else if (m.id === 'M03' && p.t > 0){
     stats = `📸 Safari bouclé en <b>${fmtTime(p.t)}</b>`;
   } else {
@@ -960,11 +1221,11 @@ function showDebrief(m, stars){
     nextBtn.textContent = '▸ MISSION SUIVANTE';
   } else {
     nextBtn.hidden = true;
-    document.getElementById('msDbKicker').textContent = '◈ CHAPITRE 1 TERMINÉ';
+    document.getElementById('msDbKicker').textContent = '◈ CHAPITRES DISPONIBLES TERMINÉS';
     document.getElementById('msDbTitle').textContent = '🏆 Bravo, Gardien !';
     document.getElementById('msDbStats').innerHTML =
-      `${starSum()}/${MAX_STARS_CH1} étoiles · ${state.talismans.length} talismans · ⛁ ${state.banco} au total<br>` +
-      `<i>Les chapitres 2 à 4 sont en préparation…</i>`;
+      `${starSum()}/${MAX_STARS_OPEN} étoiles · ${state.talismans.length} talismans · ⛁ ${state.banco} au total<br>` +
+      `<i>La suite arrive bientôt : quiz du patrimoine, vidéo du crépissage, AR et diplôme…</i>`;
     closeBtn.textContent = "Continuer l'exploration";
   }
 
@@ -994,7 +1255,9 @@ function showBrief(m){
   document.getElementById('msBriefRewards').innerHTML =
     `Récompense : <b>+${m.banco} ⛁</b>${m.talisman ? ` · 🏅 ${m.talisman.name}` : ''}`;
   const go = document.getElementById('msBriefGo');
-  go.textContent = m.mode === 'game' ? '🚁 COMMENCER LA MISSION' : 'COMMENCER';
+  go.textContent = m.mode === 'game' ? '🚁 COMMENCER LA MISSION'
+    : m.mode === 'sanctuary' ? '🚪 ENTRER DANS LE SANCTUAIRE'
+    : 'COMMENCER';
   briefEl.hidden = false;
   requestAnimationFrame(() => briefEl.classList.add('on'));
 }
@@ -1007,13 +1270,13 @@ function updateChoiceInfo(){
   const info = document.getElementById('msChoiceInfo');
   if (!info) return;
   const cur = currentMission();
-  const doneN = Object.keys(state.done).filter(k => { const m = missionById(k); return m && !m.locked; }).length;
+  const doneN = Object.keys(state.done).filter(k => { const m = missionById(k); return m && !m.soon; }).length;
   if (state.mode === 'missions' && cur){
     info.textContent = `Reprendre : ${cur.id} · ${cur.title} — ⛁ ${state.banco}`;
   } else if (!cur){
-    info.textContent = `Chapitre 1 terminé · ⭐ ${starSum()}/${MAX_STARS_CH1} · ⛁ ${state.banco}`;
+    info.textContent = `Aventures terminées · ⭐ ${starSum()}/${MAX_STARS_OPEN} · ⛁ ${state.banco}`;
   } else {
-    info.textContent = `${doneN}/5 missions · ⭐ ${starSum()}/${MAX_STARS_CH1} · ⛁ ${state.banco}`;
+    info.textContent = `${doneN}/${OPEN_MISSIONS.length} missions · ⭐ ${starSum()}/${MAX_STARS_OPEN} · ⛁ ${state.banco}`;
   }
 }
 
@@ -1082,7 +1345,9 @@ function updateLog(){
   for (const ch of CHAPTERS){
     const ms = MISSIONS.filter(m => m.ch === ch.n);
     const allLocked = ms.every(m => m.locked);
-    h += `<section class="ms-chap"><h3 class="${allLocked ? 'locked-chap' : ''}">Chap. ${ch.n} — ${ch.name}${allLocked ? ' <small>en préparation</small>' : ''}</h3>`;
+    const soon = ms.every(m => m.soon);
+    const note = soon ? 'en préparation' : (allLocked ? 'termine le Chapitre 1 pour débloquer' : '');
+    h += `<section class="ms-chap"><h3 class="${allLocked ? 'locked-chap' : ''}">Chap. ${ch.n} — ${ch.name}${note ? ` <small>${note}</small>` : ''}</h3>`;
     for (const m of ms) h += missionRow(m);
     h += '</section>';
   }
@@ -1172,6 +1437,10 @@ document.getElementById('msBriefGo')?.addEventListener('click', () => {
   if (!m) return;
   setMode('missions');
   if (m.mode === 'game') window.DroneGame?.enter?.();
+  else if (m.mode === 'sanctuary'){
+    try { window.SanctuaryMode?.resetScans?.(); } catch (_) {}
+    window.SanctuaryMode?.enter?.();
+  }
 });
 document.getElementById('msBriefLater')?.addEventListener('click', hideBrief);
 document.getElementById('msDbNext')?.addEventListener('click', () => {
@@ -1192,6 +1461,7 @@ document.getElementById('msLogReset')?.addEventListener('click', () => {
   if (!confirm('Réinitialiser toute la progression (missions, étoiles, banco, talismans) ?')) return;
   state = blankState();
   save();
+  refreshLocks();
   refreshRings();
   refreshBeacon();
   updateBanner();
@@ -1214,6 +1484,10 @@ let chooserTimer = 0;
 function scheduleChooser(){
   clearTimeout(chooserTimer);
   chooserTimer = setTimeout(() => {
+    // Ne pas rouvrir le menu principal par-dessus une partie déjà lancée
+    // (le joueur a pu entrer dans le sanctuaire ou le pilotage entre-temps).
+    if (window.SanctuaryMode?.isActive?.()) return;
+    if (document.getElementById('droneHud')?.classList.contains('is-on')) return;
     if (window.GameMenu && typeof window.GameMenu.show === 'function'){
       updateBanner();
       window.GameMenu.show();                 // menu principal « vue 360° »
@@ -1250,6 +1524,10 @@ window.Missions = {
   tick,
   onPhoto,
   onEggScan,
+  onSanctuaryEnter,
+  onSanctuaryExit,
+  onSanctuaryTick,
+  onSanctuaryEvent,
   openLog,
   openChooser: showChooser,
   openBrief(){ const c = currentMission(); if (c) showBrief(c); },
@@ -1262,8 +1540,9 @@ window.Missions = {
       current: cur ? { id: cur.id, title: cur.title, icon: cur.icon } : null,
       banco: state.banco,
       stars: starSum(),
-      maxStars: MAX_STARS_CH1,
-      doneCount: Object.keys(state.done).filter(k => { const m = missionById(k); return m && !m.locked; }).length,
+      maxStars: MAX_STARS_OPEN,
+      doneCount: Object.keys(state.done).filter(k => { const m = missionById(k); return m && !m.soon; }).length,
+      doneTotal: OPEN_MISSIONS.length,
     };
   },
   setMenuOpen(open){

@@ -189,7 +189,7 @@ function apply(){
 
   // 6) Brume + fond (mist : nappe de brume au petit matin)
   mixC(M.scene.fog.color, A.fogC, B.fogC, t);
-  const baseFar = (M.domeRadius || 400) * 0.95;
+  const baseFar = M.fogFarBase || (M.domeRadius || 400) * 0.95;
   const mist = lerp(A.mist, B.mist, t);
   M.scene.fog.far = Math.max(M.scene.fog.near * 1.25, baseFar * (1 - 0.3 * mist));
   if (M.scene.background && M.scene.background.isColor) mixC(M.scene.background, A.bgC, B.bgC, t);
@@ -222,6 +222,7 @@ if (!M || !M.scene || !GS || !M.sunLight){
 /* ---------- API ---------- */
 window.DayCycle = {
   now(){ return hour; },
+  get sunElevation(){ return elevFor(hour); },     // hauteur du soleil en degrés (négative la nuit) — lampadaires, etc.
   setTime(h){ hour = ((h % 24) + 24) % 24; apply(); },
   setDuration(seconds){ daySeconds = Math.max(30, seconds); },
   setDurationMinutes(minutes){ daySeconds = Math.max(30, minutes * 60); },

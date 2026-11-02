@@ -33,6 +33,9 @@
   pointer-events: none;
 }
 .ms-banner.on{ opacity: 1; transform: translateX(-50%) translateY(0); }
+/* En mode sanctuaire, l'aide contrôles occupe le haut de l'écran : le bandeau descend. */
+#msRoot.sn-on .ms-banner{ top: max(64px, env(safe-area-inset-top, 0px)); }
+@media (max-width: 700px){ #msRoot.sn-on .ms-banner{ top: max(70px, env(safe-area-inset-top, 0px)); } }
 .ms-banner-pill{
   display: flex;
   align-items: center;
