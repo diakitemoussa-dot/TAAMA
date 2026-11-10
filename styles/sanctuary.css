@@ -131,6 +131,9 @@
   transition: transform .05s;
 }
 
+/* PC (souris) : le joystick à l'écran est inutile (ZQSD / flèches) ; sur tactile, les commandes tactiles le remplacent déjà (tc-live) */
+@media (hover: hover) and (pointer: fine) { .sn-stick { display: none; } }
+
 /* ---------- Barre d'actions (bas centre / gauche mobile) ---------- */
 .sn-toolbar {
   position: absolute;

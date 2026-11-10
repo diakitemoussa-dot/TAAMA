@@ -22,6 +22,8 @@ const browser = await puppeteer.launch({
   args: ['--disable-gpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'],
 });
 const page = await browser.newPage();
+// l'arme (et donc la visée) est débloquée à la fin du dossier NÉANTIS : sans cette clé la visée est refusée
+await page.evaluateOnNewDocument(() => { try { localStorage.setItem('taama.gadget', '1'); } catch (_) {} });
 await page.setViewport({ width: 1000, height: 640 });
 
 const pageErrors = [];
@@ -96,6 +98,9 @@ await page.evaluate(() => window.SanctuaryMode.debugForceHeadFade(null));
 await twoFrames();
 
 // --- Visée (clic droit maintenu) ------------------------------------------
+// L'interface du jeu (écran-titre, GameUI) absorbe souris et clavier tant qu'elle est ouverte : le vrai jeu la ferme au démarrage,
+// ici on est entré dans le sanctuaire par l'API, donc on la ferme à la main.
+await page.evaluate(() => { window.GameUI?.hide?.(); });
 await page.mouse.move(500, 320);
 await page.mouse.down({ button: 'right' });
 // Le temps de jeu avance par image (dt plafonné à 0,05 s) : en rendu logiciel
@@ -120,10 +125,11 @@ const dx = d1.camPos[0] - d1.rootPos[0], dy = d1.camPos[1] - d1.rootPos[1], dz =
 const cy = Math.cos(d1.rootYaw), sy = Math.sin(d1.rootYaw);
 const lx = dx * cy - dz * sy, lz = dx * sy + dz * cy, ly = dy;
 const ms = d1.modelScale || 1;
-const expCam = [0.0721 * ms, 1.5082 * ms, -0.1715 * ms];
-check('visée : caméra rigide à AIM_CAM_LOCAL x échelle du modèle (±0,05 m)',
-  Math.abs(lx - expCam[0]) < 0.05 && Math.abs(ly - expCam[1]) < 0.05 && Math.abs(lz - expCam[2]) < 0.05,
-  `local (${lx.toFixed(3)}, ${ly.toFixed(3)}, ${lz.toFixed(3)}) attendu (${expCam.map((v) => v.toFixed(3)).join(', ')}), échelle ${ms.toFixed(3)}`);
+// Personnage Sahel : la caméra suit l'os de la tête (AIM_CAM_FROM_HEAD + AIM_CAM_TRIM_SAHEL) ; AIM_CAM_LOCAL (ancien personnage) ne s'applique plus.
+// On vérifie qu'elle reste à hauteur d'yeux, au centre du corps et hors du sac à dos (z > -0,10 m dans le repère du corps).
+check("visée : caméra à hauteur d'yeux, au centre du corps, hors du sac",
+  ly > 1.40 * ms && ly < 1.65 * ms && Math.abs(lx) < 0.12 && lz > -0.10,
+  `local (${lx.toFixed(3)}, ${ly.toFixed(3)}, ${lz.toFixed(3)}), échelle ${ms.toFixed(3)}`);
 const ey = d1.rootYaw - d1.camYaw;
 const bodyYaw = Math.atan2(Math.sin(ey), Math.cos(ey));
 check('visée : le corps est tourné de 23,4° par rapport à la visée', Math.abs(bodyYaw - 0.4083) < 0.03, `${(bodyYaw * 180 / Math.PI).toFixed(2)}°`);
@@ -133,20 +139,13 @@ check('visée : réticule affiché', reticleVisible);
 check('visée : posture tenue (couche haute figée)', d1.aimHold === true && d1.upperPaused === true && d1.shooting === false,
   `aimHold ${d1.aimHold}, upperPaused ${d1.upperPaused}, shooting ${d1.shooting}`);
 check("visée : jambes à l'arrêt = idle", d1.lower === 'idle', `lower ${d1.lower}`);
-// Position des mains et de la bouche du gadget dans le repère de la caméra (x droite, y haut, -z devant),
-// valeurs de référence mesurées dans Blender à l'image 1 (mètres Blender) x échelle du modèle.
-// ATTENTION : l'objet Camera de Blender a une échelle de 1,4819 ; les valeurs brutes (matrix_world.inverted())
-// sont divisées par cette échelle. On les ramène donc en mètres réels (x CAM_BLENDER_SCALE).
-const CAM_BLENDER_SCALE = 1.4819;
-for (const [label, got, ref, tol] of [
-  ['main droite', d1.rightHandCam, [0.002, -0.118, -0.517], 0.05],
-  ['main gauche', d1.leftHandCam, [-0.032, -0.119, -0.501], 0.05],
-  ['bouche du gadget', d1.muzzleCam, [-0.020, -0.080, -0.672], 0.07],
-]) {
-  const exp = ref.map((v) => v * CAM_BLENDER_SCALE * ms);
-  const err = got ? Math.hypot(got[0] - exp[0], got[1] - exp[1], got[2] - exp[2]) : Infinity;
-  check(`visée : ${label} dans le repère caméra (±${tol} m)`, err <= tol,
-    got ? `mesuré (${got.map((v) => v.toFixed(3)).join(', ')}) attendu (${exp.map((v) => v.toFixed(3)).join(', ')}) écart ${err.toFixed(3)} m` : 'indisponible');
+// Pistolet (remplace le gadget) : la direction du canon passe par le réticule (solveur de Sahel Game, app/aim-solve.js)
+// et le pistolet est visible dans le tiers inférieur du cadre (repère caméra : x droite, y haut, -z devant), donc sa flamme aussi.
+check('visée : le canon pointe le réticule (écart < 1°)', typeof d1.aimErrorDeg === 'number' && d1.aimErrorDeg < 1, `écart ${d1.aimErrorDeg?.toFixed?.(3)}°`);
+{
+  const m = d1.muzzleCam;
+  const ok = !!m && m[2] < -0.45 && m[2] > -1.1 && m[1] < -0.04 && m[1] > -0.25 && Math.abs(m[0]) < 0.25;
+  check('visée : bouche du pistolet dans le cadre, tiers inférieur', ok, m ? `mesuré (${m.map((v) => v.toFixed(3)).join(', ')})` : 'indisponible');
 }
 await shot('aim-on.png');
 

@@ -9,7 +9,7 @@
      découvertes, temps de jeu. Sauvegarde à chaque séquence terminée.
    ========================================================== */
 
-import { t, monthShort } from './i18n.js';
+import { t, monthShort } from './i18n.js?v=1';
 
 export const SAVE_KEY = 'taama.save.v1';
 export const SETTINGS_KEY = 'taama.settings.v1';

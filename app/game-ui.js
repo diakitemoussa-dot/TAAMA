@@ -21,15 +21,17 @@
    API : window.GameUI = { show, isOpen, openPause, settings, save, … }
    ========================================================== */
 
-import { SCREENS } from './game-screens.js?v=9';
-import * as G from './game-save.js';
-import { detectQuality, mediaUrl } from './device-quality.js?v=5';
-import * as P from './player-profile.js';
-import * as I18n from './i18n.js';
-import { t, translateTree } from './i18n.js';
-import { sendProfile } from './player-sync.js';
-import { SEQUENCES } from './tapama-core.js';
-import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=4';
+import { SCREENS } from './game-screens.js?v=10';
+import { applyTaamaLogo } from './taama-logo.js?v=2';
+import * as G from './game-save.js?v=1';
+import { detectQuality, mediaUrl } from './device-quality.js?v=6';
+import * as P from './player-profile.js?v=1';
+import * as I18n from './i18n.js?v=1';
+import { t, translateTree } from './i18n.js?v=1';
+import { EN } from './i18n-en.js?v=2';
+import { sendProfile } from './player-sync.js?v=1';
+import { SEQUENCES } from './tapama-core.js?v=2';
+import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=11';
 
 const NEW_UI = window.__NEW_UI !== false;
 const STAGE_W = 1440;
@@ -78,11 +80,24 @@ function toast(msg) {
 const host = document.createElement('div');
 host.id = 'guRoot';
 host.hidden = true;
-host.innerHTML = '<div class="gu-bg"></div><div class="gu-stage"></div>';
+host.innerHTML = '<div class="gu-bg"></div><div class="gu-stage"></div><div class="gu-rotatemsg" role="alert"><span class="gu-rotateico" aria-hidden="true">⟳</span><p></p></div>';
 const stageEl = host.querySelector('.gu-stage');
 const fpsEl = document.createElement('div');
 fpsEl.className = 'gu-fps';
 fpsEl.hidden = true;
+
+/** Interface tactile : écran tactile (pointeur « coarse ») ou ?touch=1 ; ?touch=0 la refuse. */
+function touchUi() {
+  try {
+    const q = new URLSearchParams(location.search).get('touch');
+    if (q === '0') return false;
+    if (q === '1') return true;
+  } catch (_) {}
+  return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+}
+/** Petit écran : tactile ou fenêtre basse (< 480 px) — plancher de texte et défilement vertical des écrans. */
+const smallUi = (h = host.clientHeight || window.innerHeight) => touchUi() || h < 480;
+const FONT_FLOOR_PX = 10;               // taille minimale réellement affichée du texte des écrans (petits écrans)
 
 function fit() {
   // zone réellement occupée par l'interface (et non la taille supposée de la fenêtre)
@@ -92,6 +107,17 @@ function fit() {
   const s = Math.min(w / STAGE_W, h / STAGE_H);
   stageEl.style.transform = `translate(-50%, -50%) scale(${s})`;
   host.style.setProperty('--gm-s', String(Math.max(0.8, s)));              // les noms sur la carte grandissent avec l'écran
+  // Petit écran (téléphone, paysage court) : la scène 1440 × 810 est réduite, le texte devient illisible. Les textes
+  // (font-size générés avec --fmin, voir tools/build-game-ui.mjs) ne descendent jamais sous FONT_FLOOR_PX à l'écran.
+  const small = smallUi(h);
+  host.style.setProperty('--gs', String(s));
+  host.style.setProperty('--fmin', small ? `${FONT_FLOOR_PX}px` : '0px');
+  host.classList.toggle('gu-touch', touchUi());
+  // téléphone en portrait : les menus ne sont pas conçus pour cette orientation (scène à 0,27) -> on demande de tourner
+  const portraitPhone = touchUi() && h > w * 1.05 && Math.min(w, h) < 600;
+  host.classList.toggle('gu-rotate', portraitPhone);
+  const msg = host.querySelector('.gu-rotatemsg p');
+  if (portraitPhone && msg && !msg.textContent) msg.textContent = t('Tourne ton téléphone en mode paysage');
   if (window.scrollX || window.scrollY) window.scrollTo(0, 0);       // la page ne doit jamais être décalée
 }
 
@@ -99,6 +125,10 @@ const BASE_CSS = `
 :host([data-contrast]) *{text-shadow:0 0 2px rgba(0,0,0,.95),0 0 9px rgba(0,0,0,.65)}
 :host{display:block}
 [data-act],[tabindex],label[data-confirm]{cursor:pointer}
+/* petit écran : les textes agrandis peuvent dépasser la scène 1440 × 810 -> l'écran défile verticalement (au doigt) au lieu d'être coupé */
+:host(.gu-small) [data-optional]{display:none}
+:host(.gu-small) .card{overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(248,243,234,.5) transparent}
+:host(.gu-small) .gu-top{overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(248,243,234,.5) transparent;touch-action:pan-y}
 button:focus-visible,[tabindex]:focus-visible{outline:3px solid #F8F3EA;outline-offset:3px}
 .gu-focus{outline:3px solid #F8F3EA!important;outline-offset:3px!important}
 [aria-disabled="true"]{opacity:.5;cursor:not-allowed}
@@ -144,6 +174,13 @@ function mount(id) {
   el.toggleAttribute('data-contrast', !!settings.highContrast);
   const root = el.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>${BASE_CSS}${def.css}</style>${def.html}`;
+  applyTaamaLogo(root);                              // mot « TAAMA » = logo en terre (taama-logo.js)
+  if (touchUi()) {                                  // pas de touche « Échap / Entrée / ↑↓ » à afficher sur tactile
+    root.querySelectorAll('kbd').forEach((k) => { if (k.closest('button')) k.style.display = 'none'; else if (k.parentElement && k.parentElement.tagName === 'SPAN') k.parentElement.style.display = 'none'; });
+  }
+  const top = Array.from(root.children).find((c) => c.tagName === 'DIV');
+  if (top) top.classList.add('gu-top');
+  el.classList.toggle('gu-small', smallUi());
   stageEl.appendChild(el);
   // fond plein cadre : couvre toute la fenêtre, derrière l'interface centrée
   let bgEl = null;
@@ -337,7 +374,7 @@ window.addEventListener('keydown', (e) => {
   else if (k === 'ArrowUp') moveFocus(-1);
   else if (k === 'ArrowRight') { navLR(1); }
   else if (k === 'ArrowLeft') { navLR(-1); }
-  else if (!e.repeat && (k === 'Enter' || k === ' ' || k === 'x' || k === 'X')) activateFocused();
+  else if (!e.repeat && (k === 'Enter' || k === ' ' || k === 'x' || k === 'X')) { if (!(window.Guide && window.Guide.gate && window.Guide.gate())) activateFocused(); }
   else if (!e.repeat && k === 'Escape') goBackKey();
 }, true);
 
@@ -362,7 +399,7 @@ function padLoop() {
   else if (p.justPressed('DOWN')) moveFocus(1);
   else if (p.justPressed('RIGHT')) { navLR(1); }
   else if (p.justPressed('LEFT')) { navLR(-1); }
-  else if (p.justPressed('A')) activateFocused();
+  else if (p.justPressed('A')) { if (!(window.Guide && window.Guide.gate && window.Guide.gate())) activateFocused(); }
   else if (p.justPressed('B')) goBackKey();
   else if (p.justPressed('START') && current && current.id === 'pause') act('resume-game');
 }
@@ -615,8 +652,12 @@ function applyGameSettings() {
 
 /* Bip de test (réglage du volume) */
 function testSound() {
+  // un bip muet n'aide personne : on dit pourquoi (son coupé ou volume à 0 dans les réglages)
+  if (settings.muteAll) { try { window.GamepadKit?.toast?.('Le son est coupé : décoche « Couper tous les sons »'); } catch (_) {} return; }
+  if (!(settings.volume > 0)) { try { window.GamepadKit?.toast?.('Le volume général est à 0 : monte le curseur Volume'); } catch (_) {} return; }
   try {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
     const o = ac.createOscillator(); const g = ac.createGain();
     o.type = 'sine'; o.frequency.value = 660;
     const vol = settings.muteAll ? 0 : (settings.volume / 100) * 0.25;
@@ -657,6 +698,7 @@ function act(name) {
     case 'resume-game': return closePause();
     case 'to-main': return toMain();
     case 'test-sound': return testSound();
+    case 'guide': return window.Guide && (current && current.id === 'main' ? window.Guide.start() : window.Guide.open('auto'));   // « Comment jouer ? » (app/guide.js)
     case 'touch-settings': return window.TouchControls && window.TouchControls.openSettings();   // Options › Commandes : panneau des commandes tactiles (app/touch-controls.js)
     case 'reset-settings':
       settings = { ...G.DEFAULT_SETTINGS };
@@ -732,7 +774,7 @@ const TIPS = [
   'Maintiens le clic droit pour viser avec précision, puis clique pour tirer avec ton gadget.',
   'Appuie sur H à tout moment pour demander de l’aide à Tapama.',
   'Maj pour courir, X pour sauter, K pour t’agenouiller et te cacher.',
-  'À la manette, A prend une photo avec le drone et RB filme.',
+  'À la manette, ✕ prend une photo avec le drone et R1 filme.',
 ];
 const FACTS = [
   'La Grande Mosquée de Djenné est construite en banco, une brique de terre crue.',
@@ -980,7 +1022,7 @@ function enterGame(opts = {}) {
 function hintDroneLaunch(tries = 0) {
   if (!inGame || window.__storyFreeze) return;
   const sm = window.SanctuaryMode, d = sm && sm.debug ? sm.debug() : null;
-  if (d && d.active && d.ready && d.state === 3 && !window.Tapama?.isBusy?.()) { window.GamepadKit?.toast?.('🚁 Lance ton drone : touche R · LB à la manette · bouton Drone sur mobile'); return; }
+  if (d && d.active && d.ready && d.state === 3 && !window.Tapama?.isBusy?.()) { window.GamepadKit?.toast?.('🚁 Lance ton drone : touche R · L1 à la manette · bouton Drone sur mobile'); return; }
   if (tries < 120) setTimeout(() => hintDroneLaunch(tries + 1), 500);
 }
 function takeoffWhenReady(tries = 0) {
@@ -997,6 +1039,7 @@ function takeoffWhenReady(tries = 0) {
 /* Scène 0 : dialogue d'ouverture de Tapama, plein écran sur un fond sable assombri, AVANT que le personnage ne soit affiché. */
 function playOpening() {
   hideUI();
+  document.body.classList.add('mode-campaign');       // dès l'ouverture : plus d'ancienne interface de la maquette (GAME / SANCTUAIRE, AR, ☰, SON)
   const veil = document.createElement('div');
   veil.id = 'guOpeningVeil';
   veil.style.cssText = 'position:fixed;inset:0;z-index:8990;background:radial-gradient(ellipse at 50% 40%,#8a6a45 0%,#4a3826 62%,#251a12 100%);opacity:0;transition:opacity .5s ease';
@@ -1050,8 +1093,23 @@ function pulseJournal() {
 /* Exploration libre : la maquette 3D (ville + mosquée) avec bulles de lieux, sans les boutons GAME / SANCTUAIRE / MENU (app/explore.js) */
 function startExplore() {
   if (locked()) return;
-  const go = () => { hideUI(); window.MosqueScene?.resumeLoop?.(); import('./explore.js?v=2').then((m) => m.start()); };
-  if (window.MosqueScene && window.MosqueScene.loaded) go(); else { window.startMosqueScene?.(); toast('La maquette se charge…'); const t = setInterval(() => { if (window.MosqueScene && window.MosqueScene.loaded) { clearInterval(t); go(); } }, 400); }
+  // échec du chargement (réseau) : on rend la main au menu au lieu de laisser un écran vide
+  const fail = () => { toast('Impossible de charger l’exploration libre. Vérifie ta connexion et réessaie.'); if (!open) showMainMenu(); };
+  const go = () => {
+    hideUI();
+    window.MosqueScene?.resumeLoop?.();
+    import('./explore.js?v=2').then((m) => m.start()).catch((e) => { console.warn('[Exploration]', e && e.message); fail(); });
+  };
+  if (window.MosqueScene && window.MosqueScene.loaded) go();
+  else {
+    window.startMosqueScene?.();
+    toast('La maquette se charge…');
+    const t0 = performance.now();
+    const t = setInterval(() => {
+      if (window.MosqueScene && window.MosqueScene.loaded) { clearInterval(t); go(); }
+      else if (performance.now() - t0 > LOAD_TIMEOUT_MS) { clearInterval(t); fail(); }   // délai maximal d'attente de la maquette
+    }, 400);
+  }
 }
 
 function overview() {
@@ -1191,6 +1249,7 @@ function setupScreen(scr) {
   if (id === 'carte') setupMap(root, scr);
   if (id.startsWith('options-')) { initControls(root); if (id === 'options-affichage') setupDisplay(root); }
 
+  injectGuideButton(root, id);
   if (scr.bgRoot) translateTree(scr.bgRoot);
   translateTree(root);                    // dernier : les repérages par texte français ci-dessus sont déjà faits
 
@@ -1203,6 +1262,30 @@ function setupScreen(scr) {
   }
 }
 
+/* Bouton « Comment jouer ? » (app/guide.js) : cloné d'un bouton voisin, le design des écrans reste intact.
+   Menu principal (avant Crédits) · Pause (après le journal) · Options › Commandes (sous « Personnaliser… »). */
+const GUIDE_BTN = { main: ['credits', 'before'], pause: ['journal', 'after'], 'options-commandes': ['touch-settings', 'after'] };
+EN['Comment jouer ?'] = EN['Comment jouer ?'] || 'How to play?';
+function injectGuideButton(root, id) {
+  const spec = GUIDE_BTN[id];
+  const src = spec && $(root, `[data-act="${spec[0]}"]`);
+  if (!src || $(root, '[data-act="guide"]')) return;
+  const b = src.cloneNode(true);
+  b.dataset.act = 'guide';
+  b.removeAttribute('data-bind');
+  const ic = $(b, 'svg');
+  if (ic) ic.innerHTML = '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 3.5M12 17.5v.1"/>';
+  const lab = $(b, 'span');
+  (lab || b).textContent = 'Comment jouer ?';
+  if (!lab && ic) b.prepend(ic);
+  if (!lab) b.style.gap = '10px';
+  src.insertAdjacentElement(spec[1] === 'before' ? 'beforebegin' : 'afterend', b);
+  if (id === 'main') {                                   // 7 boutons : un peu plus serrés pour ne pas toucher les aides de touches en bas
+    const nav = b.parentElement; nav.style.gap = '6px';
+    nav.querySelectorAll(':scope > button').forEach((x) => { x.style.height = '48px'; });
+  }
+}
+
 function setupMain(root) {
   const cont = $(root, '[data-act="continue"]');
   if (cont && !save) {
@@ -1212,7 +1295,7 @@ function setupMain(root) {
   }
   // carte « Ton équipe » : affiche le personnage jouable
   const line = $$(root, 'div').find((d) => d.firstElementChild && d.firstElementChild.tagName === 'SPAN' && d.firstElementChild.textContent.trim() === 'Personnage');
-  if (line) line.lastChild.textContent = ' · ' + t('Homme');
+  if (line) line.lastChild.textContent = t('Homme');   // le « · » précède déjà ce nœud (pas de double point)
 }
 
 function setupNewGame(root) {

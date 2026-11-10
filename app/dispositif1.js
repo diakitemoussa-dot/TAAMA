@@ -16,7 +16,7 @@
      -> carte vers le labo -> labo stade 2 -> fin du chapitre. État dans localStorage (clés taama.*), reprise de partie incluse.
    ========================================================== */
 import * as THREE from 'three';
-import { mediaUrl } from './device-quality.js?v=5';
+import { mediaUrl } from './device-quality.js?v=6';
 
 const M = window.MosqueScene;
 const POS = new THREE.Vector3(-10.0, 15.3, 15.0);         // repère du jeu (x nord, z est) : SUR LE TOIT de la Grande Mosquée (emplacement d'origine, côté façade à minarets)
@@ -259,7 +259,7 @@ function leaveLab(stage) {
       seq(5, 6); emit('dispositif1:piste');
     } else {
       lsSet(LAB2, 'done'); lsSet(REV_KEY, '1'); lsSet('taama.chapitre1', 'done'); lsSet('taama.next', 'bandiagara');
-      seq(11, 13); emit('taama:chapitre1-fin');
+      seq(11, 12, 13); emit('taama:chapitre1-fin');   // la séquence 12 (« La menace demeure ») est facultative dans le scénario : on la clôt avec la fin du chapitre
     }
     freeze(false); S.labBusy = false; S.leaving = false;
     veil(false, 700);

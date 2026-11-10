@@ -16,24 +16,27 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import * as WL from './water-logic.js?v=1';
+import * as WL from './water-logic.js?v=8';
+import { createCarDashboard } from './car-dashboard.js?v=3';
+import { createCargo } from './car-cargo.js?v=2';
 
 const M = window.MosqueScene;
-const URL_GLB = 'assets/models/voiture-djenne.glb?v=3';
-const DRACO = 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/';
+const URL_GLB = 'assets/models/voiture-djenne.glb?v=4';
+const DRACO = 'assets/vendor/three/examples/jsm/libs/draco/';
 
 // stationnement : à l'extérieur de la mosquée (point d'apparition extérieur du sanctuaire + décalage), orientée vers l'est/le large
 const PARK = { x: -21.5, z: 47.0, yaw: Math.PI * 0.5 };
 const WHEEL_R = 0.50, WHEEL_BASE = 3.0, TRACK = 1.6, AX_F = 1.55, AX_R = 1.45;   // mètres (= unités du jeu)
-const MAX_FWD = 34, MAX_REV = 9, ACCEL = 23, BRAKE = 28, DRAG = 0.30, ROLL_DRAG = 1.1;
-const CLIMB_POWER = 6.5;             // surcroît de couple en montée (par radian de pente) : le pick-up grimpe les pentes sans caler
+// Voiture plus lente et moins puissante : vitesse de pointe 34 -> 20 m/s (122 -> 72 km/h), accélération 23 -> 13, marche arrière 9 -> 6, freinage 28 -> 22.
+const MAX_FWD = 20, MAX_REV = 6, ACCEL = 13, BRAKE = 22, DRAG = 0.30, ROLL_DRAG = 1.1;
+const CLIMB_POWER = 9;               // surcroît de couple en montée (par radian de pente) ; relevé (6,5 -> 9) pour compenser la baisse d'ACCEL : le pick-up grimpe toujours les pentes sans caler
 const LOW_TORQUE = 1.1;              // couple supplémentaire à basse vitesse (démarrage en côte)
 const MAX_STEER = 0.52, STEER_RATE = 3.2;
 const BOARD_R = 3.4;                           // portée de la portière
 const DOOR_OPEN = 1.15;                        // rad
-const ST = { PARKED: 'parked', WALK_IN: 'walk_in', OPEN_IN: 'open_in', VANISH_IN: 'vanish_in', APPEAR_IN: 'appear_in', DRIVE: 'drive',
+const ST = { PARKED: 'parked', WALK_IN: 'walk_in', REACH_IN: 'reach_in', OPEN_IN: 'open_in', VANISH_IN: 'vanish_in', APPEAR_IN: 'appear_in', DRIVE: 'drive',
              OPEN_OUT: 'open_out', VANISH_OUT: 'vanish_out', APPEAR_OUT: 'appear_out' };
-const ANIM_URL = 'assets/models/personnage-voiture-anim.glb?v=2';     // clips Blender : car_sit_center / left / right (assis, mains sur le volant)
+const ANIM_URL = 'assets/models/personnage-voiture-anim-sahel.glb?v=2';     // car_sit_center / left / right (assis, mains sur le volant), retargetés sur le personnage Sahel : tools/build-car-sit-sahel.mjs
 const STAND = new THREE.Vector3(1.42, 0.0, -0.52);                       // où le personnage se tient devant la portière (repère voiture, y haut ; clip car_enter)
 const STAND_YAW = THREE.MathUtils.degToRad(-52);                         // il regarde la poignée
 const SEAT_FLOOR = new THREE.Vector3(0.44, 1.0, 0.58);             // sol de l'habitacle du personnage assis : bassin posé sur l'assise (assise à 1,215 m, volant à 1,545 m depuis la caisse relevée de 0,345 m)
@@ -157,6 +160,18 @@ function load() {
     for (const n of ['Siege_Conducteur', 'Sortie_G', 'Sortie_D', 'Phare_G', 'Phare_D', 'Feu_G', 'Feu_D', 'Porte_G_Charniere', 'Poussiere_ArG', 'Poussiere_ArD']) {
       const o = by(n); if (o) car.anchors[n] = o;
     }
+    // cargaison de la benne : les nœuds Cargo_* (tools/split-car-cargo.mjs) deviennent des corps physiques (app/car-cargo.js)
+    { const nodes = [];   // le nœud de chaque objet (un maillage à plusieurs primitives devient un groupe dont les enfants portent le même préfixe : on ne garde que le groupe)
+      root.traverse((o) => { if (/^Cargo_/.test(o.name) && !(o.parent && /^Cargo_/.test(o.parent.name))) nodes.push(o); });
+      const items = [];
+      for (const n of nodes) {
+        const bb = new THREE.Box3(); n.traverse((m) => { if (m.isMesh) { if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); bb.union(m.geometry.boundingBox); } });
+        if (bb.isEmpty()) continue;
+        const sz = bb.getSize(new THREE.Vector3());
+        n.userData.rest = n.position.clone();
+        items.push({ id: n.name, node: n, cx: n.position.x, cz: n.position.z, hx: sz.x / 2, hz: sz.z / 2, hy: sz.y / 2 });
+      }
+      car.cargoNodes = items; car.cargo = items.length ? createCargo(items) : null; }
     M.scene.add(g); car.group = g; car.loaded = true;
     // ombre portée : tache sombre douce sous la voiture (la lumière du jour ne projette pas d'ombre sur le terrain ici)
     { const sc = document.createElement('canvas'); sc.width = 64; sc.height = 128; const sx = sc.getContext('2d');
@@ -330,6 +345,9 @@ function inputs() {
     const raw = GP.raw, st = GP.state();
     thr = Math.max(thr, raw ? raw.trigger(7) : 0); brake = Math.max(brake, raw ? raw.trigger(6) : 0);
     if (Math.abs(st.lx) > 0.12) str = -st.lx;
+    // croix directionnelle : fait aussi conduire (haut = gaz, bas = frein / marche arrière, côtés = volant), en plus des gâchettes et du stick gauche
+    if (GP.down('UP')) thr = 1; if (GP.down('DOWN')) brake = 1;
+    if (!(Math.abs(st.lx) > 0.12)) { if (GP.down('LEFT')) str += 1; if (GP.down('RIGHT')) str -= 1; }
     if (GP.down('A')) hand = true;
   }
   return { thr, brake, str, hand };
@@ -357,9 +375,10 @@ function toggleLights() {
   S.lightsMan = !beamsWanted();
   window.GamepadKit?.toast?.(S.lightsMan ? '💡 Phares allumés' : 'Phares éteints');
 }
+const dash = createCarDashboard();     // app/car-dashboard.js
 function drivingHint() {
   const pad = window.GamepadKit && window.GamepadKit.connected && window.GamepadKit.connected();
-  return `<kbd style="${KBD}">${pad ? 'R3' : 'V'}</kbd>Vue habitacle / extérieure<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">${pad ? 'LB→RB' : 'L'}</kbd>Phares<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">H</kbd>Détresse<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">${pad ? '▲' : 'F'}</kbd>Descendre`;
+  return `<kbd style="${KBD}">${pad ? 'R3' : 'V'}</kbd>Vue habitacle / extérieure<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">${pad ? 'L1→R1' : 'L'}</kbd>Phares<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">H</kbd>Détresse<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">${pad ? '▲' : 'F'}</kbd>Descendre`;
 }
 function promptText(driving) {
   const pad = window.GamepadKit && window.GamepadKit.connected && window.GamepadKit.connected();
@@ -395,10 +414,10 @@ function loadClips() {
   new GLTFLoader().load(ANIM_URL, (g) => { S.clips = {}; for (const c of g.animations) S.clips[c.name] = c; S.clipsLoading = false; },
     undefined, (e) => { S.clipsLoading = false; console.warn('[Voiture] animations indisponibles :', e); });
 }
-function setupActs() {
+function setupActs(keepActions = false) {
   const api = SM(), mixer = api.mixer();
   if (!mixer || !S.clips || !S.clips.car_sit_center) return false;
-  api.resetActions();
+  if (!keepActions) api.resetActions();               // keepActions : le repos continue et se fond dans la pose assise (montée)
   S.acts = {};
   for (const n of ['car_sit_center', 'car_sit_left', 'car_sit_right']) {
     const a = mixer.clipAction(S.clips[n], api.model());
@@ -423,6 +442,53 @@ function placeRootAt(localPos, yawWorld, followCar) {
   api.setYaw(yawWorld);
 }
 
+/* ---------- montée : le personnage ouvre la portière (main sur la poignée, cinématique inverse du bras droit) ---------- */
+const _iv = [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector3()), _iq = [0, 1, 2].map(() => new THREE.Quaternion());
+/** Poignée de la portière conducteur : au bord arrière de la portière, face extérieure, à 27 % de sa hauteur (sous la vitre, ~1,25 m). Mesurée une fois, portière fermée, dans le repère de la portière. */
+function doorHandleLocal() {
+  if (car._handle !== undefined) return car._handle;
+  const d = car.doorL; if (!d) return (car._handle = null);
+  const box = new THREE.Box3(), inv = new THREE.Matrix4(), m = new THREE.Matrix4(), b = new THREE.Box3();
+  car.group.updateMatrixWorld(true); inv.copy(car.group.matrixWorld).invert();
+  d.traverse((o) => { if (o.isMesh && o.geometry) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); m.multiplyMatrices(inv, o.matrixWorld); b.copy(o.geometry.boundingBox).applyMatrix4(m); box.union(b); } });
+  if (box.isEmpty()) return (car._handle = null);
+  const hc = new THREE.Vector3(Math.sign(STAND.x) >= 0 ? box.max.x : box.min.x, box.min.y + 0.27 * (box.max.y - box.min.y), box.min.z + 0.14);   // repère voiture : côté extérieur, bord arrière
+  car.group.localToWorld(hc); d.worldToLocal(hc);
+  car._handleBox = box;
+  return (car._handle = hc);
+}
+function doorHandleWorld(out) { const h = doorHandleLocal(); if (!h) return null; car.doorL.updateMatrixWorld(true); return car.doorL.localToWorld(out.copy(h)); }
+/** Tourne l'os pour que le point cur (monde) vienne en wanted, mélangé à w ; la torsion autour de l'os est conservée. */
+function swingBone(bone, cur, wanted, w) {
+  const p = _iv[5]; bone.getWorldPosition(p);
+  const a = _iv[3].copy(cur).sub(p).normalize(), b = _iv[4].copy(wanted).sub(p).normalize();
+  _iq[0].setFromUnitVectors(a, b);
+  bone.getWorldQuaternion(_iq[1]); _iq[1].premultiply(_iq[0]);
+  bone.parent.getWorldQuaternion(_iq[2]).invert();
+  bone.quaternion.slerp(_iq[2].multiply(_iq[1]), w);
+  bone.updateMatrixWorld(true);
+}
+/** Le bras droit atteint target (monde) : coude vers le bas et vers l'extérieur ; w = mélange avec l'animation (0..1). Appelé après le mixeur. */
+function reachIK(target, w) {
+  if (w < 0.001) return;
+  const m = SM().model(); if (!m) return;
+  const arm = m.getObjectByName('mixamorigRightArm'), fore = m.getObjectByName('mixamorigRightForeArm'), hand = m.getObjectByName('mixamorigRightHand');
+  if (!arm || !fore || !hand) return;
+  m.updateMatrixWorld(true);
+  const S0 = arm.getWorldPosition(new THREE.Vector3()), E0 = fore.getWorldPosition(new THREE.Vector3()), H0 = hand.getWorldPosition(new THREE.Vector3());
+  const L1 = S0.distanceTo(E0), L2 = E0.distanceTo(H0);
+  const dir = new THREE.Vector3().subVectors(target, S0); let d = dir.length(); dir.normalize();
+  d = Math.min(Math.max(d, Math.abs(L1 - L2) + 0.02), L1 + L2 - 0.005);
+  const a = Math.acos(Math.max(-1, Math.min(1, (L1 * L1 + d * d - L2 * L2) / (2 * L1 * d))));
+  const pole = new THREE.Vector3(Math.sign(STAND.x) || 1, 0, 0).transformDirection(car.group.matrixWorld).multiplyScalar(0.5).add(new THREE.Vector3(0, -0.9, 0));
+  pole.addScaledVector(dir, -pole.dot(dir)).normalize();
+  const E1 = S0.clone().addScaledVector(dir, L1 * Math.cos(a)).addScaledVector(pole, L1 * Math.sin(a));
+  const T1 = S0.clone().addScaledVector(dir, d);
+  swingBone(arm, E0, E1, w);
+  const H2 = hand.getWorldPosition(new THREE.Vector3());
+  swingBone(fore, H2, T1, w);
+}
+
 /* ---------- fondu du personnage (disparition / réapparition) ---------- */
 let _fadeMats = null;
 function fadeSet(alpha) {
@@ -443,14 +509,16 @@ function fadeSet(alpha) {
   const root = SM().root(); if (root) root.visible = alpha > 0.01;
 }
 function fadeEnd() { fadeSet(1); _fadeMats = null; }
-function gadgetShow(on) { const g = SM().model()?.getObjectByName('Gadget_Nexus'); if (g) g.visible = on; }
+function gadgetShow(on) { const g = SM().model()?.getObjectByName('Pistol'); if (g) g.visible = on; }
 
 /* ---------- séquences monter / descendre ---------- */
 const ease = (x) => x * x * (3 - 2 * x);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 function localToWorld(name, out) { const a = car.anchors[name]; return a ? a.getWorldPosition(out) : out.copy(pos); }
 function doorStand(out) { out.copy(STAND); car.group.localToWorld(out); return out; }
-const DUR = { walk: 0.4, open: 0.25, vanish: 0.22, appear: 0.28, close: 0.25 };      // montée / descente rapides
+const ENTER_CAM_YAW = -Math.PI / 4, ENTER_CAM_DIST = 4.6, ENTER_CAM_H = 2.4;      // caméra de montée : derrière-gauche, proche
+const DUR = { walk: 0.4, open: 0.25, vanish: 0.22, appear: 0.28, close: 0.25,      // descente rapide (fondu)
+  reach: 0.4, openIn: 0.55, stepIn: 0.6, closeIn: 0.32 };                           // montée : main vers la poignée, portière tirée, pas dans l'habitacle, portière refermée
 
 function startEnter() {
   if (!S.clips) { loadClips(); return; }
@@ -462,6 +530,8 @@ function startExit() {
 }
 
 function tickSequence(dt) {
+  cargoTick(dt, 0, S.yaw);
+  dustTick(dt, 0);                       // entrée / sortie : la poussière déjà levée continue de se dissiper (sinon elle restait figée à l'écran)
   const api = SM();
   const mixer = api.mixer();
   S.t += dt;
@@ -474,27 +544,45 @@ function tickSequence(dt) {
       _v.lerpVectors(S.from, new THREE.Vector3(standW.x, standW.y + api.eyeHeight, standW.z), k);
       const cur = api.getYaw(); const dy = Math.atan2(Math.sin(yawStand - cur), Math.cos(yawStand - cur));
       api.pos.copy(_v); api.setYaw(cur + dy * Math.min(1, dt * 8)); api.sync();
-      if (S.t >= DUR.walk) { S.t = 0; S.st = ST.OPEN_IN; api.play('idle'); }
+      if (S.t >= DUR.walk) { S.t = 0; S.st = ST.REACH_IN; api.play('idle'); gadgetShow(false); doorHandleLocal(); }
       break;
     }
-    case ST.OPEN_IN: {                                   // la portière s'ouvre
-      S.doorAmt = ease(clamp01(S.t / DUR.open));
-      if (S.t >= DUR.open) { S.t = 0; S.st = ST.VANISH_IN; }
+    case ST.REACH_IN: {                                  // la main droite va vers la poignée
+      S.ikW = ease(clamp01(S.t / DUR.reach));
+      if (S.t >= DUR.reach) { S.t = 0; S.st = ST.OPEN_IN; }
       break;
     }
-    case ST.VANISH_IN: {                                 // le personnage s'efface…
-      fadeSet(1 - ease(clamp01(S.t / DUR.vanish)));
-      if (S.t >= DUR.vanish) {
-        if (!setupActs()) { fadeEnd(); S.st = ST.PARKED; S.doorAmt = 0; window.__vehicleBusy = false; return; }
-        S.t = 0; S.st = ST.APPEAR_IN; seated(); fadeSet(0); gadgetShow(false);            // …et réapparaît assis au volant
+    case ST.OPEN_IN: {                                   // il tire : la portière s'ouvre, la main suit la poignée, puis se relâche
+      S.doorAmt = ease(clamp01(S.t / DUR.openIn));
+      if (car.doorL) { car.doorL.rotation.y = -DOOR_OPEN * S.doorAmt; car.doorL.updateMatrixWorld(true); }
+      S.ikW = 1 - ease(clamp01((S.t - DUR.openIn * 0.7) / (DUR.openIn * 0.3)));
+      if (S.t >= DUR.openIn) {
+        S.ikW = 0;
+        if (!setupActs(true)) { fadeEnd(); S.st = ST.PARKED; S.doorAmt = 0; window.__vehicleBusy = false; dustClear(); return; }
+        S.t = 0; S.st = ST.VANISH_IN;
+        S.preActs = (mixer ? mixer._actions : []).filter((a) => a.isRunning() && !S.acts[a._clip.name] && a.getEffectiveWeight() > 0.01).map((a) => [a, a.getEffectiveWeight()]);
+        S.stepYaw0 = api.getYaw();
       }
       break;
     }
-    case ST.APPEAR_IN: {
+    case ST.VANISH_IN: {                                 // il monte : pas dans l'habitacle, la pose assise remplace peu à peu le repos
+      const k = ease(clamp01(S.t / DUR.stepIn));
+      const lp = _v.lerpVectors(STAND, SEAT_FLOOR, k); lp.y += 0.12 * Math.sin(Math.PI * k);                      // enjambe le seuil
+      const dy = Math.atan2(Math.sin(S.yaw - S.stepYaw0), Math.cos(S.yaw - S.stepYaw0));
+      placeRootAt(lp, S.stepYaw0 + dy * k, false);
+      api.root().scale.setScalar(1 + (SEATED_SCALE - 1) * k);
+      for (const [a, w0] of S.preActs) a.setEffectiveWeight(w0 * (1 - k));
+      playSitBlend(k, 0, 0);
+      if (S.t >= DUR.stepIn) {
+        for (const [a] of S.preActs) a.stop();
+        S.preActs = null; S.t = 0; S.st = ST.APPEAR_IN; seated(); gadgetShow(false);
+      }
+      break;
+    }
+    case ST.APPEAR_IN: {                                 // assis : la portière se referme, la pose assise reste active
       seated();
-      fadeSet(ease(clamp01(S.t / DUR.appear)));
-      S.doorAmt = 1 - ease(clamp01((S.t - 0.15) / DUR.close));         // la portière se referme
-      if (S.t >= DUR.appear + 0.15) { fadeEnd(); S.doorAmt = 0; S.st = ST.DRIVE; S.camInit = false; }
+      S.doorAmt = 1 - ease(clamp01(S.t / DUR.closeIn));
+      if (S.t >= DUR.closeIn) { fadeEnd(); S.doorAmt = 0; S.st = ST.DRIVE; S.camInit = false; }
       break;
     }
     case ST.OPEN_OUT: {
@@ -517,7 +605,7 @@ function tickSequence(dt) {
       fadeSet(ease(clamp01(S.t / DUR.appear)));
       S.doorAmt = 1 - ease(clamp01((S.t - 0.2) / DUR.close));
       if (S.t >= DUR.appear + 0.2) {
-        fadeEnd(); S.st = ST.PARKED; S.doorAmt = 0; window.__vehicleBusy = false;
+        fadeEnd(); S.st = ST.PARKED; S.doorAmt = 0; window.__vehicleBusy = false; dustClear();   // garée : plus aucun nuage
         api.setCameraYaw(S.yaw + Math.PI / 2); api.snapCamera(); api.setHeadFade(0);
         M.camera.near = 0.1; M.camera.updateProjectionMatrix();
       }
@@ -525,6 +613,7 @@ function tickSequence(dt) {
     }
   }
   if (mixer) mixer.update(dt);
+  if (S.ikW > 0 && (S.st === ST.REACH_IN || S.st === ST.OPEN_IN)) { const t = doorHandleWorld(_v); if (t) reachIK(t, S.ikW); }
   chaseCamera(dt, S.st === ST.DRIVE ? 1 : 0.55);
 }
 
@@ -587,8 +676,12 @@ let _camFovExt = 0;
 function chaseCamera(dt, strength) {
   const cam = M.camera; if (!cam) return;
   if (!_camFovExt) _camFovExt = cam.fov;
-  const dist = 8.2, h = 3.4;
-  const targetYaw = S.yaw;
+  // montée : caméra rapprochée, côté portière, pour bien voir le personnage ouvrir et monter (retour progressif derrière la voiture ensuite)
+  const inEnter = S.st === ST.WALK_IN || S.st === ST.REACH_IN || S.st === ST.OPEN_IN || S.st === ST.VANISH_IN || S.st === ST.APPEAR_IN;
+  S.enterCam = (S.enterCam || 0) + ((inEnter ? 1 : 0) - (S.enterCam || 0)) * (1 - Math.exp(-4 * dt));
+  const ek = ease(clamp01(S.enterCam));
+  const dist = 8.2 + (ENTER_CAM_DIST - 8.2) * ek, h = 3.4 + (ENTER_CAM_H - 3.4) * ek;
+  const targetYaw = S.yaw + ENTER_CAM_YAW * ek;
   if (!S.camInit) { S.camYaw = targetYaw; S.camInit = true; }
   const dy = Math.atan2(Math.sin(targetYaw - S.camYaw), Math.cos(targetYaw - S.camYaw));
   S.camYaw += dy * (1 - Math.exp(-3.2 * dt * strength));
@@ -616,6 +709,7 @@ function chaseCamera(dt, strength) {
   }
   const gy = groundAt(_cp.x, _cp.y, _cp.z); if (gy !== null && _cp.y < gy + 0.8) _cp.y = gy + 0.8;
   _ct.set(pos.x + Math.sin(S.yaw) * 2.2 * Math.cos(S.orbYaw), pos.y + 1.1, pos.z + Math.cos(S.yaw) * 2.2 * Math.cos(S.orbYaw));
+  if (ek > 0.001) { doorStand(_w); _w.y += 1.15; _ct.lerp(_w, ek); }     // regard sur le personnage à sa portière
 
   // transition 0 (extérieur) -> 1 (habitacle)
   const want = S.st === ST.DRIVE ? S.camMode : 0;
@@ -643,6 +737,20 @@ function chaseCamera(dt, strength) {
 }
 
 /* ---------- conduite ---------- */
+let _cgPrevSpeed = 0, _cgPrevYaw = 0, _cgALong = 0, _cgALat = 0;
+/** Cargaison de la benne : efforts d'inertie déduits de la vitesse et du lacet (lissés), puis application aux nœuds. */
+function cargoTick(dt, speed, yaw) {
+  if (!car.cargo || dt <= 0) return;
+  const aL = (speed - _cgPrevSpeed) / dt, yr = Math.atan2(Math.sin(yaw - _cgPrevYaw), Math.cos(yaw - _cgPrevYaw)) / dt;
+  _cgPrevSpeed = speed; _cgPrevYaw = yaw;
+  const k = 1 - Math.exp(-14 * dt);
+  _cgALong += (Math.max(-30, Math.min(30, aL)) - _cgALong) * k; _cgALat += (Math.max(-20, Math.min(20, speed * yr)) - _cgALat) * k;
+  car.cargo.step(dt, { aLong: _cgALong, aLat: _cgALat, speed });
+  for (const it of car.cargo.items) {
+    const n = it.node, r = n.userData.rest;
+    n.position.set(r.x + it.x, r.y + it.y, r.z + it.z); n.rotation.set(it.rx, it.yaw, it.rz, 'YXZ');
+  }
+}
 function drive(dt) {
   const inp = inputs();
   if (wantsToggle()) { startExit(); return; }
@@ -686,6 +794,7 @@ function drive(dt) {
   S.steer += (inp.str * lim - S.steer) * (1 - Math.exp(-STEER_RATE * dt));
   const yawRate = (S.speed / WHEEL_BASE) * Math.tan(S.steer) * (inp.hand ? 1.5 : 1);
   S.yaw += yawRate * dt;
+  cargoTick(dt, S.speed, S.yaw);
   // déplacement + collisions
   const step = S.speed * dt;
   if (Math.abs(step) > 1e-4) {
@@ -722,7 +831,9 @@ function drive(dt) {
   playSitBlend(1 - wL - wR, wL, wR);
   const mixer = SM().mixer(); if (mixer) mixer.update(dt);
   chaseCamera(dt, 1);
-  prompt(true, drivingHint());
+  // tableau de bord à l'écran (remplace l'ancienne barre de touches) : vitesse, cadran de guidage, clignotants, rapport, voyants
+  dash.update(dt, { speed: S.speed, steer: S.steer, hazard: S.hazard, beams: beamsWanted(), drowned: !!S.drowned, wet: !!S.wet, phase: _blinkPhase,
+    heading: Math.PI / 2 - S.yaw, guide: window.CityMap && window.CityMap.guide });
   dustTick(dt, !wet && !onPlatform() && Math.abs(S.speed) > 1.5 ? Math.min(1, (Math.abs(S.speed) - 1.5) / 7) : 0);   // dans l'eau : gerbes à la place de la poussière
   if (wet) WFX.vehicleFx(dt, { x: pos.x, z: pos.z, yaw: S.yaw, speed: S.speed, surface: wsurf, depth: wdepth });
   engineUpdate(!drowned);
@@ -757,7 +868,7 @@ function dustTick(dt, amount) {
   } else d.acc = 0;
   for (let i = 0; i < d.N; i++) {
     if (d.life[i] <= 0) { arr[i * 3 + 1] = -9999; continue; }
-    d.life[i] -= dt * 0.8;
+    d.life[i] -= dt * (amount > 0.02 ? 0.8 : 2.0);    // voiture arrêtée ou lente : le nuage se dissipe vite au lieu de traîner
     arr[i * 3] += d.vel[i].x * dt; arr[i * 3 + 1] += d.vel[i].y * dt; arr[i * 3 + 2] += d.vel[i].z * dt;
     d.vel[i].multiplyScalar(1 - dt * 1.4);
   }
@@ -766,7 +877,7 @@ function dustTick(dt, amount) {
 }
 
 /* ---------- boucle ---------- */
-let _blinkT = 0;
+let _blinkT = 0, _blinkPhase = true;
 function lightsUpdate(dt = 0.016) {
   const n = nightLevel();
   const driving = S.st === ST.DRIVE || S.st === ST.APPEAR_IN || S.st === ST.OPEN_OUT || S.st === ST.VANISH_OUT;
@@ -792,6 +903,7 @@ function lightsUpdate(dt = 0.016) {
   // clignotants : 2,6 Hz ; côté du braquage (seuil), ou feux de détresse
   _blinkT += dt;
   const phase = Math.floor(_blinkT * 2.6) % 2 === 0;
+  _blinkPhase = phase;
   const left = driving && (S.hazard || (S.steer > 0.12 && S.st === ST.DRIVE));
   const right = driving && (S.hazard || (S.steer < -0.12 && S.st === ST.DRIVE));
   if (car.ind) {
@@ -814,11 +926,14 @@ const controller = {
       S._gt = 0; const g = findGround(pos.x, pos.z, S.parkHint != null && S.parkAt && Math.hypot(pos.x - S.parkAt.x, pos.z - S.parkAt.z) < 3 ? S.parkHint : pos.y);
       if (g !== null && Math.abs(g - pos.y) > 0.12) { pos.y = g; S.pendingGround = false; applyTransform(); }
     }
-    if (S.st === ST.DRIVE) drive(dt); else tickSequence(dt);
+    if (S.st === ST.DRIVE) { if (!_wasDrive) { _wasDrive = true; dash.refuel(); dash.showHint(drivingHint(), 9000); } drive(dt); }
+    else { if (_wasDrive) { _wasDrive = false; dash.hide(); } tickSequence(dt); }
   },
 };
+let _wasDrive = false;
 function reset() {
-  S.lightsMan = null; S.hazard = false;
+  if (car.cargo) { car.cargo.reset(); for (const it of car.cargo.items) { it.node.position.copy(it.node.userData.rest); it.node.rotation.set(0, 0, 0); } }
+  S.lightsMan = null; S.hazard = false; _wasDrive = false; dash.hide();
   if (_fadeMats) fadeEnd();
   try { if (SM()) gadgetShow(true); } catch (_) {}
   if (S.acts && SM()) { try { SM().resetActions(); } catch (_) {} S.acts = null; }

@@ -15,11 +15,12 @@
    Repère du jeu : le nord réel est +x, l'est réel est +z (la ville est recalée sur la mosquée du jeu).
    ========================================================== */
 import * as THREE from 'three';
-import { PLACES, createRouter, formatDistance, etaMinutes } from './city-routes.js?v=1';
+import { PLACES, createRouter, formatDistance, etaMinutes } from './city-routes.js?v=2';
+import { createRouteArrow, projectOnRoute } from './route-arrow.js?v=8';
 
 const M = window.MosqueScene;
 const MAP_URL = 'assets/images/carte-djenne.jpg?v=2';
-const ROUTES_URL = 'assets/data/routes-djenne.json?v=1';
+const ROUTES_URL = 'assets/data/routes-djenne-voiture.json?v=1';   // routes que la voiture du jeu peut vraiment prendre (tools/analyze-roads.mjs)
 
 /* Géoréférence de l'image (repère « nouveau » de Blender/Blosm, mètres réels) */
 const HALF = 1470;                      // demi-côté de l'image (m)
@@ -67,7 +68,7 @@ function init() {
     '<div class="cm-route"><b class="cm-route-name"></b><span class="cm-route-info"></span><button type="button" class="cm-route-x">Effacer</button></div>' +
     '<div class="cm-hint-t">Glisse pour déplacer · pince pour zoomer</div>' +
     '<div class="cm-key"><span class="cm-key-kb">Glisser · molette : déplacer / zoomer · C : me recentrer · M ou Échap : fermer<br></span>' +
-    '<span class="cm-key-pad"><b>🎮</b> stick G déplacer · RT/LT zoom · A recentrer · B fermer</span></div>';
+    '<span class="cm-key-pad"><b>🎮</b> stick G déplacer · R2/L2 zoom · ✕ recentrer · ○ fermer</span></div>';
   const closeBtn = document.createElement('button'); closeBtn.className = 'cm-close'; closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', 'Réduire la carte'); closeBtn.textContent = '×'; ui.appendChild(closeBtn);
   const tools = document.createElement('div'); tools.className = 'cm-tools';
@@ -90,7 +91,7 @@ function init() {
 
   const ctx = cv.getContext('2d');
   const img = new Image(); let imgReady = false, imgReq = false;
-  let open = false, shown = false, acc = 0, lastKey = '';
+  let closedAt = -1e9, open = false, shown = false, acc = 0, lastKey = '';
   const dir = new THREE.Vector3();
   const view = { ce: 0, cn: 0, half: OPEN_HALF };               // vue de la grande carte (m réels)
   const held = new Set();                                        // flèches / WASD maintenues
@@ -115,6 +116,7 @@ function init() {
     return l;
   };
   const placeOf = (id) => places().find((p) => p.id === id) || null;
+  const routeArrow = createRouteArrow();           // boussole-guide fixe en haut de l'écran (app/route-arrow.js)
   function loadRouter() {
     if (router || routeReq) return; routeReq = true;
     fetch(ROUTES_URL).then((r) => r.json()).then((d) => { router = createRouter(d); recomputeRoute(true); if (fitPending && fitRoute()) fitPending = false; draw(true); }).catch((e) => console.warn('[carte] routes indisponibles :', e));
@@ -122,8 +124,12 @@ function init() {
   function recomputeRoute(force) {
     const pl = sel.id && placeOf(sel.id); if (!pl) { sel.route = null; updateRouteBar(); return; }
     if (!router) { loadRouter(); return; }
-    const me = playerReal();
-    if (!force && sel.from && Math.hypot(me.e - sel.from.e, me.n - sel.from.n) < 25 && sel.route) return;   // ne recalcule pas à chaque pas
+    const me = actorReal();
+    if (!force && sel.route && sel.from) {
+      const moved = Math.hypot(me.e - sel.from.e, me.n - sel.from.n);
+      if (moved < 6) return;                                                                                // ne recalcule pas à chaque pas
+      if (sel.route.roads ? projectOnRoute(sel.route.pts, me.e, me.n).dist < 20 : moved < 25) return;      // encore sur l'itinéraire : on le garde tel quel (la flèche ne saute pas)
+    }
     sel.from = { e: me.e, n: me.n };
     sel.route = router.route(me.e, me.n, pl.e, pl.n);
     updateRouteBar();
@@ -172,6 +178,7 @@ function init() {
     const L = sel.route ? sel.route.length : 0;
     barEl.querySelector('.cm-route-info').textContent = sel.route
       ? formatDistance(L) + ' · ≈ ' + etaMinutes(L, 9) + ' min en voiture · ' + etaMinutes(L, 1.4) + ' min à pied' + (sel.route.roads ? '' : ' (à vol d’oiseau)')
+        + (sel.route.wet >= 5 ? ' · gué de ' + Math.round(sel.route.wet / 10) * 10 + ' m, roule doucement' : '')
       : 'Calcul…';
   }
   // La carte s'ouvre d'elle-même aux moments clés de l'histoire (app/dispositif1.js : S2, S8, S11) via CityMap.openTo(id) ;
@@ -217,7 +224,7 @@ function init() {
   /* ---------- ouverture / fermeture ---------- */
   function setOpen(v) {
     if (v === open) return;
-    open = v;
+    open = v; closedAt = performance.now();
     box.classList.toggle('is-open', open);
     backdrop.classList.toggle('is-on', open);
     box.setAttribute('aria-label', open ? 'Carte de Djenné' : 'Carte de Djenné — cliquer pour agrandir');
@@ -308,17 +315,19 @@ function init() {
   });
 
   /* ---------- clavier ---------- */
+  // La lettre tapée (e.key) et non la position physique (e.code) : sur un clavier AZERTY la touche M est à la place du « ; » (code Semicolon), KeyM y est la virgule.
+  const isKey = (e, l) => (e.key || '').toLowerCase() === l;
   window.addEventListener('keydown', (e) => {
     if (!shown || e.ctrlKey || e.metaKey || e.altKey) return;
     const tg = e.target; if (tg && /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)) return;
     if (!open) {
-      if (e.code === 'KeyM') { e.preventDefault(); setOpen(true); }
+      if (isKey(e, 'm')) { e.preventDefault(); setOpen(true); }
       return;
     }
     if (/^F\d+$/.test(e.key)) return;                              // touches de fonction du navigateur
     const c = e.code;
-    if (c === 'KeyM' || c === 'Escape') setOpen(false);
-    else if (c === 'KeyC') recenter();
+    if (isKey(e, 'm') || c === 'Escape') setOpen(false);
+    else if (isKey(e, 'c')) recenter();
     else if (c === 'Equal' || c === 'NumpadAdd' || e.key === '+') zoomAt(0.75);
     else if (c === 'Minus' || c === 'NumpadSubtract' || e.key === '-') zoomAt(1 / 0.75);
     else if (PAN_KEYS[c]) held.add(c);
@@ -341,6 +350,17 @@ function init() {
     const p = M.camera.position, r = gameToReal(p.x, p.z);
     M.camera.getWorldDirection(dir);
     return { e: r.e, n: r.n, heading: Math.atan2(dir.z, dir.x) };      // 0 = nord (+x), + vers l'est (+z)
+  }
+
+  /** Position de l'ACTEUR (la voiture quand on conduit, sinon le joueur) : le guidage part de là et non de la caméra, qui tremble et se décale en poursuite. */
+  function actorReal() {
+    const base = playerReal();
+    const V = window.Vehicle, driving = !!(V && V.state === 'drive' && V.position);
+    let p = driving ? V.position : null;
+    if (!p) { const sp = window.SanctuaryMode && window.SanctuaryMode.playerPosition && window.SanctuaryMode.playerPosition(); if (sp) p = sp; }
+    if (!p) return { ...base, driving: false, speed: 0 };
+    const r = gameToReal(p.x, p.z);
+    return { e: r.e, n: r.n, heading: base.heading, driving, speed: driving ? (V.speed || 0) : 0 };
   }
 
   function niceBar(maxM) {
@@ -545,18 +565,21 @@ function init() {
         if (shown) { resizeCanvas(); lastKey = ''; }
       }
     }
-    if (!shown) return;
+    if (!shown) { routeArrow.hide(); return; }
+    // boussole-guide (interface) : seulement quand un lieu est choisi, la grande carte fermée ; l'aiguille vise un point de l'itinéraire, pas le lieu en ligne droite
+    if (open || !sel.id || !sel.route) routeArrow.hide();
+    else { const pl = placeOf(sel.id), a = actorReal(); routeArrow.update(d, { route: sel.route, name: pl ? (pl.short || pl.name) : '', me: a, speed: a.speed, visible: true }); }
     if (!autoShown && !sel.id && storyTarget() && placeOf(storyTarget())) { autoShown = true; sel.id = storyTarget(); loadRouter(); }   // itinéraire vers la base visible d'emblée, sur le cercle comme sur la grande carte
     if (open) { applyInputs(d); draw(false); return; }
     // fermée : la croix gauche de la manette ouvre la carte (si aucun menu n'est affiché)
     const GP = window.GamepadKit;
-    if (GP && GP.connected() && GP.justPressed('LEFT') && !(window.KeyboardMenu && window.KeyboardMenu.hasMenu && window.KeyboardMenu.hasMenu())) { setOpen(true); return; }
+    if (GP && GP.connected() && GP.justPressed('LEFT') && !(window.Vehicle && window.Vehicle.state === 'drive') && !(window.KeyboardMenu && window.KeyboardMenu.hasMenu && window.KeyboardMenu.hasMenu())) { setOpen(true); return; }
     if (tickSlow) draw(false);
   });
 
   window.CityMap = {
     open: () => setOpen(true), close: () => setOpen(false), toggle: () => setOpen(!open),
-    get isOpen() { return open; }, get visible() { return shown; },
+    get isOpen() { return open; }, get visible() { return shown; }, get busy() { return open || performance.now() - closedAt < 300; },
     get view() { return { ...view }; }, zoomAt, recenter,
     gameToReal,
     selectPlace: (id) => { if (id !== sel.id) selectPlace(id); }, clearRoute,
@@ -571,6 +594,7 @@ function init() {
       markPlacesActive(); draw(true);
     },
     get selected() { return sel.id; },
+    get guide() { return routeArrow.state; },                    // cap du trajet, distance restante, prochain virage (tableau de bord de la voiture)
     get route() { return sel.route ? { id: sel.id, length: sel.route.length, pts: sel.route.pts.length, roads: sel.route.roads } : null; },
   };
 }

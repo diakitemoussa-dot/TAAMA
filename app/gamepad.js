@@ -125,7 +125,7 @@ function _menuNav() {
 /* ---------- Raccourcis « vue d'ensemble » (maquette, hors mode jeu) ---------- */
 let _warmupUntil  = 0;      // anti « appui de réveil » juste après la connexion
 let _ovHintShown  = false;  // aide vue d'ensemble déjà montrée ?
-const _OVERVIEW_HINT = '🎮 A jouer (drone) · Y sanctuaire · X vidéo · START menu · stick D tourner · stick G se déplacer · LT/RT zoom';
+const _OVERVIEW_HINT = '🎮 ✕ jouer (drone) · △ sanctuaire · □ vidéo · START menu · stick D tourner · stick G se déplacer · L2/R2 zoom';
 
 function _overviewActive() {
   if (document.body.classList.contains('mode-campaign')) return false;   // partie en cours : la vue d'ensemble (GAME / SANCTUAIRE / MENU) n'existe plus, A / Y / X ne doivent rien lancer (sinon A, qui fait avancer Tapama, démarrait le drone)

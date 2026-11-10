@@ -10,7 +10,7 @@
    ========================================================== */
 
 export const AIM_BLEND_SPEED   = 9;     // vitesse du fondu 3e personne <-> visée (exponentiel)
-export const AIM_LOOK_MULT     = 0.6;   // sensibilité souris/stick en visée (1 = normale)
+export const AIM_LOOK_MULT     = 0.35;  // sensibilité souris/stick/toucher en visée (1 = normale) ; réduite de 0,6 à 0,35 : viseur plus lent et plus précis. La lunette en dérive (sniper-cam.js)
 export const AIM_RANGE         = 60;    // m — portée du rayon de visée
 export const AIM_HIT_RADIUS    = 0.6;   // m — tolérance de touche sur le drone ennemi
 export const AIM_HIT_RADIUS_NO_ASSIST = 0.3;   // m — tolérance sans « Aide à la visée du gadget » (Options › Jeu)
@@ -91,7 +91,7 @@ export const AIM_POSE_KNEEL = { bodyYaw: 0.3209, pitch0: -0.0560 };
 export const AIM_POSE_SPEED = 8;                      // vitesse du fondu debout <-> genoux (exponentiel)
 export const AIM_SPINE_WEIGHTS = [0.3, 0.35, 0.35];   // répartition du tangage sur Spine, Spine1, Spine2 (somme = 1)
 export const AIM_PITCH_MIN = -0.8;                    // rad : tangage de visée mini (vers le bas)
-export const AIM_PITCH_MAX = 0.6;                     // rad : tangage de visée maxi (vers le haut)
+export const AIM_PITCH_MAX = 1.45;                    // rad : tangage de visée maxi (vers le haut, ≈ 83°) ; relevé de 0,6 : les drones ennemis tirent depuis le ciel
 
 /** Paramètres de pose pour un mélange mix (0 = debout, 1 = à genoux) : { bodyYaw, pitch0 } interpolés linéairement. */
 export function aimPoseParams(mix) {
@@ -105,6 +105,20 @@ export function aimPoseParams(mix) {
 export function aimOffsetFromHead(yaw, scale = 1) {
   const c = Math.cos(yaw), s = Math.sin(yaw);
   const { x, y, z } = AIM_CAM_FROM_HEAD;
+  return { x: (x * c + z * s) * scale, y: y * scale, z: (-x * s + z * c) * scale };
+}
+
+/** Ajustement de la caméra de visée pour le personnage Sahel (pistolet) : AIM_CAM_FROM_HEAD a été calibré sur l'ancien personnage.
+ *  Sur le nouveau, la tête est 8,8 cm plus haute dans la pose de visée au pistolet ; sans correction le pistolet sort du bas de l'écran
+ *  et sa flamme avec. On abaisse donc la caméra de 6 cm (le pistolet revient dans le tiers inférieur du cadre, comme l'ancien gadget).
+ *  On NE la recule PAS jusqu'à AIM_CAM_LOCAL : à cet endroit (19,6 cm plus en arrière) elle se retrouve dans le sac à dos.
+ *  Décalage en m Blender, x échelle du modèle, repère du corps. */
+export const AIM_CAM_TRIM_SAHEL = { x: -0.03, y: -0.06, z: 0 };
+
+/** Décalage AIM_CAM_TRIM_SAHEL x scale, tourné par `yaw` autour de Y (même repère que aimOffsetFromHead). */
+export function aimTrimOffset(yaw, scale = 1) {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  const { x, y, z } = AIM_CAM_TRIM_SAHEL;
   return { x: (x * c + z * s) * scale, y: y * scale, z: (-x * s + z * c) * scale };
 }
 

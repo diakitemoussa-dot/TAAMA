@@ -57,7 +57,7 @@
 
     // Déverrouillage iOS : play+pause sur chaque élément audio de ce module
     [_countdownSound, _transitionSound, _textSound, modelWind, modelSound].forEach(a => {
-      if (!a) return;
+      if (!a || !a.paused) return;     // un son déjà lancé (vent de la maquette démarré par ce même clic) n'est pas coupé par le déverrouillage
       a.play().catch(() => {});
       a.pause();
       a.currentTime = 0;

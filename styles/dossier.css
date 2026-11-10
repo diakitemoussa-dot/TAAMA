@@ -237,7 +237,7 @@
   .ds-title{ grid-column:1; grid-row:1; height:40px; padding:0 8px 0 12px; gap:8px; font-size:.7rem; letter-spacing:.06em; border-right:0; }
   .ds-path{ overflow:visible; }
   .ds-tabs{ grid-column:2; grid-row:1; height:40px; padding:0 8px 0 0; align-items:flex-end; gap:4px; background:linear-gradient(180deg,#232d3d,#161d29); border-bottom:1px solid var(--ds-line); }
-  .ds-tab{ min-height:36px; min-width:44px; justify-content:center; padding:0 10px; font-size:.74rem; }
+  .ds-tab{ min-height:40px; min-width:44px; justify-content:center; padding:0 10px; font-size:.74rem; }
   .ds-tab-t{ display:none; }
   .ds-tab.on .ds-tab-t{ display:inline; }
   /* corps : document | messagerie */
@@ -293,7 +293,7 @@
 @media (max-height:380px) and (orientation:landscape){
   .ds-win{ grid-template-rows:36px minmax(0,1fr); }
   .ds-title, .ds-tabs{ height:36px; }
-  .ds-tab{ min-height:34px; }
+  .ds-tab{ min-height:36px; }
   .ds-chat-head{ padding:4px 10px; }
   .ds-av{ width:32px; height:32px; }
   .ds-pages{ padding:8px 12px max(8px,env(safe-area-inset-bottom)); }

@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   pickQualityDetail, isWeakGpu, createDynamicRes, tileBudget, QUALITY_PRESETS,
-  classifyNet, createNetTracker, estimateMbps, netPlan, combineQuality,
+  classifyNet, createNetTracker, estimateMbps, netPlan, combineQuality, modelVariantUrls, cityCandidates,
 } from '../app/device-quality.js';
 
 test('palier : ordinateur = high, raison fournie', () => {
@@ -128,4 +128,25 @@ test('réseau : downlink de navigator.connection (peu fiable) = seuils plus indu
   assert.equal(classifyNet({ effectiveType: '4g', downlink: 1.35 }), 'medium');   // jamais « lent » à tort sur un bon réseau
   assert.equal(classifyNet({ effectiveType: '4g', downlink: 0.5 }), 'slow');
   assert.equal(classifyNet({ effectiveType: '4g', downlink: 0.8 }, 'slow'), 'slow');
+});
+
+test('variantes mobiles : candidats (variante puis original), query conservée, PC = original seul', () => {
+  assert.deepEqual(modelVariantUrls('assets/models/personnage-joueur-gadget.glb?v=4', true),
+    ['assets/models/personnage-joueur-gadget-mobile.glb?v=4', 'assets/models/personnage-joueur-gadget.glb?v=4']);
+  assert.deepEqual(modelVariantUrls('assets/models/droneN.glb?v=1', true), ['assets/models/droneN-mobile.glb?v=1', 'assets/models/droneN.glb?v=1']);
+  assert.deepEqual(modelVariantUrls('assets/models/droneN.glb?v=1', false), ['assets/models/droneN.glb?v=1']);
+  assert.deepEqual(modelVariantUrls('assets/models/drone.glb', true), ['assets/models/drone.glb']);   // pas de variante connue
+  assert.deepEqual(modelVariantUrls('droneN.glb', true), ['droneN-mobile.glb', 'droneN.glb']);
+});
+test('ville : KTX2 > JPEG mobile > original ; sans compression GPU pas de KTX2 ; PC = original', () => {
+  assert.deepEqual(cityCandidates(true, true), ['djenne-ville-leger-mobile-ktx2.glb', 'djenne-ville-leger-mobile.glb', 'djenne-ville-leger.glb']);
+  assert.deepEqual(cityCandidates(true, false), ['djenne-ville-leger-mobile.glb', 'djenne-ville-leger.glb']);
+  assert.deepEqual(cityCandidates(false, true), ['djenne-ville-leger.glb']);
+});
+test('modelLight : vrai sur appareil non high ou réseau lent, faux sur PC en bon réseau', () => {
+  assert.equal(combineQuality('high', 'fast').bytes.modelLight, false);
+  assert.equal(combineQuality('high', 'medium').bytes.modelLight, false);
+  assert.equal(combineQuality('high', 'slow').bytes.modelLight, true);
+  assert.equal(combineQuality('mid', 'fast').bytes.modelLight, true);
+  assert.equal(combineQuality('low', 'fast').bytes.modelLight, true);
 });

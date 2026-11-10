@@ -93,6 +93,26 @@ body.gu-contrast #tpRoot .tp-d-text,
 body.gu-contrast #tpRoot .tp-r-text,
 body.gu-contrast #tpRoot .tp-quote{ text-shadow: 0 0 2px #000, 0 0 6px rgba(0,0,0,.8); font-weight: 700; }
 
+/* Partie en cours (Nouvelle partie / Continuer) : l'ancienne interface de la maquette — boutons AR, ☰, GAME / SANCTUAIRE — et le
+   bouton SON ON n'existent plus (le son se règle dans Options › Audio). Ils restent en « Exploration libre ». */
+body.mode-campaign .mq-ui,
+body.mode-campaign #soundToggle{ display: none !important; }
+
+/* Téléphone en portrait : message « tourne ton téléphone » par-dessus les menus */
+.gu-rotatemsg{
+  display: none;
+  position: absolute; inset: 0; z-index: 5;
+  flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 24px; text-align: center;
+  background: rgba(85,65,93,.97); color: #F8F3EA;
+  font: 700 18px/1.4 'Open Sans', system-ui, sans-serif;
+}
+.gu-rotatemsg p{ margin: 0; max-width: 18em; }
+.gu-rotateico{ font-size: 56px; color: #F9D58B; animation: gu-spin 2.4s ease-in-out infinite; }
+@keyframes gu-spin{ 0%,100%{ transform: rotate(-20deg); } 50%{ transform: rotate(70deg); } }
+#guRoot.gu-rotate .gu-rotatemsg{ display: flex; }
+#guRoot.gu-rotate .gu-stage{ visibility: hidden; }
+
 @media (prefers-reduced-motion: reduce){
   .gu-screen{ transition: none; }
 }

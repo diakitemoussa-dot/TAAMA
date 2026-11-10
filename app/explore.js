@@ -11,7 +11,7 @@
    Emplacements : coordonnées réelles (OpenStreetMap, voir city-routes.js) converties dans le repère du jeu.
    ========================================================== */
 import * as THREE from 'three';
-import { PLACES } from './city-routes.js?v=1';
+import { PLACES } from './city-routes.js?v=2';
 
 const M = window.MosqueScene;
 const K = 0.84, CB_X = -12.0, CB_Y = 5.2;

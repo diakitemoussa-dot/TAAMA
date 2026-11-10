@@ -10,6 +10,8 @@
     "test:compare": "node tools/browser-check.mjs http://localhost:8123/tests/compare.html",
     "test:app": "node tools/app-check.mjs",
     "test:aim-logic": "node tests/aim-system.test.mjs",
+    "test:anim-logic": "node tests/anim-state.test.mjs",
+    "test:camera-logic": "node tests/camera-rig.test.mjs",
     "test:drone-n-logic": "node tests/drone-n-ai.test.mjs",
     "test:drone-n": "node tools/drone-n-ai-check.mjs",
     "test:aim": "node tools/aim-check.mjs",

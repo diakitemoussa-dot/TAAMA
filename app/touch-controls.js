@@ -17,11 +17,11 @@
          .state() · .set(patch) · .refresh()
    ========================================================== */
 
-import * as L from './touch-layout.js';
+import * as L from './touch-layout.js?v=1';
 
 if (!document.getElementById('tcCss')) {
   const l = document.createElement('link');
-  l.id = 'tcCss'; l.rel = 'stylesheet'; l.href = 'styles/touch-controls.css?v=3';
+  l.id = 'tcCss'; l.rel = 'stylesheet'; l.href = 'styles/touch-controls.css?v=4';
   document.head.appendChild(l);
 }
 
@@ -676,7 +676,7 @@ let guBtn = null;
 function syncGuButton() {
   const host = document.getElementById('guRoot');
   const scr = host && !host.hidden ? host.dataset.screen : '';
-  const want = scr === 'pause';
+  const want = scr === 'pause' && enabled();           // PC sans écran tactile : le bouton n'a pas lieu d'être (Options › Commandes l'offre aussi)
   if (!guBtn) {
     guBtn = document.createElement('button'); guBtn.type = 'button'; guBtn.id = 'tcGuBtn';
     guBtn.addEventListener('click', () => openSettings());

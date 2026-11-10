@@ -142,7 +142,31 @@ export function tileBudget(level) {
    Le réseau décide des octets / chargements ; l'appareil décide du rendu.
    ============================================================ */
 
-const CITY_FULL = 'djenne-ville-leger.glb', CITY_LIGHT = 'djenne-ville-leger-mobile.glb';
+const CITY_FULL = 'djenne-ville-leger.glb', CITY_LIGHT = 'djenne-ville-leger-mobile.glb', CITY_KTX2 = 'djenne-ville-leger-mobile-ktx2.glb';
+
+/** Variantes mobiles d'un modèle (Meshopt, mêmes nœuds et mêmes clips) : fichier d'origine -> fichier léger. */
+export const MOBILE_VARIANTS = {
+  'personnage-joueur-gadget.glb': 'personnage-joueur-gadget-mobile.glb',
+  'droneN.glb': 'droneN-mobile.glb',
+};
+/**
+ * Candidats de chargement d'un modèle, dans l'ordre : variante mobile (si `light` et connue) puis l'original.
+ * Conserve le dossier et la query (?v=). Fonction pure : le repli sur l'original est fait par l'appelant.
+ */
+export function modelVariantUrls(url, light) {
+  if (!light || typeof url !== 'string') return [url];
+  const m = /^(.*\/)?([^/?#]+)([?#].*)?$/.exec(url);
+  const alt = m && MOBILE_VARIANTS[m[2]];
+  return alt ? [(m[1] || '') + alt + (m[3] || ''), url] : [url];
+}
+/**
+ * Ville : candidats dans l'ordre. `light` : KTX2 (si le GPU sait lire une compression), puis JPEG mobile, puis original.
+ * Sans support KTX2 (ou sans `light`), la variante KTX2 est écartée ; PC (non light) : original seul.
+ */
+export function cityCandidates(light, ktx2Ok = true) {
+  if (!light) return [CITY_FULL];
+  return ktx2Ok ? [CITY_KTX2, CITY_LIGHT, CITY_FULL] : [CITY_LIGHT, CITY_FULL];
+}
 export const NET_LEVELS = ['slow', 'medium', 'fast'];
 
 /** Seuils (Mb/s) d'un débit MESURÉ. Descente : < slowBelow ; remontée seulement au-dessus de slowUp (hystérésis). */
@@ -225,6 +249,7 @@ export function combineQuality(deviceLevel, net) {
     bytes: {
       net: plan.net,
       tilesDir: plan.tilesDir || dev.tilesDir,
+      modelLight: lightDevice || plan.net === 'slow',                             // variantes mobiles (personnage, drone, ville KTX2) : appareil non high OU réseau lent
       cityGlb: (lightDevice || plan.net === 'slow') ? CITY_LIGHT : CITY_FULL,    // ville : textures réduites (2,2 Mo / 18 Mo GPU) sur mobile ou réseau lent ; PC en réseau moyen : intacte
       radiusFactor: plan.radiusFactor,
       concurrent: plan.concurrent === null ? dev.tileConcurrent : Math.min(plan.concurrent, dev.tileConcurrent),

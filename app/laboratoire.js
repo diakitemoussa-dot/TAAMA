@@ -25,9 +25,9 @@
    exportée : voir tests/lab-enigmes.test.mjs.
    ========================================================== */
 
-import { fillName } from './player-profile.js';
-import { mediaUrl } from './device-quality.js?v=5';
-import { t, translateTree } from './i18n.js';
+import { fillName } from './player-profile.js?v=1';
+import { mediaUrl } from './device-quality.js?v=6';
+import { t, translateTree } from './i18n.js?v=1';
 
 /* ==========================================================
    1. LOGIQUE PURE DES ÉNIGMES (aucun DOM)
@@ -364,11 +364,11 @@ function sceneSVG() {
     `<g transform="translate(${96 + i * 62} 482)"><path d="M-22 0 Q-26 -26 0 -34 Q26 -26 22 0 Z" fill="#b5593a"/><path d="M-22 0 Q-26 -26 0 -34 Q26 -26 22 0 Z" fill="url(#potShade)"/><ellipse cx="0" cy="-34" rx="9" ry="3" fill="#4a2616"/></g>`).join('');
   const books = [0, 1, 2, 3, 4].map((i) =>
     `<rect x="${480 + i * 16}" y="${448 - (i % 2) * 6}" width="13" height="${40 + (i % 2) * 6}" rx="2" fill="${['#2d6a8f', '#c9a24b', '#8f3d2d', '#3d7a4c', '#55415d'][i]}"/>`).join('');
+  // silhouette de la Grande Mosquée : tracée d'après le modèle 3D du jeu (façade à trois tours, vue de face, projection orthographique), 180 points
   const mosque = `
-    <g transform="translate(200 300)">
-      <path d="M-62 40 V-6 L-44 -22 L-26 -6 V-34 L-18 -50 L-10 -34 V-6 H10 V-34 L18 -50 L26 -34 V-6 L44 -22 L62 -6 V40 Z" fill="#8b5a3a" stroke="#4a2c1a" stroke-width="2"/>
-      <rect x="-12" y="14" width="24" height="26" rx="12" fill="#3b2216"/>
-      <g stroke="#4a2c1a" stroke-width="1.4"><line x1="-18" y1="-34" x2="-18" y2="-56"/><line x1="18" y1="-34" x2="18" y2="-56"/></g>
+    <g transform="translate(206 330)">
+      <path d="M-105 0 L-105 -9.7 L-104.5 -11.8 L-103.6 -11.8 L-103 -14.8 L-99 -14.8 L-98.5 -11.8 L-97.9 -11.8 L-97.5 -9.7 L-94.7 -9.7 L-94.6 -29 L-93.2 -29 L-92.4 -31.6 L-91.6 -31.6 L-90.6 -28.9 L-89.4 -28.9 L-89.2 -27.9 L-86.9 -27.9 L-86.8 -29.3 L-86.1 -29.3 L-85.7 -37.4 L-85.5 -37.8 L-83.4 -37.8 L-82.6 -41.3 L-81.3 -41.6 L-70 -41.6 L-69.3 -40.7 L-67.7 -40.5 L-66.7 -37.3 L-65.6 -37.3 L-65.4 -34.5 L-59.6 -34.5 L-59 -35.2 L-58.9 -36.7 L-58.2 -37.4 L-56.6 -37.1 L-56.2 -34.5 L-53.9 -34.5 L-53.1 -36.9 L-51.8 -37.3 L-50.1 -37.3 L-49.1 -35.5 L-48.2 -35.5 L-47.5 -37.2 L-46.6 -37.3 L-45.5 -34.6 L-43.9 -34.5 L-43.4 -37.1 L-41.9 -37.4 L-41.3 -37 L-41.1 -35.1 L-40 -35 L-39.9 -39.7 L-38.5 -39.7 L-38.4 -40.4 L-37.2 -40.6 L-37 -43.4 L-35.6 -43.4 L-35.2 -48.4 L-33.6 -48.4 L-33.5 -48.9 L-30.2 -48.9 L-30.1 -48.4 L-28.3 -48.4 L-28 -43.4 L-26.8 -43.4 L-26.7 -40.6 L-25.4 -40.5 L-25.1 -39.8 L-23.7 -39.5 L-23.6 -35 L-22.5 -35 L-22.3 -36.4 L-21.6 -37.3 L-19.1 -37.2 L-18.7 -35.9 L-17.8 -35.9 L-17 -37.3 L-16.2 -37.3 L-15.2 -34.5 L-14.1 -34.6 L-13.2 -37.3 L-11.9 -36.9 L-11.2 -34.5 L-10.4 -34.5 L-9.3 -37.2 L-7.9 -37 L-7.3 -34.9 L-6.3 -35.1 L-5.2 -37.4 L-3.3 -37.2 L-2.7 -35.2 L-1.5 -35.1 L-1.4 -41.9 L0.1 -41.9 L1.2 -47.5 L2.3 -47.4 L2.9 -43.7 L3.7 -43.7 L3.9 -47.4 L5.1 -47.4 L5.6 -48.9 L13.1 -48.9 L13.5 -47.4 L14.8 -47.4 L14.9 -43.6 L15.8 -43.6 L16.3 -47.4 L17.4 -47.6 L18.6 -41.9 L19.5 -41.9 L20.5 -35.2 L21.4 -34.6 L22.5 -34.6 L22.9 -36.6 L23.5 -37.3 L24.9 -37.1 L25.3 -34.5 L27.7 -34.5 L29.2 -37.3 L30.1 -37.3 L30.6 -36.9 L31.4 -34.5 L32.7 -34.5 L34 -37.3 L35.9 -37.2 L37 -35.6 L37.9 -35.6 L38.2 -36.9 L39.6 -37.3 L40.3 -37 L40.7 -34.8 L42.8 -34.8 L42.9 -38.6 L44.3 -38.6 L44.6 -40.2 L45.9 -40.6 L46.1 -43.4 L47.5 -43.4 L47.6 -48.4 L49.4 -48.4 L49.5 -48.9 L52.7 -48.9 L52.9 -48.4 L54.5 -48.4 L55 -43.4 L56.6 -43.4 L56.7 -40.6 L57.8 -40.2 L57.9 -38.6 L59.3 -38.5 L59.7 -34.5 L62.5 -34.9 L63.9 -37.6 L70.5 -37.2 L71.2 -36.5 L71.8 -34.3 L72.7 -34.4 L74 -37.2 L75.5 -37 L76 -35.1 L76.9 -35.1 L78.6 -41.2 L88.7 -41.3 L88.8 -42.3 L89.6 -42.3 L89.7 -41.3 L91.1 -41.2 L92.3 -40 L92.5 -37.4 L93.2 -37.4 L93.7 -36.9 L93.9 -31.8 L95 -31.8 L95.1 -14.8 L97.2 -14.8 L98 -11.8 L98.8 -11.8 L99.2 -9.7 L104.8 -9.7 L104.9 -10.7 L104.9 0 Z" fill="#8b5a3a" stroke="#4a2c1a" stroke-width="1.1" stroke-linejoin="round"/>
+      <g fill="#3b2216" opacity=".55"><rect x="-86" y="-12" width="14" height="12" rx="7"/><rect x="72" y="-12" width="14" height="12" rx="7"/><rect x="-7" y="-14" width="14" height="14" rx="7"/></g>
     </g>`;
   const monitor = (x, y, w, h, kind) => {
     let body = '';
@@ -410,24 +410,52 @@ function sceneSVG() {
     <g opacity=".13" stroke="#000" stroke-width="2"><line x1="0" y1="210" x2="1600" y2="210"/><line x1="0" y1="420" x2="1600" y2="420"/></g>
     <path d="${crest}" fill="#241710"/>${torons}
 
-    <!-- cartes de Djenné -->
+    <!-- tableaux de recherche de Tapama : carte de Djenné et plan de la salle de prière -->
     <g transform="translate(372 -6)">
     <g>
       <rect x="62" y="108" width="296" height="260" rx="10" fill="#2a1a12" stroke="#c9a24b" stroke-width="4"/>
       <rect x="76" y="122" width="268" height="232" rx="4" fill="url(#paper)"/>
+      <!-- relief du papier : plis -->
+      <g stroke="#7a5a30" stroke-width="1" opacity=".18"><line x1="210" y1="122" x2="210" y2="354"/><line x1="76" y1="238" x2="344" y2="238"/></g>
+      <!-- bras du fleuve : Niger au nord, Bani au sud, et leurs noms -->
+      <path d="M76 150 C140 190 180 140 240 170 S320 140 344 160" fill="none" stroke="#3b82b8" stroke-width="5" opacity=".55"/>
       <path d="M76 300 C130 270 150 330 210 312 S300 270 344 300" fill="none" stroke="#3b82b8" stroke-width="9" opacity=".8"/>
-      <path d="M76 150 C140 190 180 140 240 170 S320 140 344 160" fill="none" stroke="#3b82b8" stroke-width="5" opacity=".5"/>
-      <g fill="#8b5a3a" opacity=".55"><rect x="96" y="150" width="22" height="16"/><rect x="124" y="156" width="18" height="14"/><rect x="288" y="200" width="24" height="18"/><rect x="262" y="214" width="16" height="12"/></g>
+      <text x="98" y="148" font-family="Rubik,sans-serif" font-size="8" font-style="italic" fill="#2b5f8a" letter-spacing="2" transform="rotate(14 98 148)">NIGER</text>
+      <text x="306" y="297" font-family="Rubik,sans-serif" font-size="7.5" font-style="italic" fill="#1f4e78" letter-spacing="1.5" transform="rotate(-12 306 297)">BANI</text>
+      <!-- l'île de Djenné et ses ruelles -->
+      <path d="M118 214 C150 196 250 196 296 214 C318 232 308 262 280 276 C240 292 160 292 126 276 C104 260 104 228 118 214 Z" fill="#c79a5a" opacity=".42" stroke="#8b5a3a" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <g stroke="#7a4a2a" stroke-width="1" opacity=".5" fill="none"><path d="M130 232 H290 M140 252 H282 M170 206 V284 M214 200 V288 M256 204 V282"/></g>
+      <rect x="226" y="222" width="28" height="18" rx="2" fill="#a86a3a" opacity=".6"/><text x="240" y="234" text-anchor="middle" font-family="Rubik,sans-serif" font-size="6" font-weight="700" fill="#3a2010">MARCHÉ</text>
+      <g fill="#8b5a3a" opacity=".5"><rect x="92" y="200" width="16" height="12"/><rect x="112" y="196" width="12" height="10"/><rect x="300" y="196" width="18" height="12"/><rect x="316" y="214" width="12" height="10"/></g>
       ${mosque}
-      <g fill="#b3261e"><circle cx="150" cy="198" r="5"/><circle cx="288" cy="268" r="5"/><circle cx="110" cy="318" r="5"/></g>
-      <path d="M150 198 L200 262 L288 268 M200 262 L110 318" fill="none" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 5"/>
-      <text x="210" y="342" text-anchor="middle" font-family="Rubik,sans-serif" font-size="15" font-weight="700" fill="#4a2c1a" letter-spacing="3">DJENNÉ</text>
+      <!-- parcours de Tapama : labo -> mosquée -> dispositif, et branche vers la base -->
+      <path d="M150 198 L206 282 L288 268" fill="none" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 5"/>
+      <g fill="#b3261e"><circle cx="150" cy="198" r="5"/><circle cx="288" cy="268" r="5"/></g>
+      <g font-family="Rubik,sans-serif" font-size="8" font-weight="800" fill="#7a1a14" letter-spacing=".5">
+        <text x="158" y="194">LABO TAPAMA</text><text x="236" y="259">DISPOSITIF 1</text>
+      </g>
+      <!-- titre, note, rose des vents, échelle -->
+      <text x="88" y="138" font-family="Rubik,sans-serif" font-size="9" font-weight="800" fill="#5a3a1e" letter-spacing="2">RECHERCHES · DJENNÉ</text>
+      <path d="M88 142 H214" stroke="#5a3a1e" stroke-width="1" opacity=".5"/>
+      <text x="262" y="348" text-anchor="middle" font-family="'Caveat','Rubik',cursive" font-size="9.5" font-style="italic" fill="#5a2a1a" transform="rotate(-2 262 348)">Grande Mosquée · 1907</text>
+      <g transform="translate(322 146)"><circle r="12" fill="#e9d3a2" stroke="#7a5a30" stroke-width="1"/><path d="M0 -10 L3 0 L0 10 L-3 0 Z" fill="#b3261e"/><path d="M-10 0 L0 -2.4 L10 0 L0 2.4 Z" fill="#7a5a30" opacity=".7"/><text y="-14" text-anchor="middle" font-family="Rubik,sans-serif" font-size="7" font-weight="800" fill="#5a3a1e">N</text></g>
+      <g transform="translate(92 348)" stroke="#5a3a1e" stroke-width="1.5"><path d="M0 0 H44 M0 -3 V3 M22 -2 V2 M44 -3 V3"/><text x="22" y="-5" text-anchor="middle" stroke="none" font-family="Rubik,sans-serif" font-size="6.5" font-weight="700" fill="#5a3a1e">500 m</text></g>
     </g>
     <g>
       <rect x="392" y="130" width="170" height="150" rx="8" fill="#2a1a12" stroke="#7a5a3a" stroke-width="3"/>
       <rect x="402" y="140" width="150" height="130" rx="3" fill="#d9bc86"/>
-      <g stroke="#8b6b3d" stroke-width="1" opacity=".7">${[0, 1, 2, 3, 4].map((i) => `<line x1="402" y1="${166 + i * 22}" x2="552" y2="${166 + i * 22}"/>`).join('')}${[0, 1, 2, 3, 4, 5].map((i) => `<line x1="${430 + i * 22}" y1="140" x2="${430 + i * 22}" y2="270"/>`).join('')}</g>
-      <circle cx="476" cy="205" r="14" fill="none" stroke="#b3261e" stroke-width="3"/><circle cx="476" cy="205" r="3" fill="#b3261e"/>
+      <!-- plan de la salle de prière : cour ouverte à gauche, salle couverte (champ de piliers) à droite, mur de la qibla et trois minarets -->
+      <defs><pattern id="labPillars" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.5" fill="#5a3418"/></pattern></defs>
+      <text x="412" y="154" font-family="Rubik,sans-serif" font-size="7.5" font-weight="800" fill="#5a3a1e" letter-spacing="1.2">PLAN · SALLE DE PRIÈRE</text>
+      <rect x="412" y="162" width="52" height="94" fill="none" stroke="#6a4a2a" stroke-width="1.6" stroke-dasharray="4 3"/>
+      <text x="438" y="212" text-anchor="middle" font-family="Rubik,sans-serif" font-size="7" font-weight="700" fill="#6a4a2a" letter-spacing="1" transform="rotate(-90 438 212)">COUR</text>
+      <rect x="466" y="162" width="76" height="94" fill="#e8d2a0" stroke="#4a2c1a" stroke-width="2.2"/>
+      <rect x="470" y="168" width="64" height="82" fill="url(#labPillars)" opacity=".85"/>
+      <rect x="538" y="162" width="6" height="94" fill="#4a2c1a"/>
+      <g fill="#4a2c1a"><rect x="536" y="166" width="10" height="14"/><rect x="536" y="203" width="10" height="14"/><rect x="536" y="240" width="10" height="14"/></g>
+      <text x="476" y="266" font-family="'Caveat','Rubik',cursive" font-size="9" font-style="italic" fill="#8a1d14">piliers : à compter…</text>
+      <circle cx="502" cy="209" r="16" fill="none" stroke="#b3261e" stroke-width="2.2" stroke-dasharray="3 3"/>
+      <text x="551" y="209" text-anchor="middle" font-family="Rubik,sans-serif" font-size="5.5" font-weight="800" fill="#6a4a2a" letter-spacing="1" transform="rotate(90 551 209)">QIBLA</text>
     </g>
     </g>
     <!-- étagère aux canaris -->
@@ -522,7 +550,7 @@ class Annule extends Error {}
 function ensureCss() {
   if (cssPromise) return cssPromise;
   cssPromise = new Promise((resolve) => {
-    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=6';
+    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=7';
     let link = [...document.querySelectorAll('link[rel="stylesheet"]')].find((l) => /laboratoire\.css/.test(l.getAttribute('href') || ''));
     if (link) { resolve(); return; }
     link = document.createElement('link');
@@ -620,6 +648,7 @@ function buildUI(stage) {
   if (stage === 2) root.classList.add('has-d1');
   ui.relire.addEventListener('click', () => toggleHistory());
   ui.face.src = PORTRAIT('neutre');
+  try { ui.faceFx = window.TapamaFace && window.TapamaFace.attach(ui.face); } catch (_) {}      // bouche animée + clignements (tapama-face.js)
   translateTree(root);
   return root;
 }
@@ -630,6 +659,7 @@ function say(mood, text, opts = {}) {
   const line = { who: 'tapama', mood: mood || 'neutre', text };
   S.log.push(line);
   ui.face.src = PORTRAIT(mood);
+  window.TapamaVoice?.line(text, mood || 'neutre', nm(text));      // sa voix (audio préenregistré ou synthèse selon l'humeur)
   ui.bubbleText.textContent = `« ${nm(text)} »`;
   ui.bubble.classList.remove('pop'); void ui.bubble.offsetWidth; ui.bubble.classList.add('pop');
   ui.visio.dataset.mood = mood || 'neutre';
@@ -664,7 +694,16 @@ function dialogue(id, lines) {
 }
 
 function guard() { if (!S || S.run !== runId) throw new Annule(); }
-async function pause(ms) { await new Promise((r) => setTimeout(r, ms)); guard(); }
+/** Pause du déroulé du labo : Tapama finit d'abord sa phrase (voix), puis le délai prévu s'écoule : jamais de passage à la suite en pleine réplique. */
+async function pause(ms) {
+  if (window.TapamaVoice && window.TapamaVoice.busy) {
+    const t0 = performance.now();
+    await window.TapamaVoice.whenDone(20000); guard();
+    const rest = Math.max(Math.min(ms, 600), ms - (performance.now() - t0));       // le délai prévu court pendant qu'elle parle ; si elle est plus longue, un court souffle après sa dernière phrase
+    await new Promise((r) => setTimeout(r, rest)); guard(); return;
+  }
+  await new Promise((r) => setTimeout(r, ms)); guard();
+}
 
 /* ---------------- Historique (relire) ---------------- */
 
@@ -911,6 +950,7 @@ function submit() {
   c.status.textContent = t('Ce n’est pas ça. Essaie encore !');
   c.status.className = 'lab-status is-bad';
   ui.panel.classList.remove('shake'); void ui.panel.offsetWidth; ui.panel.classList.add('shake');
+  { const h = c.help; h.classList.remove('call'); void h.offsetWidth; h.classList.add('call'); }       // le bouton d'indice se secoue et brille : « clique sur moi »
   sfx.buzz();
   window.GamepadKit?.rumble?.(160, 0.4);
   const illisible = e.kind === 'nombre' && lireNombre(c.input.value) == null;
@@ -1158,6 +1198,7 @@ function close() {
   runId++;
   const r = root, v = ui && ui.video;
   if (v) { try { v.pause(); } catch (e) { /* rien */ } }
+  try { if (ui && ui.faceFx) ui.faceFx.detach(); if (window.TapamaVoice) window.TapamaVoice.stop(); } catch (e) { /* rien */ }
   if (r) r.remove();
   S.open = false;
   root = null; ui = null;

@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import * as I from '../app/i18n.js';
+import * as I from '../app/i18n.js?v=1';   // même URL que les modules de l'app (sinon deux instances, donc deux langues)
 import * as G from '../app/game-save.js';
 import * as P from '../app/player-profile.js';
 import * as T from '../app/tapama-core.js';

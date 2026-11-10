@@ -14,7 +14,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { TileStreamer } from './spatial-streaming.js?v=3';
-import { detectQuality, QUALITY_PRESETS, createDynamicRes, currentBytesPlan } from './device-quality.js?v=5';
+import { detectQuality, QUALITY_PRESETS, createDynamicRes, currentBytesPlan } from './device-quality.js?v=6';
+import { loadCity } from './gltf-extras.js?v=1';
 
 const canvas    = document.getElementById('mosqueCanvas');
 const stage     = document.getElementById('mosqueStage');
@@ -22,7 +23,7 @@ const loadingEl = document.getElementById('mosqueLoading');
 if (!canvas) throw new Error('mosqueCanvas introuvable');
 
 const MODEL_URL     = 'assets/models/djenne-ar.glb';
-const DRACO_DECODER = 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/';
+const DRACO_DECODER = 'assets/vendor/three/examples/jsm/libs/draco/';
 
 // URL de la vidéo du grand crépissage (à renseigner — laisser vide affiche "bientôt disponible")
 const VIDEO_CREPISSAGE = '';
@@ -474,15 +475,14 @@ function loadMonolithicScene() {
    assets/models/djenne-ville-leger.glb : sol + relief + fleuve + maisons + arbres, déjà recalée dans le
    repère de la mosquée du jeu (voir djenne-ville-leger.INFO.md). Le cœur (mosquée, ciel, nuages) reste
    celui des tuiles ; les anciennes maisons ne sont plus chargées. ?oldcity=1 rétablit l'ancienne ville. */
-const CITY_URL = `assets/models/${currentBytesPlan().cityGlb}?v=4`;   // mobile / réseau lent : textures de la ville réduites de moitié
+// Mobile / réseau lent : ville à textures KTX2 (repli : JPEG mobile, puis original) ; PC : original. Voir gltf-extras.js
 let cityPromise = Promise.resolve(false);
 let newCityLoaded = false;
 let fogFarBase = 0;                  // portée de base de la brume (m), lue par daycycle.js
 
 function loadNewCity() {
   cityPromise = new Promise((resolve) => {
-    loader.load(
-      CITY_URL,
+    loadCity(() => { const l = new GLTFLoader(); l.setDRACOLoader(draco); return l; }, renderer,
       (gltf) => {
         const city = gltf.scene;
         city.name = 'VilleDjenne';
@@ -570,7 +570,7 @@ loader.load(
 // Cache-buster : force le rechargement de la dernière version à chaque ré-export
 // (évite d'avoir à vider le cache / Ctrl+Shift+R après un nouvel export Blender)
 loader.load(
-  `assets/models/personnages.glb?v=${Date.now()}`,
+  `assets/models/personnages.glb?v=1`,
   (gltf) => {
     gltf.scene.traverse((o) => {
       if (!o.isMesh) return;
@@ -1069,6 +1069,7 @@ function _stopWritingLoop() {
 
 /* Déverrouillage iOS */
 document.addEventListener('audioUnlock', () => {
+  if (!_gameBtnSound.paused) return;
   _gameBtnSound.play().catch(() => {}); _gameBtnSound.pause(); _gameBtnSound.currentTime = 0;
 }, { once: true });
 
@@ -1114,7 +1115,7 @@ if (btnInterior) btnInterior.addEventListener('click', () => {
 });
 
 if (btnAr) btnAr.addEventListener('click', () => {
-  import('./ar-mode.js?v=3').then(mod => mod.enter());
+  import('./ar-mode.js?v=3').then(mod => mod.enter()).catch((e) => console.warn('[AR] module introuvable :', e && e.message));
 });
 
 if (btnMenu) btnMenu.addEventListener('click', (e) => {
@@ -1162,6 +1163,7 @@ function closeVideoModal(){
   videoModal.setAttribute('aria-hidden', 'true');
 }
 if (btnVideo)      btnVideo.addEventListener('click', (e) => { e.stopPropagation(); openVideo(); });
+if (btnVideo && !VIDEO_CREPISSAGE) btnVideo.style.display = 'none';   // pas de vidéo branchée : on masque le bouton plutôt qu'une fenêtre « bientôt »
 if (videoClose)    videoClose.addEventListener('click', closeVideoModal);
 if (videoBackdrop) videoBackdrop.addEventListener('click', closeVideoModal);
 

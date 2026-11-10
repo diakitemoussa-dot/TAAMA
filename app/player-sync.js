@@ -7,12 +7,21 @@
    et le jeu réessaiera plus tard (profil marqué « en attente »).
    ========================================================== */
 
-import { toPayload } from './player-profile.js';
+import { toPayload } from './player-profile.js?v=1';
 
-export const PLAYERS_ENDPOINT = '/api/players';
+/** Adresse du serveur : `window.TAAMA_PLAYERS_ENDPOINT` ou <meta name="taama-players-endpoint"> si définis (hébergeur externe),
+ *  sinon une adresse RELATIVE à la page (sous /Taama/ sur GitHub Pages, « /api/players » absolu visait la racine du domaine). */
+export function resolveEndpoint(win = globalThis.window, doc = globalThis.document) {
+  const fromWin = win && typeof win.TAAMA_PLAYERS_ENDPOINT === 'string' ? win.TAAMA_PLAYERS_ENDPOINT.trim() : '';
+  if (fromWin) return fromWin;
+  const meta = doc && doc.querySelector ? doc.querySelector('meta[name="taama-players-endpoint"]') : null;
+  const fromMeta = meta && meta.content ? meta.content.trim() : '';
+  return fromMeta || 'api/players';
+}
+export const PLAYERS_ENDPOINT = 'api/players';
 
 /** @returns {Promise<boolean>} true si le serveur a bien enregistré le joueur */
-export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = PLAYERS_ENDPOINT, timeoutMs = 8000 } = {}) {
+export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = resolveEndpoint(), timeoutMs = 8000 } = {}) {
   if (!profile || typeof fetchFn !== 'function') return false;
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;

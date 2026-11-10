@@ -239,7 +239,8 @@ function build(id, file) {
   html = addAct(html, ACTS[id] || []);
   if (BINDS[id]) html = addBinds(html, BINDS[id], id);
   // « Taille du texte » (Options) : chaque taille en px devient proportionnelle à --ts (0,9 · 1 · 1,18)
-  const scaleFonts = (x) => x.replace(/font-size:\s*([\d.]+)px/g, 'font-size:calc($1px * var(--ts,1))');
+  // + plancher --fmin / --gs (posés par fit() de game-ui.js) : sur petit écran, jamais moins de 11 px réels (0 sur PC : rendu inchangé)
+  const scaleFonts = (x) => x.replace(/font-size:\s*([\d.]+)px/g, 'font-size:max(calc($1px * var(--ts,1)), calc(var(--fmin,0px) / var(--gs,1)))');
   const split = extractBackground(scaleFonts(html));
   return { css: scaleFonts(css), html: split.html, bg: split.bg };
 }

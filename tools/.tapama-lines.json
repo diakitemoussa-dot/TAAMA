@@ -1,0 +1,387 @@
+[
+ {
+  "key": "18b710fb",
+  "text": "Salut {nom} ! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je suis sa descendante.",
+  "mood": "souriante"
+ },
+ {
+  "key": "02323b8c",
+  "text": "La légende raconte qu’elle s’est sacrifiée pour que Djenné tienne debout. Chez nous, on dit que les secrets de la ville appartiennent à ceux qui osent les chercher.",
+  "mood": "neutre"
+ },
+ {
+  "key": "ff78cc7c",
+  "text": "Depuis quelques années, je cherche un ancien dispositif caché dans la Grande Mosquée. Mon grand-père m’en parlait déjà quand j’étais petite, le soir, sous le ciel de Djenné.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "97f0accc",
+  "text": "Mes recherches sont formelles : il existe, quelque part dans la mosquée. J’ignore ce qu’il fait. Je veux le découvrir, et pour ça j’ai besoin de toi, {nom}.",
+  "mood": "attentive"
+ },
+ {
+  "key": "2be5590b",
+  "text": "Fais décoller ton drone. Inspecte tous les recoins de la mosquée, en commençant par le haut. Je te guide par radio. Allez, on y va !",
+  "mood": "souriante"
+ },
+ {
+  "key": "0de47fa3",
+  "text": "{nom}, j’ai découvert quelque chose près de la mosquée. Je ne sais pas encore ce que c’est, mais certains détails ne correspondent à rien de ce que j’ai étudié.",
+  "mood": "neutre"
+ },
+ {
+  "key": "d82c81bf",
+  "text": "Je ne sais pas. C’est justement pour cela que j’ai besoin de toi, {nom}. Viens examiner l’endroit avant que quelqu’un d’autre ne le découvre.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "5df2dd78",
+  "text": "Ce n’est pas une projection ordinaire, {nom}. Regarde les détails. Tout semble lié à un événement précis.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "0eead818",
+  "text": "Il manque quelque chose. Nous devons trouver l’autre dispositif.",
+  "mood": "attentive"
+ },
+ {
+  "key": "7437cbed",
+  "text": "Ne les perds pas de vue, {nom}. Je vais essayer de comprendre ce qu’ils savent déjà. Fais attention, nous ne savons pas qui ils sont ni jusqu’où ils sont prêts à aller.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "0152e63f",
+  "text": "Alors ils ne sont pas ici pour revendre un objet. Ils cherchent quelque chose de précis.",
+  "mood": "attentive"
+ },
+ {
+  "key": "aa679a66",
+  "text": "Regarde cette carte, {nom}. Djenné n’est qu’un point parmi d’autres.",
+  "mood": "surprise"
+ },
+ {
+  "key": "f6352f26",
+  "text": "Nous pensions avoir trouvé deux objets isolés. Mais ils font partie d’un ensemble.",
+  "mood": "attentive"
+ },
+ {
+  "key": "9c3d9466",
+  "text": "Ne les perds pas de vue, {nom}. Je vais essayer de comprendre ce qu’ils savent déjà.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "ba471a8f",
+  "text": "Fais attention, {nom}, ils sont plus rapides que toi.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "79238505",
+  "text": "Prends une photo avec le drone, {nom}, je regarde ce que ça donne.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "5213c957",
+  "text": "Tu as trouvé quelque chose, {nom} ? Montre-moi.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "69c6124d",
+  "text": "Commence par le toit, {nom}. Les secrets aiment les hauteurs. Prends des photos si quelque chose te semble bizarre.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "ea5b399e",
+  "text": "Cherche un objet qui ne ressemble pas à de la terre ou à du bois. Quelque chose de lisse, avec des motifs.",
+  "mood": "attentive"
+ },
+ {
+  "key": "de4212a2",
+  "text": "Attends… zoome encore ! Là, à moitié enfoui. C’est ça, {nom} ! Atterris et va le chercher.",
+  "mood": "surprise"
+ },
+ {
+  "key": "438727ca",
+  "text": "Regarde bien le dispositif. Certains motifs se répètent, et pas par hasard. Qu’est-ce qui change d’un côté à l’autre ?",
+  "mood": "attentive"
+ },
+ {
+  "key": "6cc517be",
+  "text": "On cherche à activer le premier dispositif trouvé près de la mosquée. Il doit réagir à une interaction précise.",
+  "mood": "neutre"
+ },
+ {
+  "key": "9bd31633",
+  "text": "Observe les motifs gravés sur sa surface. Certains se répètent, d’autres non.",
+  "mood": "attentive"
+ },
+ {
+  "key": "ede872bb",
+  "text": "Je pense que les motifs qui changent indiquent un ordre à respecter. Tu veux essayer dans ce sens ?",
+  "mood": "curieuse"
+ },
+ {
+  "key": "d4eaa050",
+  "text": "Prends ton temps, observe les lieux. Je suis là si tu as besoin de moi.",
+  "mood": "attentive"
+ },
+ {
+  "key": "62e14e5d",
+  "text": "Observe les alentours, utilise le drone pour repérer ce qui sort de l’ordinaire.",
+  "mood": "neutre"
+ },
+ {
+  "key": "b608ca0a",
+  "text": "Regarde les détails de l’architecture : un élément qui ne ressemble pas aux autres vaut un coup d’œil.",
+  "mood": "attentive"
+ },
+ {
+  "key": "f66e7f7c",
+  "text": "Si une zone te paraît étrange, photographie-la avec le drone et nous en reparlerons.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "0ddf0055",
+  "text": "Lance ton drone et explore la ville, {nom} !",
+  "mood": "souriante"
+ },
+ {
+  "key": "71685dfd",
+  "text": "Cherche un objet brillant sur le toit, {nom}.",
+  "mood": "souriante"
+ },
+ {
+  "key": "366a6c3b",
+  "text": "Rapproche-toi du dispositif et ramasse-le !",
+  "mood": "souriante"
+ },
+ {
+  "key": "a702631a",
+  "text": "Va au cercle jaune : c’est mon labo !",
+  "mood": "souriante"
+ },
+ {
+  "key": "c481a9b6",
+  "text": "Retourne devant la grande mosquée.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e9d98380",
+  "text": "Va à la base des robots avec ton gadget !",
+  "mood": "souriante"
+ },
+ {
+  "key": "e6464122",
+  "text": "Rapporte le dispositif au cercle jaune.",
+  "mood": "souriante"
+ },
+ {
+  "key": "b3869c10",
+  "text": "Bravo {nom} ! Choisis ta prochaine aventure sur la carte.",
+  "mood": "souriante"
+ },
+ {
+  "key": "57698852",
+  "text": "Super, je vois que tu l’as récupéré ! Prends le pick-up garé devant la mosquée pour me rejoindre à ces coordonnées.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f2bd13a1",
+  "text": "{nom}… un groupe est passé juste avant toi. Ils ont emporté le second dispositif. J’ai vu leurs images sur mon écran.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "a1048498",
+  "text": "Je te transfère tout ce que j’ai sur eux. Ça s’appelle NÉANTIS. Voilà leur logo…",
+  "mood": "attentive"
+ },
+ {
+  "key": "e9f83968",
+  "text": "… et leur patron, Adrian Voss.",
+  "mood": "attentive"
+ },
+ {
+  "key": "71234b3a",
+  "text": "Leur devise : « Tout voir. Tout garder. Rien rendre. » Ils veulent surtout contrôler ce que ces objets montrent, pas les vendre.",
+  "mood": "neutre"
+ },
+ {
+  "key": "7cd4096c",
+  "text": "Leurs robots patrouillent partout. Mais je ne t’envoie pas sans rien : il y a un gadget dans la voiture. Avec lui, tu pourras te défendre.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "ac7ad602",
+  "text": "Je t’affiche l’itinéraire de leur base. Regarde bien, et reviens-moi en un seul morceau.",
+  "mood": "attentive"
+ },
+ {
+  "key": "1871ee4f",
+  "text": "Le premier verrou saute ! Tu vois, ensemble on avance vite. Plus que deux.",
+  "mood": "souriante"
+ },
+ {
+  "key": "a3b68982",
+  "text": "Deux sur trois ! Le dernier est une date. Pense à la mosquée que tu vois aujourd’hui, pas à l’ancienne.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "1733dd7b",
+  "text": "Un de moins ! Les maçons de Djenné seraient fiers de toi. Encore deux.",
+  "mood": "souriante"
+ },
+ {
+  "key": "2dec4bb2",
+  "text": "Plus qu’un verrou, {nom}. Celui-là demande un petit calcul : prends ton temps.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "4d699b3b",
+  "text": "Bienvenue chez moi, {nom} ! Pose le dispositif dans la machine, là, au centre. Doucement…",
+  "mood": "souriante"
+ },
+ {
+  "key": "8f6694cd",
+  "text": "Il est verrouillé. Trois mots de passe, et ils parlent tous de la mosquée. On les trouve ensemble : tu observes, je cherche dans mes notes.",
+  "mood": "attentive"
+ },
+ {
+  "key": "0bc0f6f2",
+  "text": "Il est là ! {nom}, tu es incroyable. Pose-le dans la machine, à côté du premier.",
+  "mood": "surprise"
+ },
+ {
+  "key": "e3919aa6",
+  "text": "Cette fois les verrous sont plus costauds. Trois nouveaux mots de passe. On y va, calmement.",
+  "mood": "attentive"
+ },
+ {
+  "key": "ac8cb55c",
+  "text": "Regarde ! Ce n’est pas un écran, ça sort de l’objet lui-même… {nom}, tu vois cette scène ?",
+  "mood": "surprise"
+ },
+ {
+  "key": "832cc7eb",
+  "text": "Attends, attends… Je regarde ce qui s’est passé.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "bf223929",
+  "text": "Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché dans la mosquée. C’est lui qu’il nous faut, {nom}.",
+  "mood": "attentive"
+ },
+ {
+  "key": "a99014eb",
+  "text": "Retourne vers la mosquée avec le pick-up. Et fais vite, j’ai un mauvais pressentiment.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "48078446",
+  "text": "Non, non, non… Reste avec moi, je relance les écrans.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "5c68c4d5",
+  "text": "Les deux dispositifs ne sont qu’un début. Il y en a d’autres, cachés ailleurs en Afrique de l’Ouest. NÉANTIS le sait aussi.",
+  "mood": "attentive"
+ },
+ {
+  "key": "e4bbba8f",
+  "text": "Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac, {nom} !",
+  "mood": "souriante"
+ },
+ {
+  "key": "15f397af",
+  "text": "On reprend où on s’était arrêtés, {nom}.",
+  "mood": "souriante"
+ },
+ {
+  "key": "1376066c",
+  "text": "Glisse le dispositif jusqu’à l’alvéole lumineuse. Ou appuie sur « Placer le dispositif ».",
+  "mood": "curieuse"
+ },
+ {
+  "key": "562b1a4f",
+  "text": "Parfait, il est bien en place. Les verrous s’affichent… regardons le premier.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e40d347e",
+  "text": "Écris d’abord une réponse, {nom}. Même une idée, on l’essaie.",
+  "mood": "attentive"
+ },
+ {
+  "key": "265a455b",
+  "text": "Je n’ai pas bien compris ta réponse. Tu peux l’écrire autrement ?",
+  "mood": "curieuse"
+ },
+ {
+  "key": "dadf3c48",
+  "text": "On bute un peu, ce n’est pas grave. Je te donne un coup de pouce.",
+  "mood": "attentive"
+ },
+ {
+  "key": "abe3cc88",
+  "text": "On a fait le tour des indices, {nom}. Si tu veux, je te donne la réponse : tu l’écris et on avance ensemble.",
+  "mood": "souriante"
+ },
+ {
+  "key": "ed138e0f",
+  "text": "D’accord, prends ton temps. Je suis là si tu changes d’avis.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e42f22c5",
+  "text": "Je n’ai plus d’indice à te donner, mais je peux te dire la réponse si tu veux.",
+  "mood": "attentive"
+ },
+ {
+  "key": "3a9d5632",
+  "text": "Alors ils ne sont pas là pour revendre un objet, {nom}. Ils cherchent quelque chose de précis.",
+  "mood": "attentive"
+ },
+ {
+  "key": "e9b114a9",
+  "text": "Tu l’as ! Rejoins-moi, {nom}. Je t’affiche le chemin jusqu’à chez moi.",
+  "mood": "souriante"
+ },
+ {
+  "key": "79ad5f5a",
+  "text": "Ralentis avant le portail, {nom}. Gare-toi et continue à pied. Leurs drones balaient la zone.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "d3afe0ef",
+  "text": "Je te vois. Reste dans l’ombre. Quand un drone N s’approche, vise-le et tire : il se met en veille quelques secondes.",
+  "mood": "attentive"
+ },
+ {
+  "key": "cd7c71db",
+  "text": "La réponse, c’est « 90 ». Écris-la et valide, on garde le rythme.",
+  "mood": "neutre"
+ },
+ {
+  "key": "0fc78193",
+  "text": "La réponse, c’est « 104 ». Écris-la et valide, on garde le rythme.",
+  "mood": "neutre"
+ },
+ {
+  "key": "ba32118d",
+  "text": "La réponse, c’est « 1907 ». Écris-la et valide, on garde le rythme.",
+  "mood": "neutre"
+ },
+ {
+  "key": "b541744b",
+  "text": "La réponse, c’est « torons ». Écris-la et valide, on garde le rythme.",
+  "mood": "neutre"
+ },
+ {
+  "key": "409d4a8d",
+  "text": "La réponse, c’est « 3 ». Écris-la et valide, on garde le rythme.",
+  "mood": "neutre"
+ },
+ {
+  "key": "77de0035",
+  "text": "La réponse, c’est « 81 ». Écris-la et valide, on garde le rythme.",
+  "mood": "neutre"
+ }
+]

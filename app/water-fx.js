@@ -10,8 +10,8 @@
    API : window.WaterFx
    ========================================================== */
 import * as THREE from 'three';
-import * as L from './water-logic.js?v=1';
-import { detectQuality } from './device-quality.js?v=5';
+import * as L from './water-logic.js?v=8';
+import { detectQuality } from './device-quality.js?v=6';
 
 const M = window.MosqueScene;
 const LEVEL = (() => { try { return window.Quality?.level || detectQuality(); } catch (_) { return 'mid'; } })();
@@ -104,7 +104,7 @@ function drop(x, y, z, vx, vy, vz, life, floorY, bright) {
 }
 
 /* ---------- ondes circulaires (InstancedMesh) ---------- */
-const ringGeo = new THREE.RingGeometry(0.92, 1, 40); ringGeo.rotateX(-Math.PI / 2);
+const ringGeo = new THREE.RingGeometry(0.955, 1, 48); ringGeo.rotateX(-Math.PI / 2);
 const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
 const rings = new THREE.InstancedMesh(ringGeo, ringMat, NR);
 rings.frustumCulled = false; rings.renderOrder = 3; rings.visible = false;
@@ -130,8 +130,8 @@ function splash(x, y, z, power = 1) {
     const a = Math.random() * TAU, sp = (0.6 + Math.random() * 1.8) * (0.6 + power * 0.5);
     drop(x + Math.cos(a) * 0.15, y + 0.05, z + Math.sin(a) * 0.15, Math.cos(a) * sp, (2.4 + Math.random() * 3.2) * (0.6 + power * 0.45), Math.sin(a) * sp, 0.7 + Math.random() * 0.5, y, 1);
   }
-  ripple(x, y, z, 1.4 + power * 1.8, 1.0 + power * 0.4, 0.2, 0.5);
-  ripple(x, y, z, 0.9 + power * 1.2, 0.7 + power * 0.3, 0.1, 0.35);
+  ripple(x, y, z, 1.4 + power * 1.8, 1.0 + power * 0.4, 0.2, 0.25);
+  ripple(x, y, z, 0.9 + power * 1.2, 0.7 + power * 0.3, 0.1, 0.18);
 }
 /** Petites éclaboussures aux pieds (pataugeage). */
 function footSplash(x, y, z) {
@@ -142,7 +142,37 @@ function footSplash(x, y, z) {
   ripple(x, y, z, 0.9, 0.6, 0.1, 0.35);
 }
 /** Sillage : une onde qui s'élargit (nage, marche dans l'eau). */
-function wake(x, y, z, power = 1) { ripple(x, y, z, 0.9 + power * 0.9, 0.9 + power * 0.3, 0.12, 0.32 * Math.min(1, 0.4 + power * 0.6)); }
+function wake(x, y, z, power = 1) { ripple(x, y, z, 0.9 + power * 0.9, 1.0 + power * 0.3, 0.12, 0.15 * Math.min(1, 0.4 + power * 0.6)); }
+
+let _sStroke = 0, _sKick = 0, _sV = 0, _sSide = 1;
+/** Nage : à chaque brassée, gerbe devant la main (côtés alternés) + ondes ; battement des pieds derrière ; sillage en V qui s'élargit.
+ *  o = { x, z, yaw, surface, moving, fast } (yaw : cap du corps, il regarde (sin yaw, cos yaw)) */
+function swimFx(dt, o) {
+  if (!o.moving) { _sStroke = 0; _sKick = 0; _sV = 0; return; }
+  const fx = Math.sin(o.yaw), fz = Math.cos(o.yaw), rx = Math.cos(o.yaw), rz = -Math.sin(o.yaw), y = o.surface, k = o.fast ? 1 : 0.7;
+  _sStroke -= dt;
+  if (_sStroke <= 0) {
+    _sStroke = 0.78 - 0.26 * k; _sSide = -_sSide;
+    const hx = o.x + fx * 0.8 + rx * _sSide * 0.4, hz = o.z + fz * 0.8 + rz * _sSide * 0.4;
+    for (let i = 0; i < 7; i++) {
+      const sp = 0.7 + Math.random() * 1.3;
+      drop(hx + (Math.random() - 0.5) * 0.2, y + 0.04, hz + (Math.random() - 0.5) * 0.2, fx * sp * 0.6 + rx * _sSide * sp * 0.5, 1.5 + Math.random() * 1.6, fz * sp * 0.6 + rz * _sSide * sp * 0.5, 0.4 + Math.random() * 0.3, y, 0.95);
+    }
+    ripple(hx, y, hz, 0.7, 0.8, 0.1, 0.16);
+  }
+  _sKick -= dt;
+  if (_sKick <= 0) {
+    _sKick = 0.14;
+    const bx = o.x - fx * 0.95 + rx * (Math.random() - 0.5) * 0.5, bz = o.z - fz * 0.95 + rz * (Math.random() - 0.5) * 0.5;
+    for (let i = 0; i < 3; i++) drop(bx, y + 0.03, bz, (Math.random() - 0.5) * 0.7, 1.0 + Math.random() * 1.2, (Math.random() - 0.5) * 0.7, 0.3 + Math.random() * 0.2, y, 0.85);
+    ripple(bx, y, bz, 0.5, 0.55, 0.1, 0.1);
+  }
+  _sV -= dt;
+  if (_sV <= 0) {
+    _sV = 0.3 - 0.08 * k;
+    for (const s of [-1, 1]) ripple(o.x - fx * 0.9 + rx * s * 0.45, y, o.z - fz * 0.9 + rz * s * 0.45, 1.6 + 1.0 * k, 1.5, 0.3, 0.1);   // les deux branches du V
+  }
+}
 
 let _vWake = 0, _vSpray = 0;
 /** Voiture dans l'eau : gerbes latérales (∝ vitesse), gouttelettes, ondes. o = { x, z, yaw, speed, surface, depth } */
@@ -237,7 +267,7 @@ function tick(dt) {
 M?.addFrameHook?.((dt) => { try { tick(dt); } catch (e) { if (!tick.err) { tick.err = 1; console.error('[Eau] erreur :', e && (e.stack || e)); } } });
 
 window.WaterFx = {
-  surfaceAt, depthAt, nearRiver, splash, footSplash, wake, ripple, vehicleFx,
+  surfaceAt, depthAt, nearRiver, splash, footSplash, wake, ripple, vehicleFx, swimFx,
   logic: L, level: LEVEL, budget: { particles: NP, rings: NR },
   get alive() { return _alive; }, get ringsAlive() { return _ringsAlive; },
   get veil() { return _veilOn; },

@@ -13,7 +13,7 @@
    est donc faite des deux côtés avec exactement les mêmes règles.
    ========================================================== */
 
-import { t } from './i18n.js';
+import { t } from './i18n.js?v=1';
 
 export const PROFILE_KEY = 'taama.player.v1';
 export const NAME_MIN = 2;

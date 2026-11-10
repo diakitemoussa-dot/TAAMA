@@ -1,7 +1,10 @@
 /* ==========================================================
    ITINÉRAIRES DE DJENNÉ — logique pure (sans DOM ni Three.js, testable sous Node)
-   Graphe routier : assets/data/routes-djenne.json = { n: [[est, nord], …], e: [[a, b], …] } (mètres réels par rapport à la
-   Grande Mosquée, extrait d'OpenStreetMap — Documents\Djenne3D\osm\djenne.osm). Plus court chemin par A*.
+   Graphe routier : assets/data/routes-djenne-voiture.json = { n: [[est, nord], …], e: [[a, b] ou [a, b, classe], …] } (mètres réels par
+   rapport à la Grande Mosquée). Extrait d'OpenStreetMap (Documents\Djenne3D\osm\djenne.osm) PUIS filtré par tools/analyze-roads.mjs :
+   ne restent que les tronçons que la voiture du jeu peut vraiment prendre (pas de maison du modèle 3D en travers, pas d'eau profonde, pas
+   de pente excessive). `classe` (omise = 0) : 0 route sèche, 1 gué peu profond (< 0,8 m), 2 gué profond (jusqu'à 1,3 m : voiture ralentie).
+   Plus court chemin par A*, avec un surcoût pour les gués : on préfère toujours les routes sèches.
    ========================================================== */
 export const PLACES = [
   { id: 'mosquee', name: 'Grande Mosquée de Djenné', short: 'Grande Mosquée', e: 0, n: 0, kind: 'mosquee', info: 'Plus grand édifice en banco du monde (UNESCO).' },
@@ -15,11 +18,14 @@ export const PLACES = [
   { id: 'djennodjeno', name: 'Djenné-Djenno', short: 'Djenné-Djenno', e: 1655, n: -1669, kind: 'site', info: 'Plus ancienne ville connue d’Afrique subsaharienne (UNESCO).' },
 ];
 
+/** Surcoût d'un tronçon (fois sa longueur) selon sa classe d'eau : 0 sec, 1 gué peu profond, 2 gué profond. */
+export const WET_COST = [0, 0.6, 2.0];
+
 export function createRouter(data) {
   const N = data.n, adj = Array.from({ length: N.length }, () => []);
-  for (const [a, b] of data.e) {
+  for (const [a, b, cls = 0] of data.e) {
     const d = Math.hypot(N[a][0] - N[b][0], N[a][1] - N[b][1]);
-    adj[a].push([b, d]); adj[b].push([a, d]);
+    adj[a].push([b, d, cls]); adj[b].push([a, d, cls]);
   }
   // grille pour trouver le nœud le plus proche
   const CELL = 120, grid = new Map();
@@ -33,12 +39,13 @@ export function createRouter(data) {
     }
     return best < 0 ? null : { i: best, d: bd };
   }
-  /** itinéraire { pts: [[e, n], …], length } ; ligne droite si le réseau n'est pas joignable. */
+  /** itinéraire { pts: [[e, n], …], length, roads, wet, deep } ; wet = mètres dans l'eau (gués), deep = dont gué profond ; ligne droite si le réseau n'est pas joignable. */
   function route(fe, fn, te, tn) {
     const A = nearest(fe, fn), B = nearest(te, tn);
-    const straight = () => ({ pts: [[fe, fn], [te, tn]], length: Math.hypot(te - fe, tn - fn), roads: false });
+    const straight = () => ({ pts: [[fe, fn], [te, tn]], length: Math.hypot(te - fe, tn - fn), roads: false, wet: 0, deep: 0 });
     if (!A || !B) return straight();
     const g = new Float64Array(N.length).fill(Infinity), prev = new Int32Array(N.length).fill(-1), done = new Uint8Array(N.length);
+    const prevCls = new Uint8Array(N.length), prevLen = new Float64Array(N.length);
     const h = (i) => Math.hypot(N[i][0] - N[B.i][0], N[i][1] - N[B.i][1]);
     g[A.i] = 0;
     const heap = [[h(A.i), A.i]];
@@ -47,13 +54,15 @@ export function createRouter(data) {
     while (heap.length) {
       const [, u] = pop(); if (done[u]) continue; done[u] = 1;
       if (u === B.i) break;
-      for (const [v, w] of adj[u]) { const ng = g[u] + w; if (ng < g[v]) { g[v] = ng; prev[v] = u; push([ng + h(v), v]); } }
+      for (const [v, d, c] of adj[u]) { const ng = g[u] + d * (1 + WET_COST[c]); if (ng < g[v]) { g[v] = ng; prev[v] = u; prevCls[v] = c; prevLen[v] = d; push([ng + h(v), v]); } }
     }
     if (!isFinite(g[B.i])) return straight();
-    const ids = []; for (let i = B.i; i !== -1; i = prev[i]) ids.push(i); ids.reverse();
+    const ids = []; let wet = 0, deep = 0;
+    for (let i = B.i; i !== -1; i = prev[i]) { ids.push(i); if (prev[i] !== -1 && prevCls[i] > 0) { wet += prevLen[i]; if (prevCls[i] === 2) deep += prevLen[i]; } }
+    ids.reverse();
     const pts = [[fe, fn], ...ids.map((i) => N[i]), [te, tn]];
     let length = 0; for (let i = 1; i < pts.length; i++) length += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-    return { pts, length, roads: true };
+    return { pts, length, roads: true, wet, deep };
   }
   return { route, nearest, nodes: N.length };
 }

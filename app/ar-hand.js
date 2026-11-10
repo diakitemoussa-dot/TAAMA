@@ -15,7 +15,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const MODEL_URL = 'assets/models/djenne-mosque-only.glb';
-const DRACO = 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/';
+const DRACO = 'assets/vendor/three/examples/jsm/libs/draco/';
 const MP_VER = '0.10.22-rc.20250304';
 const MP_BUNDLES = [`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/vision_bundle.mjs`, `https://unpkg.com/@mediapipe/tasks-vision@${MP_VER}/vision_bundle.mjs`];
 const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/wasm`;

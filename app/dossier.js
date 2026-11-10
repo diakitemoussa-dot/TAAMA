@@ -10,10 +10,10 @@
    Commandes : clic / Entrée / Espace / → = suivant · ← = retour
                manette : A, Y ou croix droite = suivant, B ou croix gauche = retour
    ========================================================== */
-import { t } from './i18n.js';
-import { fillName } from './player-profile.js';
+import { t } from './i18n.js?v=1';
+import { fillName } from './player-profile.js?v=1';
 
-const CSS_URL = new URL('../styles/dossier.css', import.meta.url).href + '?v=3';
+const CSS_URL = new URL('../styles/dossier.css', import.meta.url).href + '?v=4';
 const IMG = (p) => new URL('../assets/images/' + p, import.meta.url).href;
 const SAVE_KEY = 'taama.dossier';
 
@@ -65,7 +65,7 @@ function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.
 /* ---------- Son (WebAudio, facultatif et discret) ---------- */
 function blip(freq = 880, dur = 0.05, vol = 0.025, type = 'square') {
   try {
-    if (window.GameSettings && window.GameSettings.sfx === false) return;
+    if (window.GameSettings && (window.GameSettings.effects === 0 || window.GameSettings.muteAll)) return;   // Options › Effets à 0 ou son coupé
     if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); window.GameAudio?.ctx?.(actx, 'effects'); }
     if (actx.state === 'suspended') actx.resume();
     const o = actx.createOscillator(), g = actx.createGain();
@@ -129,7 +129,7 @@ function build() {
             <button type="button" class="ds-btn ds-back" aria-label="${t('Retour')}">◀ ${t('Retour')}</button>
             <button type="button" class="ds-btn ds-next ds-primary"><span class="ds-next-l">${t('Continuer')}</span> ▶</button>
           </div>
-          <div class="ds-hint">${t('Clic · Entrée · A / ▲ manette pour avancer')}</div>
+          <div class="ds-hint">${t('Clic · Entrée · ✕ manette pour avancer')}</div>
         </aside>
       </div>
     </div>
@@ -140,6 +140,7 @@ function build() {
   E.pages = root.querySelector('.ds-pages');
   E.msgs = root.querySelector('.ds-msgs');
   E.av = root.querySelector('.ds-av img');
+  try { E.faceFx = window.TapamaFace && window.TapamaFace.attach(E.av); } catch (_) {}      // visage animé (tapama-face.js)
   E.mood = root.querySelector('.ds-mood');
   E.next = root.querySelector('.ds-next');
   E.nextL = root.querySelector('.ds-next-l');
@@ -377,6 +378,7 @@ async function sendMsg(msg, myRun) {
   await wait(650);
   if (myRun !== runId) return;
   const full = tx(msg.text);
+  window.TapamaVoice?.line(msg.text, msg.mood, full);        // elle dit le message au moment où il s'écrit
   b.classList.remove('typing-dots');
   b.textContent = '';
   sndPing();
@@ -512,6 +514,7 @@ function finish() {
 function teardown() {
   opened = false;
   cancelRun();
+  try { window.TapamaVoice?.stop(); if (E.faceFx) E.faceFx.detach(); } catch (_) {}
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;
   if (keyHandler) { window.removeEventListener('keydown', keyHandler, true); keyHandler = null; }

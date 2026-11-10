@@ -1,5 +1,5 @@
 /**
- * Image du personnage du menu (fond transparent) : personnage + drone sur le sac, animation idle_look.
+ * Image du personnage du menu (fond transparent) : personnage + drone sur le sac, animation « pistol idle » (personnage Sahel).
  * Prérequis : `npm run serve` (http://localhost:8123)
  * Usage : node tools/menu-character.mjs <sortie.png> [angle°] [t en s] [largeur] [hauteur]
  */

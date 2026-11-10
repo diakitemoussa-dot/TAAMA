@@ -10,7 +10,7 @@
    Ville v2 uniquement (les positions sont calées sur djenne-ville-leger.glb).
    ========================================================== */
 import * as THREE from 'three';
-import { detectQuality } from './device-quality.js?v=5';
+import { detectQuality } from './device-quality.js?v=6';
 
 const M = window.MosqueScene;
 const LAMPS_URL = 'assets/models/djenne-lampadaires.json?v=4';

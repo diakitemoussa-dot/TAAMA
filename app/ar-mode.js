@@ -33,7 +33,7 @@ export async function enter() {
   // Ordinateur (ou appareil sans AR) : la mosquée se pose sur la main de l'utilisateur, grâce à la webcam et au suivi de la main
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   if (!viewer.canActivateAR || !coarse) {
-    try { const mod = await import('./ar-hand.js?v=1'); await mod.start(); }
+    try { const mod = await import('./ar-hand.js?v=2'); await mod.start(); }
     catch (e) { console.warn('[AR] suivi de la main indisponible :', e); _showArUnavailable(); }
     return;
   }

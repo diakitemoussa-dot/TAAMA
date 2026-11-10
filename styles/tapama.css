@@ -121,6 +121,43 @@
 .tp-dialogue.is-player .tp-d-portrait{ opacity: .55; filter: grayscale(.25) drop-shadow(0 12px 28px rgba(20,12,26,.5)); }
 .tp-d-shadow{ display: none; }
 
+/* Lueur derrière Tapama : halo chaud centré sur sa tête, qui respire doucement et s'intensifie avec sa voix (--lvl posé par tapama-face.js) */
+.tp-d-glow{
+  position: absolute;
+  left: clamp(0px, 2.5vw, 40px);
+  bottom: 0;
+  height: min(82vh, 760px);
+  aspect-ratio: 600 / 745;
+  max-width: 48vw;
+  pointer-events: none;
+  --lvl: 0;
+}
+.tp-d-glow::before, .tp-d-glow::after{
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.tp-d-glow::before{                                   /* grand halo doré */
+  inset: -30% -78% 0% -78%;
+  background: radial-gradient(ellipse 50% 50% at 50% 31%, rgba(255, 226, 160, .95) 0%, rgba(255, 190, 96, .62) 22%, rgba(255, 150, 70, .30) 46%, rgba(255, 120, 60, 0) 74%);
+  mix-blend-mode: screen;
+  opacity: calc(.82 + var(--lvl) * .18);
+  transform: scale(calc(1 + var(--lvl) * .07));
+  animation: tpGlowBreath 5.5s ease-in-out infinite;
+}
+.tp-d-glow::after{                                    /* cœur lumineux près de la tête */
+  inset: 0 -10% 38% -10%;
+  background: radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255, 248, 224, .85) 0%, rgba(255, 224, 150, .42) 42%, rgba(255, 200, 120, 0) 74%);
+  mix-blend-mode: screen;
+  filter: blur(8px);
+  opacity: calc(.7 + var(--lvl) * .3);
+  animation: tpGlowBreath 5.5s ease-in-out -2.7s infinite;
+}
+@keyframes tpGlowBreath{ 0%, 100%{ filter: brightness(.92); } 50%{ filter: brightness(1.12); } }
+.tp-dialogue.is-player .tp-d-glow{ opacity: .35; transition: opacity .25s ease; }
+@media (prefers-reduced-motion: reduce){ .tp-d-glow::before, .tp-d-glow::after{ animation: none; } }
+
 .tp-d-stack{
   position: absolute;
   right: clamp(12px, 4vw, 64px);
@@ -425,6 +462,7 @@
 /* Téléphone en portrait : le buste en haut (estompé en bas), la bulle dessous */
 @media (max-width: 760px){
   .tp-d-title{ display: none; }
+  .tp-d-glow{ left: 50%; bottom: auto; top: 64px; height: 40vh; max-width: none; transform: translateX(-50%); }
   .tp-d-portrait{
     left: 50%;
     bottom: auto;
@@ -441,7 +479,7 @@
 
 /* Téléphone en paysage : buste à gauche, bulle à droite */
 @media (max-height: 520px) and (min-width: 761px){
-  .tp-d-portrait{ height: 74vh; max-width: 40vw; }
+  .tp-d-portrait, .tp-d-glow{ height: 74vh; max-width: 40vw; }
   .tp-d-stack{ width: 56vw; bottom: 16px; }
 }
 
@@ -463,3 +501,6 @@
 .tp-ask-btn:focus-visible{ outline: 3px solid #F8F3EA; outline-offset: 3px; }
 .tp-ask-btn .tp-k{ font-size: .72rem; padding: 1px 7px; }
 @media (max-width: 640px){ .tp-ask-btn{ flex: 1; justify-content: center; padding: 12px 10px; } }
+
+/* Écran tactile : les aides « Entrée / Échap / Touche » du dialogue n'ont pas de sens (boutons à l'écran) */
+@media (pointer: coarse){ #tpRoot .tp-d-hints, #tpRoot .tp-btn .tp-k{ display: none; } }

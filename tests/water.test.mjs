@@ -15,19 +15,19 @@ test('depth : surface − sol, 0 sans eau ou sans sol', () => {
   assert.equal(W.depth(10, 12), 0);
 });
 
-test('waterState : pataugeage dès 0,15 m, nage dès 0,45 m', () => {
+test('waterState : pataugeage dès 0,15 m, nage dès 0,55 m', () => {
   assert.equal(W.waterState('dry', 0.1), 'dry');
   assert.equal(W.waterState('dry', 0.15), 'wade');
-  assert.equal(W.waterState('dry', 0.44), 'wade');
-  assert.equal(W.waterState('dry', 0.45), 'swim');
+  assert.equal(W.waterState('dry', 0.54), 'wade');
+  assert.equal(W.waterState('dry', 0.55), 'swim');
   assert.equal(W.waterState('wade', 2), 'swim');
 });
 
-test('waterState : hystérésis de la nage (sortie sous 0,30 m)', () => {
-  assert.equal(W.waterState('swim', 0.4), 'swim');
-  assert.equal(W.waterState('swim', 0.31), 'swim');
-  assert.equal(W.waterState('swim', 0.29), 'wade');
-  assert.equal(W.waterState('wade', 0.4), 'wade');
+test('waterState : hystérésis de la nage (sortie sous 0,40 m)', () => {
+  assert.equal(W.waterState('swim', 0.5), 'swim');
+  assert.equal(W.waterState('swim', 0.41), 'swim');
+  assert.equal(W.waterState('swim', 0.39), 'wade');
+  assert.equal(W.waterState('wade', 0.5), 'wade');
 });
 
 test('waterState : hystérésis du pataugeage', () => {
@@ -38,7 +38,7 @@ test('waterState : hystérésis du pataugeage', () => {
 
 test('waterState : pas d\'oscillation autour du seuil de nage', () => {
   let s = 'dry', changes = 0;
-  for (let i = 0; i < 100; i++) { const n = W.waterState(s, 0.45 + (i % 2 ? 0.04 : -0.04)); if (n !== s) changes++; s = n; }
+  for (let i = 0; i < 100; i++) { const n = W.waterState(s, 0.55 + (i % 2 ? 0.04 : -0.04)); if (n !== s) changes++; s = n; }
   assert.ok(changes <= 2, `bascules : ${changes}`);
 });
 
@@ -49,17 +49,17 @@ test('deepPose : vertical dès 1,05 m, repasse à plat sous 0,90 m', () => {
   assert.equal(W.deepPose(true, 0.89), false);
 });
 
-test('swimPose : à plat en mouvement ou en eau peu profonde, vertical à l\'arrêt en eau profonde', () => {
-  assert.equal(W.swimPose(false, false), 'prone');
+test('swimPose : à plat en mouvement, vertical (tête hors de l eau) à l arrêt, quelle que soit la profondeur', () => {
+  assert.equal(W.swimPose(false, false), 'upright');
   assert.equal(W.swimPose(true, false), 'prone');
   assert.equal(W.swimPose(true, true), 'prone');
   assert.equal(W.swimPose(false, true), 'upright');
 });
 
-test('swimFeetY : vertical = surface − 1,15 m, à plat = surface − 0,6 m, à ±3 cm', () => {
+test('swimFeetY : vertical = surface − 1,52 m, à plat = surface − 1,1 m, à ±3 cm', () => {
   for (let t = 0; t < 10; t += 0.1) {
-    assert.ok(Math.abs(W.swimFeetY(100, t, 50, false) - (100 - 1.15)) <= 0.0301);
-    assert.ok(Math.abs(W.swimFeetY(100, t, 50, true) - (100 - 0.6)) <= 0.0301);
+    assert.ok(Math.abs(W.swimFeetY(100, t, 50, false) - (100 - 1.52)) <= 0.0301);
+    assert.ok(Math.abs(W.swimFeetY(100, t, 50, true) - (100 - 1.1)) <= 0.0301);
   }
 });
 
@@ -68,7 +68,7 @@ test('swimFeetY : jamais sous le sol + 5 cm (eau peu profonde)', () => {
     const g = 100 - d;
     assert.ok(W.swimFeetY(100, t, g, prone) >= g + W.SWIM_CLEAR - 1e-9);
   }
-  assert.ok(Math.abs(W.swimFeetY(100, 0, -Infinity, false) - 98.85) < 1e-9);
+  assert.ok(Math.abs(W.swimFeetY(100, 0, -Infinity, false) - 98.48) < 1e-9);
 });
 
 test('swimSpeedMul : ×0,6 / ×0,75 en eau peu profonde, ×0,55 / ×0,7 en eau profonde', () => {
@@ -109,3 +109,11 @@ test('budgets de particules par palier', () => {
 });
 
 console.log(`\n${passed} tests passés`);
+
+test('swimAllowed : on nage après 5 m de marche dans l eau, ou dès 1,6 m de profondeur', () => {
+  assert.equal(W.swimAllowed(0.6, 0), false);
+  assert.equal(W.swimAllowed(0.6, 4.9), false);
+  assert.equal(W.swimAllowed(0.6, 5), true);
+  assert.equal(W.swimAllowed(1.6, 0), true);
+  assert.equal(W.swimAllowed(1.5, 0), false);
+});

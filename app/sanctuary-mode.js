@@ -8,10 +8,11 @@ import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import * as Aim from './aim-system.js?v=6';
-import * as WL from './water-logic.js?v=1';
-import * as DroneAI from './drone-n-ai.js?v=2';
+import * as Aim from './aim-system.js?v=8';
+import * as WL from './water-logic.js?v=8';
+import * as DroneAI from './drone-n-ai.js?v=3';
 import { installHeadFade } from './head-fade.js?v=1';
+import { useMeshopt, loadModel } from './gltf-extras.js?v=1';
 
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
@@ -26,9 +27,17 @@ const _gltfDir = new GLTFLoader();
 _gltfDir.setDRACOLoader(_draco);
 
 /* ---------- Personnage joueur (GLB animé, 3e personne) ---------- */
-import { heroUrl } from './hero.js?v=2';
+import { heroUrl } from './hero.js?v=3';
+import { MuzzleFlash } from './muzzle-flash.js?v=1';
+import * as Sniper from './sniper-cam.js?v=1';
+import * as AimSolve from './aim-solve.js?v=1';
+import { HitIndicators } from './hit-indicator.js?v=1';
+import { PlayerTag } from './player-tag.js?v=2';
+import { smoothValues, dampValues } from './clip-smooth.js?v=2';
+import * as AnimState from './anim-state.js?v=1';       // choix des animations (logique pure, testée)
+import { CameraRig } from './camera-rig.js?v=1';        // placement de la caméra 3e personne : épaule, accroupi (logique pure, testée)
 let _loadedHeroUrl = null;
-const _gltfPlayer   = new GLTFLoader();
+const _gltfPlayer   = useMeshopt(new GLTFLoader());
 
 let _playerRoot          = null;
 let _playerModel         = null;
@@ -55,20 +64,16 @@ let _playerLayeredShootAction  = null;
 let _aimHold                   = false;   // pose de visée tenue (couche haute figée)
 
 /* ---------- Gadget joueur : tir et cible ---------- */
-const GADGET_GLB_NODE      = 'Gadget_Nexus';
+const GADGET_GLB_NODE      = 'Pistol';          // l'arme du personnage Sahel remplace l'ancien gadget
+const GADGET_MUZZLE_NODE   = 'Muzzle_Pistol';   // point de tir déjà posé dans le GLB, au bout du canon
 const GADGET_GLOW_MATERIAL = 'GN_Blue_Glow';   // partie lumineuse avant du gadget
 const GADGET_SHOT_RANGE    = 30;     // m — portée du verrouillage
 // Le clip Shoot_Gadget (0,867 s) contient UN tir : le canon se relève dès la 7e image.
 // Un seul tir par pression, avec les dégâts de l'ancienne rafale de 3 (6 PV = 2 pressions).
 const GADGET_SHOT_DAMAGE   = 3;      // points de vie du drone retirés par tir
-const GADGET_SHOT_TIMES    = [0.17]; // s — tir au début du recul (image 6-7 du clip)
-const GADGET_SHOT_DURATION = 0.87;  // s — durée du tir agenouillé (= durée du clip)
-const GADGET_SHOT_FX_LIFE  = 0.20;   // s — durée de l'éclair de bouche
-const GADGET_PULSE_SPEED   = 75;     // m/s — vitesse de l'impulsion d'énergie du gadget
-const GADGET_IMPACT_LIFE   = 0.42;   // s — anneau et arcs électriques à l'impact
-const GADGET_ARC_COUNT     = 6;      // arcs électriques par impact
-const GADGET_ARC_SEGMENTS  = 4;      // segments par arc
-const GADGET_SHOT_COOLDOWN = 0.18;   // s — anti-rebond après la rafale
+const GADGET_SHOT_TIMES    = [0.04]; // s — le coup part dès le début du clip de tir du pistolet (voir _makeSahelShotClip)
+const GADGET_SHOT_DURATION = 0.32;  // s — durée du tir agenouillé (= durée du clip)
+const GADGET_SHOT_COOLDOWN = 0.12;   // s — anti-rebond : cadence ≈ 0,4 s par coup (Sahel Game : 0,25 s au pistolet)
 const DRONE_N_MAX_HP       = 6;
 const DRONE_N_RESPAWN_DELAY = 12;    // s — le drone revient pour s'entraîner
 
@@ -93,23 +98,24 @@ let _boundCtx            = null;    // contexte de sentinelle actuellement lié 
 let _droneLaserLock      = false;
 const _droneRoster       = [];      // sentinelles supplémentaires du poste de la base : { id, d, health, dead, respawnT, fireCd, noRespawn }
 
-const _gadgetShotFx      = [];
 const _fireworkFx        = [];
 let   _fireworkTexture   = null;
 let   _explosionFireTexture  = null;
 let   _explosionSmokeTexture = null;
 let   _explosionRingTexture  = null;
 const _gadgetOrigin      = new THREE.Vector3();
+const _bulletEnd         = new THREE.Vector3();   // point visé de la balle avant l'arrêt par un obstacle
+const _muzzleDir         = new THREE.Vector3();   // direction réelle du canon
+let   _muzzleFx          = null;                  // flamme de canon, traceur, impact (app/muzzle-flash.js)
+let   _hitInd            = null;                  // arcs jaunes : d'où viennent les tirs reçus (app/hit-indicator.js, repris de Sahel Game)
+let   _hitIdN            = 0;
+const _hitDir            = new THREE.Vector3();
+let   _playerTag         = null;                  // nom + barre de vie jaune au-dessus de la tête du joueur (app/player-tag.js)
+const _tagPos            = new THREE.Vector3();
 const _gadgetAim         = new THREE.Vector3();
-const _gadgetTargetPos   = new THREE.Vector3();
-const _gadgetFallback    = new THREE.Vector3();
 const _gadgetDir         = new THREE.Vector3();
 const _gadgetUp          = new THREE.Vector3(0, 1, 0);
 const _gadgetRay         = new THREE.Raycaster();
-const _gadgetSparkGeo    = new THREE.SphereGeometry(0.11, 10, 10);
-const _gadgetOrbGeo      = new THREE.SphereGeometry(1, 14, 14);
-const _gadgetRingGeo     = new THREE.RingGeometry(0.16, 0.21, 40);
-const _gadgetMuzzleGeo   = new THREE.SphereGeometry(0.055, 8, 8);
 
 let   _dirGLTF       = null;
 const _dirNodes      = [];
@@ -131,8 +137,45 @@ function _spawnDirAt(pos, radius = 2.5, opts = {}) {
   col.position.y = 1.5; col.raycast = () => {}; col.renderOrder = 4; col.frustumCulled = false;
   root.add(disc, ring, pulse, col);
   root.userData.pulse = pulse; root.userData.phaseOff = Math.random() * Math.PI * 2; root.userData.snap = !!opts.snapGround;
+  root.userData.parts = { disc, ring, pulse, col }; root.userData.radius = radius; root.userData.fitted = false;
   M.scene.add(root);
   _dirNodes.push(root);
+}
+
+/** Ajuste un repère de portail à son décor (une fois les collisions prêtes) : le cercle ne doit entrer ni dans un mur ni dans le sol.
+ *  1. des rayons horizontaux (à 0,4 m et 1 m au-dessus du sol) mesurent la distance aux murs ; le cercle est repoussé d'au plus 1,2 m s'il en touche un,
+ *     puis son rayon est réduit pour rester à 12 cm du mur le plus proche (jamais sous 0,9 m) ;
+ *  2. le disque et les anneaux épousent le relief : chaque sommet est posé sur le sol réel (rayon vertical), de sorte qu'aucun morceau ne s'enfonce ni ne flotte. */
+const _fitRay = new THREE.Raycaster();
+function _fitDirMarker(root) {
+  const cols = colliders; if (!cols || !cols.length) return false;
+  const R0 = root.userData.radius, UP = new THREE.Vector3(0, 1, 0), DOWN = new THREE.Vector3(0, -1, 0);
+  const groundAt = (x, z, y0) => { _fitRay.set(new THREE.Vector3(x, y0 + 1.2, z), DOWN); _fitRay.far = 6; const h = _fitRay.intersectObjects(cols, false); return h.length ? h[0].point.y : null; };
+  const wallDist = (cx, cy, cz, maxD) => {
+    let dmin = maxD; const dirs = [];
+    for (let i = 0; i < 20; i++) { const a = (i / 20) * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a);
+      let d = maxD; for (const h of [0.4, 1.0]) { _fitRay.set(new THREE.Vector3(cx, cy + h, cz), new THREE.Vector3(dx, 0, dz)); _fitRay.far = maxD; const hit = _fitRay.intersectObjects(cols, false); if (hit.length) d = Math.min(d, hit[0].distance); }
+      dirs.push([dx, dz, d]); dmin = Math.min(dmin, d); }
+    return { dmin, dirs };
+  };
+  const gy0 = groundAt(root.position.x, root.position.z, root.position.y); if (gy0 === null) return false;      // sol pas encore chargé : on réessaie
+  let cx = root.position.x, cz = root.position.z, cy = gy0;
+  // 1. murs
+  let w = wallDist(cx, cy, cz, R0 + 1.5), sx = 0, sz = 0;
+  for (const [dx, dz, d] of w.dirs) if (d < R0 + 0.15) { const push = R0 + 0.15 - d; sx -= dx * push; sz -= dz * push; }
+  const sl = Math.hypot(sx, sz) / w.dirs.length * 2; if (sl > 0.001) { const k = Math.min(1.2, sl) / (Math.hypot(sx, sz) || 1); cx += sx * k; cz += sz * k; const g2 = groundAt(cx, cz, cy); if (g2 !== null) cy = g2; w = wallDist(cx, cy, cz, R0 + 1.5); }
+  const R = Math.max(0.9, Math.min(R0, w.dmin - 0.12)), k = R / R0;
+  root.position.set(cx, cy, cz); root.scale.set(k, 1, k);
+  // 2. relief : disque (maillé en anneaux), anneaux et pulsation épousent le sol (le maillage est tourné de −90° autour de x : z local = hauteur)
+  const P = root.userData.parts;
+  P.disc.geometry.dispose(); P.disc.geometry = new THREE.RingGeometry(R0 * 0.02, R0 * 0.96, 48, 6);
+  for (const m of [P.disc, P.ring, P.pulse]) {
+    const pos = m.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) { const gx = cx + pos.getX(i) * k, gz = cz - pos.getY(i) * k; const g = groundAt(gx, gz, cy); pos.setZ(i, (g === null ? cy : Math.max(g, cy - 0.6)) - cy); }
+    pos.needsUpdate = true; m.geometry.computeBoundingSphere();
+  }
+  root.userData.fitted = true; root.userData.snap = false;
+  return true;
 }
 
 let _dirTime = 0;
@@ -143,8 +186,9 @@ function _tickDirAnim(dt) {
   _dirSnapT -= dt;
   if (_dirSnapT <= 0) {                                   // repose les cercles « snap » sur le terrain (les tuiles du sol arrivent en cours de partie)
     _dirSnapT = 1.0;
+    for (const n of _dirNodes) if (!n.userData.fitted && n.userData.parts && colliders && colliders._done) { try { _fitDirMarker(n); } catch (e) { n.userData.fitted = true; console.warn('[Repère] ajustement ignoré', e); } }
     const sol = []; M.scene.traverse((o) => { if (o.isMesh && /^Sol_/.test(o.name)) sol.push(o); });
-    if (sol.length) for (const n of _dirNodes) if (n.userData.snap) {
+    if (sol.length) for (const n of _dirNodes) if (n.userData.snap && !n.userData.fitted) {
       const rc = new THREE.Raycaster(new THREE.Vector3(n.position.x, 80, n.position.z), new THREE.Vector3(0, -1, 0)); rc.far = 200;
       const h = rc.intersectObjects(sol, false); if (h.length) n.position.y = h[0].point.y;
     }
@@ -152,7 +196,7 @@ function _tickDirAnim(dt) {
   for (const n of _dirNodes) {
     const k = ((_dirTime * 0.55) + n.userData.phaseOff) % 1;           // onde qui s'étend du centre vers le bord, puis recommence
     const p = n.userData.pulse;
-    p.scale.setScalar(0.55 + 0.45 * k); p.material.opacity = 0.85 * (1 - k);
+    const ps = 0.55 + 0.45 * k; p.scale.set(ps, ps, 1); p.material.opacity = 0.85 * (1 - k);          // l onde s étend dans le plan seulement
   }
 }
 
@@ -189,16 +233,28 @@ window.GameAudio?.track(_walkSound, 'effects');
 /* Déverrouillage iOS : play+pause synchrone sur premier geste */
 document.addEventListener('audioUnlock', () => {
   [_scannerSound, _walkSound, _insideSound].forEach(a => {
-    if (!a) return;
+    if (!a || !a.paused) return;     // déjà en lecture (pas ou ambiance démarrés avant ce geste) : on ne les coupe pas
     a.play().catch(() => {}); a.pause(); a.currentTime = 0;
   });
 }, { once: true });
 let _walkPlaying = false;
+/* Cadence des pas : le fichier a un pas environ toutes les 0,57 s (mesuré). Les animations de déplacement tournent à LOCO_ANIM_SCALE :
+   marche Sahel 1,3 s pour 2 pas -> un pas toutes les 0,46 s ; course 0,8 s -> toutes les 0,29 s. Vitesses de lecture = 0,57 / ces intervalles
+   (la hauteur du son ne change pas : preservesPitch). */
+const WALK_SOUND_RATE_WALK = 1.25, WALK_SOUND_RATE_RUN = 1.95;
+let _walkTry = 0;
 const _startWalk = () => {
-  if (_walkPlaying) return;
-  _walkPlaying = true;
+  // relance si le son a été coupé de l'extérieur (déverrouillage audio, lecture refusée avant le premier geste) alors que le personnage marche
+  if (_walkPlaying && !_walkSound.paused) return;
+  const t = performance.now();
+  if (_walkPlaying && t - _walkTry < 400) return;
+  _walkPlaying = true; _walkTry = t;
   _walkSound.play().catch(() => {});
 };
+/** Une interface plein écran est ouverte (labo, dossier, carte, guide, dialogue de Tapama) : le personnage ne marche pas et les pas se taisent. */
+const _uiBlocking = () => !!(window.__storyFreeze || (window.CityMap && window.CityMap.isOpen) || (window.Guide && window.Guide.isOpen)
+  || (window.Tapama && window.Tapama.isBusy && window.Tapama.isBusy()) || document.querySelector('.gu-screen.on'));
+setInterval(() => { if (_walkPlaying && _uiBlocking()) _stopWalk(); }, 150);       // filet de sécurité : même si la boucle du jeu est gelée, les pas s'arrêtent
 const _stopWalk = () => {
   if (!_walkPlaying) return;
   _walkPlaying = false;
@@ -266,8 +322,11 @@ const SPAWN_YAW       = Math.PI;         // regard vers -Z (la mosquée)
 const PLAYER_EXTERIOR = new THREE.Vector3(-27.602, 6.7586, 36.228);
 const EXTERIOR_YAW    = Math.PI;         // regard vers -Z
 const APPROACH_DUR    = 2.5;
-const WALK_SPEED      = 3.0;
-const PLAYER_RUN_SPEED = 5.6;
+// Personnage plus rapide (+40 %) : marche 3,0 -> 4,2 m/s, course 5,6 -> 8,0 m/s. Les animations de déplacement sont accélérées dans la
+// même proportion (LOCO_ANIM_SCALE) pour que les pieds ne glissent pas.
+const WALK_SPEED      = 4.2;
+const PLAYER_RUN_SPEED = 8.0;
+const LOCO_ANIM_SCALE = 1.4;
 const PLAYER_TURN_RATE = 11;             // vitesse d'orientation du personnage
 const CAPSULE_R       = 0.38;   // rayon du personnage (passages étroits du sanctuaire)
 const EYE_HEIGHT      = 1.7;
@@ -312,6 +371,7 @@ let _playerKneeling    = false;   // personnage agenouillé (bascule bouton X)
 let _playerKneelingPrev = '';     // action avant le kneeling pour pouvoir revenir
 let _playerDying       = false;   // personnage neutralisé par le drone N
 let _playerRunning     = false;   // le personnage court (bruit perçu par la Sentinelle)
+let _playerMoving      = false;   // le personnage se déplace (bruit de pas, entendu de très près)
 const PLAYER_MAX_HP        = 6;     // points de vie du personnage face au drone N
 const PLAYER_REGEN_DELAY   = 4.0;   // s sans être touché avant de récupérer
 const PLAYER_REGEN_STEP    = 1.2;   // s par point de vie récupéré
@@ -380,6 +440,10 @@ const _tmpA       = new THREE.Vector3();
 /* ---------- Caméra 3e personne (temporaires) ---------- */
 const _camTarget  = new THREE.Vector3();
 const _camDir     = new THREE.Vector3();
+const _camShoulder = new THREE.Vector3();   // point d'appui de la caméra : la tête décalée vers l'épaule (camera-rig.js)
+const _camLookRig  = new THREE.Vector3();   // point regardé hors visée : devant la caméra, parallèlement à son axe
+const _camRig      = new CameraRig({ exploration: { side: 0, up: 0, ahead: 0, distK: 1 }, tir: { side: 0, up: 0, ahead: 0, distK: 1 }, agenouille: { side: 0, up: 0, ahead: 0, distK: 1 } });       // réglages de placement lissés : épaule, accroupi, tir
+const _rigState = () => ({ kneeling: _playerKneeling, shooting: _gadgetShooting });
 const _camDesired = new THREE.Vector3();
 const _camOffset  = new THREE.Vector3();
 const _camMat     = new THREE.Matrix4();
@@ -394,8 +458,12 @@ let hudAccum        = 0;
 let _controlsInited = false;
 let _gpHintShown    = false;   // aide manette déjà affichée ? (une fois par session)
 
-/* ---------- Visée précise (L2/LT manette ou clic droit souris) ---------- */
+/* ---------- Visée précise (clic droit souris ou mode tireur d'élite : L2 maintenue, T, R3) ---------- */
 let _aiming        = false;
+let _sniper        = false;   // mode tireur d'élite ACTIF : visée + lunette (zoom, sensibilité réduite), repris de Sahel Game
+let _sniperLatched = false;   // bascule T / R3 (reste actif jusqu'à la prochaine pression) ; L2 maintenue l'active aussi tant qu'elle est enfoncée
+const _sniperPos   = new THREE.Vector3(), _sniperLook = new THREE.Vector3(), _sniperGround = new THREE.Vector3();   // caméra de lunette (épaule droite) et pieds du joueur
+let _sniperBlend   = 0;       // 0 = visée normale, 1 = lunette (lissé)
 let _aimMouseRight = false;   // état clic droit souris
 let _aimBlend      = 0;       // 0 = caméra 3e personne, 1 = caméra aux yeux
 let _headFade      = null;    // dissolution tramée de la tête (head-fade.js)
@@ -416,6 +484,9 @@ const _aimOffset = new THREE.Vector3();
 const _aimQT = new THREE.Quaternion(), _aimQP = new THREE.Quaternion(), _aimQR = new THREE.Quaternion(), _aimQPi = new THREE.Quaternion();
 const _aimAxisV = new THREE.Vector3();
 function _aimPose() { return Aim.aimPoseParams(_aimPoseMix); }
+/* Décalage du corps par rapport à la visée : 23,4° debout (pose de l'ancien gadget), ramené à 0 en lunette : comme dans Sahel Game,
+   le corps fait alors face à la caméra, ce qui garde le pistolet près de l'axe de visée. */
+function _aimBodyYaw() { return _aimPose().bodyYaw * (1 - _sniperBlend); }
 const _aimLook         = new THREE.Vector3();
 const _aimSegEnd       = new THREE.Vector3();
 const _aimDronePos     = new THREE.Vector3();
@@ -508,8 +579,25 @@ function _searchTomb(dt) {
   }
 }
 
-// À pied, une zone de scan ne fait rien : on rappelle au joueur d'utiliser son drone.
+/* SCANNER RETIRÉ : plus de jauge, de son ni de fiche de résultat quand le drone s'approche d'une zone. Les missions qui attendaient un scan (tombeau, petit tombeau, imam, entrée)
+   sont validées EN SILENCE, une seule fois, dès que le drone survole la zone (même distance de déclenchement qu'avant). */
+const _silentScanDone = {};
+function _tickSilentScans() {
+  if (!_droneScanPos) return;
+  const zones = [
+    ['tomb', tombCenter, TOMB_SCAN_DIST, null],
+    ['petit', PETIT_TOMB_POS, PETIT_TOMB_DIST, null],
+    ['imam', IMAM_POS, IMAM_DIST, () => isInsideMosque(_droneScanPos)],      // l'imam : le drone doit être sous le toit
+    ['entree', ENTREE_POS, ENTREE_DIST, null],
+  ];
+  for (const [kind, pt, dist, extra] of zones) {
+    if (_silentScanDone[kind] || !pt || (extra && !extra())) continue;
+    if (_scanDist(pt) < dist) { _silentScanDone[kind] = true; _missionEvent('scan', kind); }
+  }
+}
+// À pied, une zone de scan ne fait rien : on rappelait au joueur d'utiliser son drone (conseil supprimé avec le scanner).
 function _tickScanHint(dt) {
+  return;
   _scanHintCd = Math.max(0, _scanHintCd - dt);
   if (_scanHintCd > 0 || _droneScanPos || _pilotHold) return;
   const near =
@@ -890,7 +978,7 @@ function _initLookDrag() {
     if (Math.abs(dx) + Math.abs(dy) > 2) _lookDragMoved = true;
     lookDragLastX = e.clientX;
     lookDragLastY = e.clientY;
-    const lookMul = Aim.lookMultiplier(_aiming);
+    const lookMul = Sniper.lookMultiplier(_aiming, _sniper);
     cameraYaw   -= dx * LOOK_SENSITIVITY * lookMul;
     playerPitch -= dy * LOOK_SENSITIVITY * lookMul;
     playerPitch  = _aiming ? Aim.clampAimPitch(playerPitch) : Math.max(PLAYER_CAM_PITCH_MIN, Math.min(PLAYER_CAM_PITCH_MAX, playerPitch));
@@ -947,6 +1035,7 @@ async function buildColliders() {
     }
     colliders.push(o);
   }
+  colliders._done = true;                       // liste complète (BVH calculés) : les repères de portail peuvent s'ajuster au décor
 }
 
 function clearDist(dir, maxLen) {
@@ -1035,11 +1124,17 @@ function _makeBlobShadow() {
   return mesh;
 }
 
+/** Vitesse de lecture d'une action : les clips de déplacement (marche, course, recul, pas de côté, y compris leurs versions de couche) suivent LOCO_ANIM_SCALE. */
+function _locoScale(action) {
+  const n = String(action?.getClip?.()?.name || '').toLowerCase();
+  return /^(walk|run|pistol walk backward|pistol strafe)/.test(n) ? LOCO_ANIM_SCALE : 1;
+}
+
 function _playAction(name, opts = {}) {
   if (!_playerReady || !_playerMixer) return;
   const once = !!opts.once;
-  const fade = opts.fade != null ? opts.fade : PLAYER_ANIM_FADE;
   const wanted = _playerActions[name] ? name : 'idle';
+  const fade = opts.fade != null ? opts.fade : PLAYER_ANIM_FADE;    // long autour de l'arrêt, court entre déplacements
   const next = _playerActions[wanted];
   if (!next) return;
   if (_playerCurrentAction === wanted && !once) return;
@@ -1049,7 +1144,7 @@ function _playAction(name, opts = {}) {
   next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity);
   next.clampWhenFinished = once;
   next.enabled = true;
-  next.setEffectiveTimeScale(1);
+  next.setEffectiveTimeScale(_locoScale(next));
   next.setEffectiveWeight(1);
   next.play();
   if (prev && prev !== next) next.crossFadeFrom(prev, fade, false);
@@ -1127,7 +1222,7 @@ function _enterShootLayer(shootName, lowerName) {
   lower.setLoop(THREE.LoopRepeat, Infinity);
   lower.clampWhenFinished = false;
   lower.enabled = true;
-  lower.setEffectiveTimeScale(1);
+  lower.setEffectiveTimeScale(_locoScale(lower));
   lower.setEffectiveWeight(1);
   // Conserve la phase de marche/course pour éviter un saut de pas.
   if (prev && actualLowerName === _playerCurrentAction) {
@@ -1161,32 +1256,8 @@ function _updateShootLayer(dt, moving, running) {
 
   // Détermine l'animation du bas du corps selon la direction de déplacement
   // pendant le tir (strafe gauche/droite/arrière ou marche/arrêt normal).
-  let wantLower;
-  if (_playerKneeling && !moving) {
-    // Agenouillé : le bas du corps garde la pose kneeling, le buste tire.
-    wantLower = 'pistol kneeling idle';
-  } else if (moving && _move.lengthSq() > 1e-4) {
-    const m = _move.clone().normalize();
-    // Vecteurs avant et droite du personnage dans le plan XZ.
-    const fwdChar = new THREE.Vector3(Math.sin(playerYaw), 0, Math.cos(playerYaw));
-    const rgtChar = new THREE.Vector3(-Math.cos(playerYaw), 0, Math.sin(playerYaw));
-    const dFwd = m.dot(fwdChar);
-    const dRgt = m.dot(rgtChar);
-    const absFwd = Math.abs(dFwd);
-    const absRgt = Math.abs(dRgt);
-    if (absRgt > absFwd && absRgt > 0.55) {
-      // Mouvement principalement latéral.
-      wantLower = dRgt > 0 ? 'pistol strafe right' : 'pistol strafe left';
-    } else if (absFwd > absRgt && absFwd > 0.55 && dFwd < 0) {
-      // Marche arrière.
-      wantLower = 'pistol walk backward';
-    } else {
-      // Avant : marche ou course normale.
-      wantLower = running ? 'run' : 'walk';
-    }
-  } else {
-    wantLower = 'idle';
-  }
+  // (agenouillé : jambes figées sur la pose ; sinon pas de côté, marche arrière, marche ou course : voir anim-state.js)
+  const wantLower = AnimState.pickLowerClip({ kneeling: _playerKneeling, moving, move: _move, bodyYaw: playerYaw, running });
   if (wantLower === _playerLowerName) {
     // La couche agenouillée doit rester figée même après un changement d'état.
     const cur = _lowerSet()[wantLower];
@@ -1207,7 +1278,7 @@ function _updateShootLayer(dt, moving, running) {
   next.setLoop(THREE.LoopRepeat, Infinity);
   next.clampWhenFinished = false;
   next.enabled = true;
-  next.setEffectiveTimeScale(1);
+  next.setEffectiveTimeScale(_locoScale(next));
   next.setEffectiveWeight(1);
   // Synchronise la phase entre walk et run ; idle->walk part du début.
   if (prev && prevDur > 0 && nextDur > 0 &&
@@ -1252,7 +1323,7 @@ function _exitShootLayer(moving, running) {
   next.setLoop(THREE.LoopRepeat, Infinity);
   next.clampWhenFinished = false;
   next.enabled = true;
-  next.setEffectiveTimeScale(1);
+  next.setEffectiveTimeScale(_locoScale(next));
   next.setEffectiveWeight(1);
   if ((want === 'walk' || want === 'run') && lowerPhase > 0) {
     const dur = next.getClip()?.duration || 0;
@@ -1361,6 +1432,7 @@ function _forceDry() {
   _waterState = 'dry'; _waterSurf = null;
   if (_swimming) _setSwimming(false);
 }
+let _waterWalked = 0, _wwLast = null;      // mètres parcourus dans l'eau depuis l'entrée (0 à sec)
 /** État du joueur dans l'eau (une fois par image, avant le déplacement) : pataugeage, nage, éclaboussures, sillage. */
 function _tickWater(dt, moving, running) {
   const FX = window.WaterFx;
@@ -1370,11 +1442,16 @@ function _tickWater(dt, moving, running) {
     surf = FX.surfaceAt(playerPos.x, playerPos.z);
     if (surf !== null) {
       const feet = playerPos.y - EYE_HEIGHT;
-      st = (prev === 'dry' && feet > surf + 0.4) ? 'dry' : WL.waterState(prev, WL.depth(surf, _waterGroundY));   // en l'air bien au-dessus de l'eau : pas d'eau
+      const dep = WL.depth(surf, _waterGroundY);
+      st = (prev === 'dry' && feet > surf + 0.4) ? 'dry' : WL.waterState(prev, dep);   // en l'air bien au-dessus de l'eau : pas d'eau
+      if (st !== 'dry') { if (_wwLast) _waterWalked += Math.hypot(playerPos.x - _wwLast.x, playerPos.z - _wwLast.z); _wwLast = _wwLast || new THREE.Vector3(); _wwLast.copy(playerPos); }
+      else { _waterWalked = 0; _wwLast = null; }
+      if (st === 'swim' && !WL.swimAllowed(dep, _waterWalked)) st = 'wade';   // à l'entrée dans l'eau : on patauge d'abord (2 m de marche), puis on nage
       if (st === 'dry') surf = null;
     }
   }
   _waterState = st; _waterSurf = surf;
+  if (st !== 'dry') window.WetLook?.soak();                 // dans l'eau : mouillé à fond ; en sortant il sèche en quelques secondes (wet-look.js)
   if (st === 'swim') {
     _swimDepth = WL.depth(surf, _waterGroundY);
     _swimDeep = WL.deepPose(_swimDeep, _swimDepth);
@@ -1391,6 +1468,7 @@ function _tickWater(dt, moving, running) {
     _footT -= dt;
     if (_footT <= 0) { _footT = running ? 0.2 : 0.3; FX.footSplash(x, surf, z); }
   } else if (st === 'swim') {
+    FX.swimFx?.(dt, { x, z, yaw: playerYaw, surface: surf, moving, fast: running });
     _wakeT -= dt;
     if (_wakeT <= 0) { _wakeT = moving ? 0.35 : 0.9; FX.wake(x, surf, z, moving ? 1 : 0.4); }
   }
@@ -1436,13 +1514,22 @@ function _updateSwimAnimation(dt, moving, running) {
 
 function _tryJump() {
   if (_inVehicle() || _swimming) return;
-  if (!_playerReady || _playerJumping || _gadgetShooting || _playerKneeling) return;
+  if (!_playerReady || _playerJumping || _gadgetShooting) return;
   if (!_playerActions.jump) return;
+  if (_playerKneeling) _standUpFromKneel();          // sauter depuis la position agenouillée : le joueur se relève d'abord
   _playerJumping = true;
   _playerIdleTime = 0;
   if (_playerShootLayer) _cancelShootLayer();
   _playAction('jump', { once: true, fade: 0.08 });
   window.GamepadKit?.rumble?.(90, 0.4);
+}
+
+/** Se relever sans geste de bascule : appelé quand le joueur marche, court ou saute (une autre animation prend le relais). */
+function _standUpFromKneel() {
+  if (!_playerKneeling) return;
+  _playerKneeling = false;
+  _playerKneelingPrev = '';
+  if (_playerShootLayer && _aimHold) _cancelShootLayer();
 }
 
 /* ---------- Bascule genoux à terre (bouton X / touche K) ---------- */
@@ -1503,7 +1590,7 @@ function _applyAimPitch() {
     _aimBoneOut[i] = null;
   }
   const theta = (_aiming || _aimBlend > 0) ? (playerPitch - _aimPose().pitch0) * _aimBlend : 0;
-  if (Math.abs(theta) < 1e-5) { _aimBones[0].updateWorldMatrix(true, true); return; }
+  if (Math.abs(theta) < 1e-5) { _aimBones[0].updateWorldMatrix(true, true); _applyAimIK(); return; }
   _aimAppliedTheta = theta;
   for (let i = 0; i < _aimBones.length; i++) {
     const bone = _aimBones[i];
@@ -1517,6 +1604,50 @@ function _applyAimPitch() {
     _aimBoneOut[i] = (_aimBoneOut[i] || new THREE.Quaternion()).copy(bone.quaternion);
     bone.updateWorldMatrix(false, true);
   }
+  _applyAimIK();
+}
+
+/* Point que le canon doit viser : le réticule (centre de l'écran) une fois la caméra de visée en place, sinon 30 m devant la caméra. */
+const _ikTarget = new THREE.Vector3(), _ikPivot = new THREE.Vector3(), _ikMuzzle = new THREE.Vector3(), _ikDir = new THREE.Vector3();
+const _ikWq = new THREE.Quaternion(), _ikPq = new THREE.Quaternion();
+function _aimIKTarget(out) {
+  if (_aimBlend >= 0.5) return out.copy(_aimPoint);
+  _aimRay.setFromCamera(_aimNdc, M.camera);
+  return out.copy(_aimRay.ray.origin).addScaledVector(_aimRay.ray.direction, 30);
+}
+
+/**
+ * Comme dans Sahel Game : après l'animation, la colonne (Spine1) pivote de quelques degrés pour que le canon
+ * (Muzzle_Pistol) pointe exactement le réticule. Poids = fondu de la visée, angle limité à 60°.
+ * Les rotations de la colonne sont mémorisées comme celles du tangage (_aimBoneBase / _aimBoneOut) pour ne jamais se cumuler.
+ */
+function _applyAimIK() {
+  if (!_aimBones || !_gadgetMuzzle || !M?.camera || !(_aiming || _aimBlend > 0.01)) return;
+  const sp = _aimBones[1];
+  if (_aimAppliedTheta === 0) _aimBoneBase[1].copy(sp.quaternion);        // pas de tangage appliqué : la base est la pose de l'animation
+  _aimBones[0].updateWorldMatrix(true, true);
+  _gadgetMuzzle.getWorldPosition(_ikMuzzle);
+  _muzzleDirection(_ikDir);
+  sp.getWorldPosition(_ikPivot);
+  _aimIKTarget(_ikTarget);
+  let R = AimSolve.solveAim(_ikPivot, _ikMuzzle, _ikDir, _ikTarget, 5);
+  R = AimSolve.limitRotation(R, THREE.MathUtils.degToRad(AimSolve.AIM_SOLVE_MAX_DEG));
+  R = AimSolve.blendRotation(R, Math.min(1, _aimBlend));
+  sp.getWorldQuaternion(_ikWq);
+  sp.parent.getWorldQuaternion(_ikPq);
+  sp.quaternion.copy(_ikPq.invert().multiply(R.multiply(_ikWq)));
+  _aimBoneOut[1] = (_aimBoneOut[1] || new THREE.Quaternion()).copy(sp.quaternion);
+  sp.updateWorldMatrix(false, true);
+}
+
+/** Diagnostic : écart (°) entre la direction du canon et la ligne bouche -> réticule. */
+function _aimErrorDeg() {
+  if (!_gadgetMuzzle || !M?.camera) return null;
+  _gadgetMuzzle.updateWorldMatrix(true, false);
+  _gadgetMuzzle.getWorldPosition(_ikMuzzle);
+  _muzzleDirection(_ikDir);
+  _aimIKTarget(_ikTarget);
+  return THREE.MathUtils.radToDeg(_ikDir.angleTo(_ikTarget.sub(_ikMuzzle).normalize()));
 }
 function _mixerUpdate(dt) { _playerMixer.update(dt); _applyAimPitch(); }
 
@@ -1551,15 +1682,9 @@ function _updatePlayerAnimation(dt, moving, running) {
   if (wantHold && !_playerShootLayer) _enterAimHold(moving);
   else if (!wantHold && _aimHold && !_gadgetShooting) _exitShootLayer(moving, running);
   if (!_playerJumping && !_gadgetShooting && !_playerShootLayer) {
-    let want;
-    if (moving) {
-      _playerIdleTime = 0;
-      want = running ? 'run' : 'walk';
-    } else {
-      _playerIdleTime += dt;
-      want = _playerIdleTime >= PLAYER_IDLE_LOOK_DELAY ? 'idle_look' : 'idle';
-    }
-    _playAction(want);
+    if (moving) _playerIdleTime = 0;
+    else _playerIdleTime += dt;
+    _playAction(AnimState.pickBaseClip({ moving, running, idleTime: _playerIdleTime, idleLookDelay: PLAYER_IDLE_LOOK_DELAY }));
   } else if (_playerShootLayer) {
     _updateShootLayer(dt, moving, running);
   }
@@ -1567,23 +1692,80 @@ function _updatePlayerAnimation(dt, moving, running) {
   if (_gadgetShooting) _updateGadgetShot(moving, running);
 }
 
-/* Changement de personnage (Homme / Femme) : retire le modèle chargé pour que le prochain chargement prenne le bon fichier */
-window.addEventListener('hero:change', () => {
-  if (!_playerModel || _loadedHeroUrl === heroUrl()) return;
-  if (_playerRoot) { _playerRoot.parent?.remove(_playerRoot); }
-  _playerRoot = null; _playerModel = null; _playerMixer = null; _playerReady = false; _playerLoading = false;
-  _playerCurrentAction = ''; _playerLowerName = ''; _headFade = null; _gadgetNode = null; _gadgetMuzzle = null; _gadgetTarget = null;
-  for (const k of Object.keys(_playerActions)) delete _playerActions[k];
-  for (const o of [_playerLowerActions, _playerUpperShootActions, _playerAimLowerActions, _playerAimUpperActions]) for (const k of Object.keys(o)) delete o[k];
-  if (active) _loadPlayerModel();
-});
+
+/* ---- Personnage Sahel (clips Mixamo) : noms que le jeu attend ----
+   Le jeu cherche des clips nommés d'après l'ancien personnage. Les clips qui existent déjà sous le même
+   nom (idle, walk, run, jump, pistol strafe right, pistol walk backward) n'ont besoin de rien ; absents :
+   idle_look et control_idle retombent sur « idle » (voir _playAction), shoot_gadget_side sur shoot_gadget. */
+const SAHEL_CLIP_ALIASES = {
+  'dying': 'death',
+  'pistol kneeling idle': 'pistol kneel',
+  'pistol strafe left': 'pistol strafe',
+};
+const SAHEL_SHOT_DURATION = 0.32;                       // coup sec de pistolet (l'ancien Shoot_Gadget durait 0,87 s)
+const SAHEL_SHOT_KEYS     = [0, 0.04, 0.10, SAHEL_SHOT_DURATION]; // pose, coup à 0,04 s (GADGET_SHOT_TIMES), pic du recul, retour
+// Recul du pistolet : rotation locale ajoutée à la pose de visée au moment du tir [axe, degrés]
+const SAHEL_RECOIL = {
+  mixamorigRightHand:    { axis: [1, 0, 0], deg: -10 },
+  mixamorigRightForeArm: { axis: [1, 0, 0], deg: -4 },
+  mixamorigSpine2:       { axis: [1, 0, 0], deg: -2 },
+};
+
+/** Tir ponctuel : pose de visée tenue (Pistol Idle Tir, image 1) + petit recul. Toutes les pistes (bassin compris) sont présentes. */
+function _makeSahelShotClip(src) {
+  const tracks = [];
+  const q = new THREE.Quaternion(), qk = new THREE.Quaternion(), kick = new THREE.Quaternion();
+  for (const tr of src.tracks) {
+    const n = tr.getValueSize();
+    const v0 = Array.from(tr.values.slice(0, n));
+    const rec = SAHEL_RECOIL[tr.name.split('.')[0]];
+    if (tr.name.endsWith('.quaternion')) {
+      q.fromArray(v0);
+      qk.copy(q);
+      if (rec) qk.multiply(kick.setFromAxisAngle(new THREE.Vector3(...rec.axis), THREE.MathUtils.degToRad(rec.deg)));
+      tracks.push(new THREE.QuaternionKeyframeTrack(tr.name, SAHEL_SHOT_KEYS, [...v0, ...v0, ...qk.toArray(), ...v0]));
+    } else {
+      tracks.push(new THREE.VectorKeyframeTrack(tr.name, SAHEL_SHOT_KEYS, [...v0, ...v0, ...v0, ...v0]));
+    }
+  }
+  return new THREE.AnimationClip('shoot_gadget', SAHEL_SHOT_DURATION, tracks);
+}
+
+/* Animations de repos : le bruit de capture de mouvement (quelques dixièmes de degré d'une image clé à l'autre) fait trembler le
+   personnage quand il est immobile. On le retire par un lissage gaussien en boucle (app/clip-smooth.js) ; la respiration et les
+   appuis lents (< 1 Hz) sont conservés. */
+// damp : part de l'oscillation lente conservée. Le repos debout balance le bassin (±5°) alors que les pieds restent « collés » : sans cinématique
+// inverse ils glissent de ±8 cm comme un pendule, ce qui donne un personnage instable. On garde 35 % du balancement (respiration, appui).
+const SAHEL_SMOOTH_CLIPS = { 'idle': 0.35, 'pistol kneel': 1 };     // debout, et agenouillé (alias « pistol kneeling idle »)
+function _smoothClip(clip, damp = 1) {
+  const tracks = clip.tracks.map((t) => {
+    const isQuat = t instanceof THREE.QuaternionKeyframeTrack;
+    if (!isQuat && !/\.position$/.test(t.name)) return t.clone();                      // échelle, etc. : inchangé
+    const size = t.getValueSize();
+    const smooth = smoothValues(t.values, size, { radius: 6, sigma: 2.5, loop: true, quaternion: isQuat });
+    return new t.constructor(t.name, t.times, dampValues(smooth, size, damp, isQuat));
+  });
+  return new THREE.AnimationClip(clip.name, clip.duration, tracks);
+}
+
+function _installSahelClips(clips) {
+  for (const [key, damp] of Object.entries(SAHEL_SMOOTH_CLIPS)) {
+    const a = _playerActions[key];
+    if (a) _playerActions[key] = _playerMixer.clipAction(_smoothClip(a.getClip(), damp));
+  }
+  for (const [alias, real] of Object.entries(SAHEL_CLIP_ALIASES)) {
+    if (!_playerActions[alias] && _playerActions[real]) _playerActions[alias] = _playerActions[real];
+  }
+  const aim = _playerActions['pistol idle tir']?.getClip();
+  if (!_playerActions.shoot_gadget && aim) _playerActions.shoot_gadget = _playerMixer.clipAction(_makeSahelShotClip(aim));
+}
 
 function _loadPlayerModel() {
   if (_playerModel || _playerLoading || !M) return;
   _playerLoading = true;
 
   _loadedHeroUrl = heroUrl();
-  _gltfPlayer.load(_loadedHeroUrl, (gltf) => {
+  loadModel(_gltfPlayer, _loadedHeroUrl, (gltf) => {
     _playerLoading = false;
     if (!M) return;
 
@@ -1611,6 +1793,7 @@ function _loadPlayerModel() {
     _playerRoot.add(model);
 
     _playerShadow = _makeBlobShadow();
+    if (window.ShadowFollow && window.ShadowFollow.realShadows) _playerShadow.material.opacity = 0.2;      // vraies ombres actives : le disque ne garde qu'un léger contact au pied
     _playerRoot.add(_playerShadow);
 
     _playerModel = model;
@@ -1633,6 +1816,7 @@ function _loadPlayerModel() {
       const key = String(clip.name || '').trim().toLowerCase();
       if (key) _playerActions[key] = _playerMixer.clipAction(clip);
     });
+    _installSahelClips(gltf.animations);
 
     // Couches basse (jambes) et haute (buste/bras) pour tirer en marchant.
     for (const key of ['idle', 'walk', 'run']) {
@@ -1736,6 +1920,8 @@ function _loadPlayerModel() {
  * pendant toutes les animations.
  */
 function _findGadgetMuzzle(model) {
+  const named = model.getObjectByName(GADGET_MUZZLE_NODE);
+  if (named) return named;
   let muzzle = null;
   model.traverse((o) => {
     if (muzzle || !o.isMesh || !o.geometry) return;
@@ -1797,27 +1983,6 @@ function _gadgetLineClear(origin, target) {
 }
 
 const _tgtTmp = new THREE.Vector3();
-function _getGadgetTarget() {
-  let best = null, bestDist = Infinity;
-  for (const c of _liveDrones([])) {
-    c.d.group.getWorldPosition(_tgtTmp); _tgtTmp.y += 0.15;
-    const dist = playerPos.distanceTo(_tgtTmp);
-    if (dist > GADGET_SHOT_RANGE || dist >= bestDist) continue;
-    if (!_gadgetLineClear(playerPos, _tgtTmp)) continue;
-    best = c.d; bestDist = dist; _gadgetTargetPos.copy(_tgtTmp);
-  }
-  return best;
-}
-
-function _gadgetAimFallback() {
-  const a = playerYaw + (_gadgetSideShot ? -Math.PI / 2 : 0);
-  _gadgetFallback.set(
-    playerPos.x + Math.sin(a) * 18,
-    playerPos.y - 0.18,
-    playerPos.z + Math.cos(a) * 18
-  );
-}
-
 /* Le gadget reste caché : il est débloqué à la fin du dossier NÉANTIS (S8, app/dispositif1.js écrit taama.gadget = '1') */
 function _gadgetUnlocked() { try { return localStorage.getItem('taama.gadget') === '1'; } catch (_) { return false; } }
 
@@ -1838,28 +2003,12 @@ function _startGadgetShot(side) {
     return;
   }
 
-  // En visée, le buste suit la caméra : un tir latéral n'a pas de sens, et la
-  // visée est 100 % manuelle (aucun verrouillage sur le drone).
-  if (_aiming) side = false;
-  const target = _aiming ? null : _getGadgetTarget();
-  _gadgetSideShot = !!side;
-  _gadgetTarget = target;
-
-  if (_aiming) {
-    playerYaw = cameraYaw + _aimPose().bodyYaw;   // le buste pointe là où regarde la caméra
-  } else if (target) {
-    const dx = _gadgetTargetPos.x - playerPos.x;
-    const dz = _gadgetTargetPos.z - playerPos.z;
-    const targetYaw = Math.atan2(dx, dz);
-    // Le tir latéral part vers la droite du personnage : le buste reste
-    // perpendiculaire à la cible, pendant que la caméra garde la cible au centre.
-    playerYaw = side ? targetYaw + Math.PI / 2 : targetYaw;
-    cameraYaw = targetYaw;
-    _camSnap = true;
-    _gadgetFallback.copy(_gadgetTargetPos);
-  } else {
-    _gadgetAimFallback();
-  }
+  // Comme dans Sahel Game : plus de verrouillage automatique ni de tir latéral. Le buste suit toujours la caméra
+  // (en visée, avec le décalage de la pose) et la balle part là où le joueur regarde.
+  side = false;
+  _gadgetSideShot = false;
+  _gadgetTarget = null;
+  playerYaw = _aiming ? cameraYaw + _aimBodyYaw() : cameraYaw;
 
   _gadgetShooting = true;
   _gadgetShotIndex = 0;
@@ -1896,29 +2045,6 @@ function _startGadgetShot(side) {
   // En visée, ne pas « claquer » la caméra si le fondu est en cours.
   _updateThirdPersonCamera(0, !_aiming && _aimBlend === 0);
   window.GamepadKit?.rumble?.(35, 0.18);
-}
-
-function _playGadgetShotSound(side) {
-  try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    if (!_gadgetAudio) { _gadgetAudio = new AC(); window.GameAudio?.ctx(_gadgetAudio, 'effects'); }
-    const ctx = _gadgetAudio;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-    const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(side ? 480 : 680, t);
-    osc.frequency.exponentialRampToValueAtTime(110, t + 0.13);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.075, t + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.16);
-  } catch (_) {}
 }
 
 function _playExplosionSound() {
@@ -1975,27 +2101,9 @@ function _fireGadgetShotOnce() {
     _gadgetOrigin.copy(playerPos);
     _gadgetOrigin.y -= 0.55;
   }
-
-  // Tant que le fondu n'est pas à mi-course, le tir suit le chemin non visé (ligne droite).
-  if (_aiming && _aimBlend >= 0.5) {
-    _fireAimedShot();
-    return;
-  }
-
-  let hit = false;
-  const d = _gadgetTarget;
-  const tctx = d ? _ctxOfDrone(d) : null;
-  const tdead = tctx ? tctx.dead : _droneNDead;
-  if (d && !tdead && d.group?.visible) {
-    d.group.getWorldPosition(_gadgetTargetPos);
-    _gadgetTargetPos.y += 0.15;
-    hit = _gadgetLineClear(_gadgetOrigin, _gadgetTargetPos);
-  }
-  if (!hit) _gadgetAimFallback();
-
-  _spawnGadgetBeam(_gadgetOrigin, hit ? _gadgetTargetPos : _gadgetFallback,
-    hit ? () => _withCtx(tctx, () => _damageDroneN(GADGET_SHOT_DAMAGE)) : null);
-  _playGadgetShotSound(_gadgetSideShot);
+  // Comme dans Sahel Game : en visée (ou en tireur d'élite) la balle part du canon vers le point du réticule (centre de l'écran) ;
+  // hors visée elle part droit devant le canon. Tant que le fondu n'est pas à mi-course, on tire droit devant.
+  _fireBulletShot(_aiming && _aimBlend >= 0.5);
 }
 
 function _updateGadgetShot(moving, running) {
@@ -2042,221 +2150,6 @@ function _updateKneelingShot(dt) {
     // La pose agenouillée continue sans interruption.
     if (_playerKneeling && _playerReady) _playAction('pistol kneeling idle');
   }
-}
-
-/**
- * Tir du gadget : impulsion d'énergie bleue (orbe lumineux avec images rémanentes) qui
- * voyage jusqu'à la cible, puis anneau de choc et arcs électriques à l'impact.
- * `onArrive` (facultatif) est appelé à l'arrivée : c'est là que les dégâts sont infligés.
- */
-function _spawnGadgetBeam(origin, target, onArrive) {
-  if (!M?.scene) return;
-  const start = origin.clone();
-  _gadgetDir.copy(target).sub(start);
-  const len = _gadgetDir.length();
-  if (len < 0.05) { onArrive?.(); return; }
-  _gadgetDir.multiplyScalar(1 / len);
-
-  const mats = [];
-  const mkMat = (color, opacity) => {
-    const m = new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity,
-      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-    });
-    mats.push(m);
-    return m;
-  };
-
-  // Orbe : cœur blanc, halo cyan pulsant, trois images rémanentes derrière.
-  const orb = new THREE.Group();
-  orb.name = 'gadget_pulse';
-  const core = new THREE.Mesh(_gadgetOrbGeo, mkMat(0xeaffff, 1));
-  core.scale.setScalar(0.07);
-  const halo = new THREE.Mesh(_gadgetOrbGeo, mkMat(0x54d8ff, 0.42));
-  halo.scale.setScalar(0.2);
-  orb.add(halo, core);
-  orb.position.copy(start);
-  M.scene.add(orb);
-
-  const ghosts = [];
-  for (let i = 0; i < 3; i++) {
-    const g = new THREE.Mesh(_gadgetOrbGeo, mkMat(0x54d8ff, 0.3 - i * 0.08));
-    g.scale.setScalar(0.13 - i * 0.03);
-    g.position.copy(start);
-    M.scene.add(g);
-    ghosts.push(g);
-  }
-
-  const muzzle = new THREE.Mesh(_gadgetMuzzleGeo, mkMat(0xffffff, 1));
-  muzzle.position.copy(start);
-  muzzle.scale.setScalar(0.8);
-  M.scene.add(muzzle);
-
-  _gadgetShotFx.push({
-    kind: 'pulse', phase: 'fly',
-    start, end: target.clone(), dir: _gadgetDir.clone(), len, travelled: 0,
-    orb, core, halo, ghosts, muzzle, muzzleMat: muzzle.material,
-    ring: null, arcs: null, arcAttr: null, flash: null,
-    objs: [orb, ...ghosts, muzzle], mats, geos: [],
-    onArrive: onArrive || null,
-    life: 0, max: 5, impactT: 0, arcT: 0,
-  });
-  while (_gadgetShotFx.length > 18) _disposeGadgetFx(_gadgetShotFx.shift());
-}
-
-// Anneau, flash et arcs électriques à l'arrivée de l'impulsion.
-function _startGadgetImpact(fx) {
-  fx.phase = 'impact';
-  fx.impactT = 0;
-  fx.orb.visible = false;
-  for (const g of fx.ghosts) g.visible = false;
-
-  const mkMat = (color, opacity) => {
-    const m = new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-      side: THREE.DoubleSide, toneMapped: false,
-    });
-    fx.mats.push(m);
-    return m;
-  };
-
-  fx.ring = new THREE.Mesh(_gadgetRingGeo, mkMat(0x9fefff, 1));
-  fx.ring.position.copy(fx.end);
-  M.scene.add(fx.ring);
-
-  fx.flash = new THREE.Mesh(_gadgetSparkGeo, mkMat(0xeaffff, 1));
-  fx.flash.position.copy(fx.end);
-  M.scene.add(fx.flash);
-
-  const geo = new THREE.BufferGeometry();
-  fx.arcAttr = new THREE.BufferAttribute(
-    new Float32Array(GADGET_ARC_COUNT * GADGET_ARC_SEGMENTS * 2 * 3), 3);
-  geo.setAttribute('position', fx.arcAttr);
-  const arcMat = new THREE.LineBasicMaterial({
-    color: 0xbdf4ff, transparent: true, opacity: 1,
-    blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-  });
-  fx.mats.push(arcMat);
-  fx.geos.push(geo);
-  fx.arcs = new THREE.LineSegments(geo, arcMat);
-  fx.arcs.frustumCulled = false;
-  M.scene.add(fx.arcs);
-
-  fx.objs.push(fx.ring, fx.flash, fx.arcs);
-  _fillGadgetArcs(fx);
-}
-
-// Nouveaux arcs : des éclairs en zigzag qui partent du point d'impact dans toutes les directions.
-function _fillGadgetArcs(fx) {
-  const pos = fx.arcAttr.array;
-  let o = 0;
-  for (let a = 0; a < GADGET_ARC_COUNT; a++) {
-    // direction aléatoire sur la sphère
-    const u = Math.random() * 2 - 1;
-    const th = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(1 - u * u);
-    const dx = r * Math.cos(th), dy = u, dz = r * Math.sin(th);
-    const total = 0.35 + Math.random() * 0.45;
-    let px = fx.end.x, py = fx.end.y, pz = fx.end.z;
-    for (let k = 1; k <= GADGET_ARC_SEGMENTS; k++) {
-      const f = (k / GADGET_ARC_SEGMENTS) * total;
-      const jitter = 0.09;
-      const nx = fx.end.x + dx * f + (Math.random() - 0.5) * jitter;
-      const ny = fx.end.y + dy * f + (Math.random() - 0.5) * jitter;
-      const nz = fx.end.z + dz * f + (Math.random() - 0.5) * jitter;
-      pos[o++] = px; pos[o++] = py; pos[o++] = pz;
-      pos[o++] = nx; pos[o++] = ny; pos[o++] = nz;
-      px = nx; py = ny; pz = nz;
-    }
-  }
-  fx.arcAttr.needsUpdate = true;
-}
-
-function _spawnGadgetBurst(pos) {
-  if (!M?.scene) return;
-  const mat = new THREE.MeshBasicMaterial({
-    color: 0x9fefff, transparent: true, opacity: 1,
-    blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-  });
-  const mesh = new THREE.Mesh(_gadgetSparkGeo, mat);
-  mesh.position.copy(pos);
-  mesh.scale.setScalar(1.2);
-  M.scene.add(mesh);
-  _gadgetShotFx.push({ kind: 'burst', impact: mesh, impactMat: mat, life: 0, max: 0.55 });
-}
-
-function _disposeGadgetFx(fx) {
-  if (!fx) return;
-  if (M?.scene) {
-    fx.objs?.forEach((o) => M.scene.remove(o));
-    if (fx.group) M.scene.remove(fx.group);
-    if (fx.impact) M.scene.remove(fx.impact);
-    if (fx.muzzle && !fx.objs) M.scene.remove(fx.muzzle);
-  }
-  fx.mats?.forEach((m) => m.dispose());
-  fx.geos?.forEach((g) => g.dispose());
-  fx.impactMat?.dispose();
-  if (!fx.mats) fx.muzzleMat?.dispose();
-}
-
-function _updateGadgetPulse(fx, dt) {
-  if (fx.phase === 'fly') {
-    fx.travelled += GADGET_PULSE_SPEED * dt;
-    const t = Math.min(fx.travelled, fx.len);
-    fx.orb.position.copy(fx.start).addScaledVector(fx.dir, t);
-    // Pulsation du halo et images rémanentes en retard sur l'orbe.
-    fx.halo.scale.setScalar(0.2 * (1 + 0.25 * Math.sin(fx.life * 45)));
-    for (let i = 0; i < fx.ghosts.length; i++) {
-      const back = Math.max(0, t - (i + 1) * 0.14);
-      fx.ghosts[i].position.copy(fx.start).addScaledVector(fx.dir, back);
-    }
-    if (fx.travelled >= fx.len) {
-      fx.onArrive?.();
-      fx.onArrive = null;
-      _startGadgetImpact(fx);
-    }
-  } else {
-    fx.impactT += dt;
-    const k = Math.min(1, fx.impactT / GADGET_IMPACT_LIFE);
-    fx.ring.lookAt(M.camera.position);
-    fx.ring.scale.setScalar(1 + k * 4.5);
-    fx.ring.material.opacity = 1 - k;
-    fx.flash.scale.setScalar(1.1 + k * 2.6);
-    fx.flash.material.opacity = Math.max(0, 1 - k * 2.2);
-    // Les éclairs sont régénérés ~20 fois par seconde : effet de crépitement.
-    fx.arcT += dt;
-    if (fx.arcT >= 0.05) { fx.arcT = 0; _fillGadgetArcs(fx); }
-    fx.arcs.material.opacity = 1 - k;
-    if (k >= 1) fx.life = fx.max;   // terminé
-  }
-  fx.muzzleMat.opacity = Math.max(0, 1 - fx.life / GADGET_SHOT_FX_LIFE);
-  fx.muzzle.scale.setScalar(0.8 + Math.min(1, fx.life / GADGET_SHOT_FX_LIFE) * 1.3);
-}
-
-function _updateGadgetFx(dt) {
-  for (let i = _gadgetShotFx.length - 1; i >= 0; i--) {
-    const fx = _gadgetShotFx[i];
-    fx.life += dt;
-    if (fx.kind === 'pulse') {
-      _updateGadgetPulse(fx, dt);
-    } else {
-      const k = Math.min(1, fx.life / fx.max);
-      // 'burst' : flash d'explosion
-      fx.impactMat.opacity = 1 - k;
-      fx.impact.scale.setScalar(1.1 + k * 3.4);
-    }
-    if (fx.life >= fx.max) {
-      // Une impulsion interrompue (sortie du mode) ne doit pas perdre ses dégâts : elle est simplement annulée.
-      _disposeGadgetFx(fx);
-      _gadgetShotFx.splice(i, 1);
-    }
-  }
-}
-
-function _clearGadgetFx() {
-  for (const fx of _gadgetShotFx) _disposeGadgetFx(fx);
-  _gadgetShotFx.length = 0;
 }
 
 /* ---------- Destruction du drone N : feu d'artifice ---------------- */
@@ -3013,6 +2906,7 @@ const DRONE_DISC_DUR    = 0.5;      // s — montée douce des disques d'hélice
 
 const _gltfDrone = new GLTFLoader();
 _gltfDrone.setDRACOLoader(_draco);
+useMeshopt(_gltfDrone);
 
 let _dockedDrone        = null;     // { group, model, discs:[{ node, base }] }
 let _dockedDroneLoading = false;
@@ -3117,9 +3011,13 @@ function _updateDockedDrone(dt) {
   if (kr >= 1) _handoffDrone();
 }
 
+let _handoffWait = 0;
 function _handoffDrone() {
   const tk = _droneTakeoff;
   if (!tk) return;
+  // le modèle de pilotage n'est pas encore chargé : le drone du sac reste visible (3 s au plus) au lieu de disparaître
+  if (window.DroneGame?.modelReady && !window.DroneGame.modelReady() && (performance.now() - (_handoffWait || (_handoffWait = performance.now()))) < 3000) { window.DroneGame.preload?.(); return; }
+  _handoffWait = 0;
   _droneTakeoff = null;
   const g = _dockedDrone?.group;
   const start = new THREE.Vector3();
@@ -3140,7 +3038,7 @@ function _handoffDrone() {
    lasers depuis le canon Cylinder.001 uniquement en état ENGAGE. */
 const DRONE_N_GLB_URL       = 'assets/models/droneN.glb?v=1';
 const DRONE_N_SIZE          = 1.3;          // envergure max en unités monde
-const DRONE_N_TURN_SPEED    = 7.0;          // lissage de la rotation vers le personnage
+const DRONE_N_TURN_SPEED    = 10.0;         // lissage de la rotation vers le personnage (7 avant : réaction visuelle plus vive)
 const DRONE_N_FIRE_INTERVAL = 0.55;         // s entre deux tirs laser
 const DRONE_N_BULLET_SPEED  = 55.0;         // m/s — vitesse des balles traçantes
 const DRONE_N_BULLET_RANGE  = 45.0;         // m — portée avant disparition
@@ -3193,7 +3091,7 @@ function _retireMainDrone() {
 function _loadSanctuaryDroneN() {
   if (_sanctuaryDroneN || _sanctuaryDroneNLoading || !M) return;
   _sanctuaryDroneNLoading = true;
-  _gltfDrone.load(DRONE_N_GLB_URL, (gltf) => {
+  loadModel(_gltfDrone, DRONE_N_GLB_URL, (gltf) => {
     _sanctuaryDroneNLoading = false;
     _droneNGltf = gltf;
     const model = gltf.scene;
@@ -3245,7 +3143,7 @@ function _loadSanctuaryDroneN() {
     if (!emitter) console.warn('[Sanctuaire] Canon Cylinder.001 introuvable sur droneN.');
     _sanctuaryDroneN = {
       group, model, mixer, actions,
-      ai: DroneAI.createAI(DroneAI.makePatrolWaypoints(DRONE_N_POS)),
+      ai: DroneAI.createAI(DroneAI.makePatrolWaypoints(DRONE_N_POS), { center: DRONE_N_POS.clone(), radius: DRONE_N_ROAM_RADIUS }),
       yaw: 0,            // lacet courant (le repos regarde vers +Z)
       scanning: false,
       scanBaseYaw: 0,
@@ -3275,7 +3173,11 @@ function _loadSanctuaryDroneN() {
    Chaque sentinelle a son contexte (vie, mort, tir, IA) ; les fonctions d'origine travaillent sur des variables globales,
    on les « lie » donc au contexte voulu le temps d'un appel (_withCtx). Aucune alerte de groupe : chaque IA ne réagit qu'à
    ce qu'elle perçoit elle-même (cône de vision de 12 m, bruit à 5 m) — le joueur peut les neutraliser une par une. */
-const SENTINEL_ACTIVE_R = 160;           // m — au-delà, une sentinelle en patrouille est gelée (économie)
+const SENTINEL_ACTIVE_R = 240;           // m — au-delà, une sentinelle en patrouille est gelée (économie) ; relevé (160 -> 240) car elles patrouillent maintenant sur de grandes zones
+// Patrouille « de partout » : chaque drone choisit des points au hasard dans un disque autour de son poste (drone-n-ai.js : pickRoamPoint).
+const DRONE_N_ROAM_RADIUS = 140;         // m — sentinelle d'origine (devant la mosquée)
+const SENTINEL_ROAM_RADIUS = { Cube: 55, Dock: 75, default: 110 };   // m — sentinelles du poste de la base, selon leur poste
+const DRONE_N_ALARM_COOLDOWN = 1.0;      // s — délai mini entre deux propagations d'alarme
 function _saveGlobals() {
   return { d: _sanctuaryDroneN, h: _droneNHealth, dead: _droneNDead, rt: _droneNRespawnT, fc: _droneNFireCooldown, nr: _droneNNoRespawn, ctx: _boundCtx };
 }
@@ -3338,7 +3240,8 @@ function _spawnBaseSentinels() {
     const emitter = model.getObjectByName('Cylinder.001') || model.getObjectByName('Cylinder001');
     const d = {
       group, model, mixer, actions, home: home.clone(), post: nm,
-      ai: DroneAI.createAI(DroneAI.makePatrolWaypoints(home, /^Cube/.test(nm) ? 1.0 : (nm === 'Dock' ? 2.0 : 3.0), 3)),
+      ai: DroneAI.createAI(DroneAI.makePatrolWaypoints(home, /^Cube/.test(nm) ? 1.0 : (nm === 'Dock' ? 2.0 : 3.0), 3),
+        { center: home.clone(), radius: /^Cube/.test(nm) ? SENTINEL_ROAM_RADIUS.Cube : (nm === 'Dock' ? SENTINEL_ROAM_RADIUS.Dock : SENTINEL_ROAM_RADIUS.default) }),
       yaw: 0, scanning: false, scanBaseYaw: 0, statusSprite: null,
       initialTransforms: _captureDroneNTransforms(model), baseQuat: group.quaternion.clone(), emitter,
       currentAction: null, dodging: false, dodgeDir: 0, maxDim,
@@ -3360,9 +3263,32 @@ function _resetSentinels(visible) {
   }
 }
 
+/**
+ * Alarme : dès qu'un drone repère le joueur (ALERT / ENGAGE), les drones en patrouille dans un rayon de DRONE_N_ALARM_RADIUS viennent
+ * fouiller le secteur (SEARCH à la dernière position connue). Les drones morts ou déjà en action ne sont pas touchés.
+ */
+let _droneAlarmT = 0;
+function _shareDroneAlarm(dt) {
+  _droneAlarmT -= dt;
+  if (_droneAlarmT > 0) return;
+  const all = [];
+  if (_sanctuaryDroneN?.ai && !_droneNDead) all.push({ ai: _sanctuaryDroneN.ai, pos: _sanctuaryDroneN.group.position });
+  for (const r of _droneRoster) if (!r.dead && r.d.ai && r.d.group) all.push({ ai: r.d.ai, pos: r.d.group.position });
+  let raised = false;
+  for (const a of all) {
+    if ((a.ai.state !== DroneAI.AI_ALERT && a.ai.state !== DroneAI.AI_ENGAGE) || !a.ai.lastKnown) continue;
+    for (const b of all) {
+      if (b === a || DroneAI.horizontalDist(a.pos, b.pos) > DroneAI.DRONE_N_ALARM_RADIUS) continue;
+      if (DroneAI.onAlarm(b.ai, a.ai.lastKnown)) raised = true;
+    }
+  }
+  if (raised) _droneAlarmT = DRONE_N_ALARM_COOLDOWN;
+}
+
 function _updateAllDroneN(dt, passive = false) {
   _updateSanctuaryDroneN(dt, passive);                  // sentinelle d'origine (variables globales = elle)
   if (!_droneRoster.length) { if (active) _spawnBaseSentinels(); return; }
+  if (!passive && active) _shareDroneAlarm(dt);         // un drone qui repère le joueur prévient ses voisins
   _droneLaserLock = true;                               // les balles ont déjà été avancées par la sentinelle d'origine
   try {
     for (const r of _droneRoster) {
@@ -3384,7 +3310,7 @@ const DRONE_N_STATUS_COLORS = {
 };
 const DRONE_N_STATUS_HEIGHT = 0.55;   // m au-dessus du drone
 const DRONE_N_TOAST_GAP     = 5;      // s mini entre deux messages « intrus détecté »
-const DRONE_N_SCAN_AMPLITUDE = 0.9;   // rad — amplitude du balayage
+const DRONE_N_SCAN_AMPLITUDE = 1.4;   // rad — amplitude du balayage (0,9 avant : il couvre plus d'angle)
 const DRONE_N_BLOCK_CHECK   = 0.7;    // m — distance testée devant le drone avant d'avancer
 
 let _droneNToastT = 0;
@@ -3461,7 +3387,7 @@ function _updateSanctuaryDroneN(dt, passive = false) {
     const lineClear = _droneNLaserClear(g.position, _droneNShotTarget);
     sensed = DroneAI.senses({
       dronePos: g.position, droneYaw: d.yaw, playerPos,
-      playerRunning: _playerRunning && !_playerDying, lineClear,
+      playerRunning: _playerRunning && !_playerDying, playerMoving: _playerMoving && !_playerDying, lineClear,
     });
   }
 
@@ -3475,8 +3401,8 @@ function _updateSanctuaryDroneN(dt, passive = false) {
   // --- Déplacement (plan horizontal, hauteur constante) ---
   let desiredYaw = d.yaw;
   if (out.moveTarget) {
-    desiredYaw = DroneAI.yawTo(g.position, out.moveTarget);
     if (_droneNPathClear(d, out.moveTarget)) {
+      desiredYaw = DroneAI.yawTo(g.position, out.moveTarget);
       const dist = DroneAI.horizontalDist(g.position, out.moveTarget);
       const stepLen = Math.min(dist, out.moveSpeed * dt);
       if (dist > 1e-3) {
@@ -3484,7 +3410,7 @@ function _updateSanctuaryDroneN(dt, passive = false) {
         g.position.add(_droneNMovePos);
       }
     } else if (d.ai.state === DroneAI.AI_PATROL) {
-      d.ai.wpIndex = (d.ai.wpIndex + 1) % d.ai.waypoints.length;   // waypoint inaccessible : on passe au suivant
+      DroneAI.skipWaypoint(d.ai);                                   // waypoint inaccessible : point suivant (ou nouveau tirage en patrouille libre)
     } else {
       d.ai.lastKnown = { x: g.position.x, y: g.position.y, z: g.position.z };   // bloqué : on cherche sur place
     }
@@ -3778,6 +3704,13 @@ function _resetPlayerHealth() {
 
 // Une balle du drone N touche le personnage : il perd un point de vie, et n'est
 // neutralisé qu'à zéro.
+/** Arc jaune du côté du tireur (Sahel Game) : `from` = origine du tir ; power 1 = touché, moins = balle qui frôle. */
+function _indicateShotFrom(src, from, power) {
+  if (!_hitInd) _hitInd = new HitIndicators();
+  if (src._hitId == null) src._hitId = `dn${++_hitIdN}`;       // un même drone réutilise le même arc
+  _hitInd.shotFrom(src._hitId, from, power);
+}
+
 function _damagePlayerByDroneN(amount) {
   if (_playerDying) return;
   _playerHp = Math.max(0, _playerHp - amount);
@@ -3845,6 +3778,8 @@ function _fireDroneNLaser(d) {
     mesh,
     pos: _droneNMuzzlePos.clone().addScaledVector(_droneNShotDir, 0.06),
     dir: _droneNShotDir.clone(),
+    origin: _droneNMuzzlePos.clone(),                  // d'où part la balle : direction affichée par l'arc jaune
+    src: fx,
     travelled: 0,
   };
   mesh.scale.set(1, DRONE_N_TRACER_LEN, 1);
@@ -3896,20 +3831,25 @@ function _stepDroneNBullet(fx, bullet, dt) {
   }
 
   // Joueur : trois points le long du corps ; la balle passe-t-elle à moins de DRONE_N_BULLET_RADIUS ?
-  let tPlayer = Infinity;
+  let tPlayer = Infinity, nearest = Infinity;
   if (!_playerDying && active && state === S_FPS) {
     for (const dy of [-0.2, -0.65, -1.1]) {
       _droneNPlayerPt.set(playerPos.x, playerPos.y + dy, playerPos.z).sub(bullet.pos);
       const t = Math.min(step, Math.max(0, _droneNPlayerPt.dot(bullet.dir)));
       _droneNBulletTmp.copy(bullet.dir).multiplyScalar(t);
-      if (_droneNBulletTmp.distanceTo(_droneNPlayerPt) <= DRONE_N_BULLET_RADIUS) tPlayer = Math.min(tPlayer, t);
+      const dPt = _droneNBulletTmp.distanceTo(_droneNPlayerPt);
+      if (dPt < nearest) nearest = dPt;
+      if (dPt <= DRONE_N_BULLET_RADIUS) tPlayer = Math.min(tPlayer, t);
     }
+    // balle qui frôle le joueur (moins de 1,6 m) : arc jaune plus discret, une seule fois par balle
+    if (nearest < 1.6 && tPlayer === Infinity && !bullet.warned) { bullet.warned = true; _indicateShotFrom(bullet.src, bullet.origin, 0.55); }
   }
 
   if (tPlayer < tObs) {
     _droneNBulletHit.copy(bullet.pos).addScaledVector(bullet.dir, tPlayer);
     _droneNBulletNorm.copy(bullet.dir).negate();
     _droneNImpact(_droneNBulletHit, _droneNBulletNorm, true);
+    _indicateShotFrom(bullet.src, bullet.origin, 1);      // touché : arc jaune plein
     _damagePlayerByDroneN(DRONE_N_BULLET_DAMAGE);
     return false;
   }
@@ -3996,6 +3936,7 @@ function _enterPilotHold() {
   active = false;
   state  = S_IDLE;
   _pilotHold = true;
+  if (_gadgetNode) _gadgetNode.visible = false;
   _hideDroneNLaserFx();   // les balles en vol disparaissent ; le drone N reste visible
   _playerJumping  = false;
   _playerIdleTime = 0;
@@ -4030,10 +3971,7 @@ function pilotTick(dt, dronePos) {
   if (!_pilotHold) return;
   // Le drone survole les zones : c'est lui qui déclenche les analyses.
   _droneScanPos = dronePos ? _droneScanVec.copy(dronePos) : null;
-  tickTombScan(dt);
-  tickPetitTombScan(dt);
-  tickImamScan(dt);
-  tickEntreeScan(dt);
+  _searchTomb(dt); _tickSilentScans();
   _updateFireworkFx(Math.min(dt, 0.05));
   // Le drone N reste visible et patrouille (sans tirer) pendant que le joueur pilote.
   if (_sanctuaryDroneN?.mixer) _sanctuaryDroneN.mixer.update(Math.min(dt, 0.05));
@@ -4064,6 +4002,22 @@ function endPilotHold() {
   _stopInsideSound();
 }
 
+/* Fondu de caméra au retour du drone : la caméra part de la vue du pilote et glisse vers la vue du personnage (plus de coupure). */
+let _camBlendIn = null;
+const CAM_BLEND_IN_DUR = 0.9;   // s
+const _cbQ = new THREE.Quaternion();
+function _applyCamBlendIn(dt) {
+  const b = _camBlendIn; if (!b) return;
+  b.t += dt;
+  const u = Math.min(1, b.t / CAM_BLEND_IN_DUR), k = u * u * (3 - 2 * u);
+  _cbQ.copy(M.camera.quaternion);
+  M.camera.position.lerpVectors(b.pos, M.camera.position, k);
+  M.camera.quaternion.slerpQuaternions(b.quat, _cbQ, k);
+  const tf = M.camera.fov, f = b.fov + (tf - b.fov) * k;
+  if (Math.abs(f - tf) > 0.01) { M.camera.fov = f; M.camera.updateProjectionMatrix(); }
+  if (u >= 1) _camBlendIn = null;
+}
+
 /** Retour du drone vers le personnage (L1/LB pendant le pilotage). */
 function returnDrone(pose) {
   if (!_pilotHold || !M || !pose || !pose.position) return false;
@@ -4088,6 +4042,7 @@ function returnDrone(pose) {
   document.querySelector('.mq-ui')?.classList.add('dg-hidden');
   if (ambLight)   ambLight.visible = true;
   if (pointLight) pointLight.visible = true;
+  _camBlendIn = pose.cam ? { t: 0, pos: pose.cam.pos, quat: pose.cam.quat, fov: pose.cam.fov } : null;
   _updateThirdPersonCamera(0, true);
 
   const dd = _dockedDrone;
@@ -4164,6 +4119,7 @@ function _tickDroneReturn(dt) {
 
   if (_playerMixer) _playerMixer.update(dt);
   _updateThirdPersonCamera(dt);
+  _applyCamBlendIn(dt);
   if (pointLight) {
     pointLight.position.copy(playerPos);
     pointLight.position.y += 0.45;
@@ -4172,7 +4128,7 @@ function _tickDroneReturn(dt) {
 }
 
 function _finishDroneReturn() {
-  _droneReturn = null;
+  _droneReturn = null; _camBlendIn = null;
   if (_dockedDrone) _attachDockedDrone();
   state = S_FPS;
   _camDistView = _camDist;
@@ -4192,11 +4148,12 @@ function _aimCameraPosition(out) {
   if (head) {
     // Tête (os) APRÈS le tangage : la caméra est rigide avec le haut du corps.
     head.updateWorldMatrix(true, false); head.getWorldPosition(_tmpHead);
-    const o = Aim.aimOffsetFromHead(cameraYaw + _aimPose().bodyYaw, sc);
-    _aimOffset.set(o.x, o.y, o.z).applyQuaternion(_aimPitchQuat(_aimAppliedTheta, _aimQR));
+    const yawB = cameraYaw + _aimBodyYaw();
+    const o = Aim.aimOffsetFromHead(yawB, sc), t = Aim.aimTrimOffset(yawB, sc);
+    _aimOffset.set(o.x + t.x, o.y + t.y, o.z + t.z).applyQuaternion(_aimPitchQuat(_aimAppliedTheta, _aimQR));
     return out.copy(_tmpHead).add(_aimOffset);
   }
-  const off = Aim.aimCameraOffset(cameraYaw + _aimPose().bodyYaw, sc);
+  const off = Aim.aimCameraOffset(cameraYaw + _aimBodyYaw(), sc);
   out.set(playerPos.x + off.x, playerPos.y - EYE_HEIGHT + off.y, playerPos.z + off.z);
   return out;
 }
@@ -4207,12 +4164,27 @@ function _computeDesiredCamera(out, dt = 0) {
 
   const cp = Math.cos(playerPitch);
   _camDir.set(Math.sin(cameraYaw) * cp, Math.sin(playerPitch), Math.cos(cameraYaw) * cp);
-  out.copy(_camTarget).addScaledVector(_camDir, -_camDistView);
+  // Par-dessus l'épaule (réglages de camera-rig.js) : la caméra est décalée vers la droite de l'écran, un peu plus haut ou plus bas
+  // selon la pose, et regarde droit devant elle ; le personnage apparaît donc un peu à gauche. R = droite écran = (-cos, 0, sin).
+  const rig = _camRig.cur;
+  _camShoulder.copy(_camTarget);
+  _camShoulder.x += -Math.cos(cameraYaw) * rig.side;
+  _camShoulder.z += Math.sin(cameraYaw) * rig.side;
+  _camShoulder.y += rig.up;
+  _camLookRig.copy(_camShoulder).addScaledVector(_camDir, Math.max(rig.ahead, 0.001));
+  out.copy(_camShoulder).addScaledVector(_camDir, -_camDistView * rig.distK);
 
   // Visée : la caméra glisse jusqu'aux yeux du personnage.
   if (_aimBlend > 0) {
     _aimCameraPosition(_aimEye);
     out.lerp(_aimEye, _aimBlend);
+  }
+  // Lunette : la caméra glisse à côté de la tête, au niveau de l'épaule droite (position de Cam_Sniper dans Sahel Game).
+  if (_sniperBlend > 0) {
+    _sniperGround.set(playerPos.x, playerPos.y - EYE_HEIGHT, playerPos.z);
+    const sp = Sniper.sniperCameraPosition(_sniperGround, cameraYaw, playerPitch);
+    _sniperPos.set(sp.x, sp.y, sp.z);
+    out.lerp(_sniperPos, _sniperBlend);
   }
 
   // Ne jamais traverser un mur / pilier entre la tête et la caméra.
@@ -4240,8 +4212,9 @@ function _computeDesiredCamera(out, dt = 0) {
 }
 
 function _refreshApproachEnd() {
+  _camRig.snap(_rigState());
   _computeDesiredCamera(animCamEnd);
-  _camMat.lookAt(animCamEnd, _camTarget, _up);
+  _camMat.lookAt(animCamEnd, _camLookRig, _up);
   animQuatEnd.setFromRotationMatrix(_camMat);
 }
 
@@ -4283,12 +4256,19 @@ function _updateThirdPersonCamera(dt, snap = false) {
   const blendTarget = _aiming ? 1 : 0;
   _aimBlend = snap ? blendTarget : Aim.approach(_aimBlend, blendTarget, Aim.AIM_BLEND_SPEED, dt);
   if (Math.abs(_aimBlend - blendTarget) < 0.002) _aimBlend = blendTarget;
-  _headFade?.setFade(_headFadeForce ?? Aim.headFade(_aimBlend));
+  // Lunette (mode tireur d'élite) : même lissage que la visée ; le zoom, le réticule et la vignette suivent _sniperBlend.
+  const sniperTarget = (_sniper && _aiming) ? 1 : 0;
+  _sniperBlend = snap ? sniperTarget : Aim.approach(_sniperBlend, sniperTarget, Aim.AIM_BLEND_SPEED, dt);
+  if (Math.abs(_sniperBlend - sniperTarget) < 0.002) _sniperBlend = sniperTarget;
+  { const sc = document.getElementById('snScope'); if (sc) sc.style.opacity = String(_sniperBlend);
+    const ret = document.getElementById('snAimReticle'); if (ret) ret.style.transform = `translate(-50%,-50%) scale(${1 - 0.3 * _sniperBlend})`; }
+  // En lunette la tête RESTE visible (la caméra est à côté, à l'épaule, comme dans Sahel Game) : le fondu de la tête s'annule avec _sniperBlend.
+  _headFade?.setFade(_headFadeForce ?? Aim.headFade(_aimBlend) * (1 - _sniperBlend));
   if (_aiming && _aimBlend < 1) playerPitch = Aim.approach(playerPitch, _aimPose().pitch0, Aim.AIM_BLEND_SPEED, dt);
   else if (!_aiming && _aimBlend > 0 && _aimSavedPitch !== null) playerPitch = Aim.approach(playerPitch, _aimSavedPitch, Aim.AIM_BLEND_SPEED, dt);
   if (!_aiming && _aimBlend === 0) _aimSavedPitch = null;
   if (_baseFov !== null) {
-    const fov = Aim.aimFov(_baseFov, _aimBlend, M.camera.aspect);
+    const fov = Sniper.sniperFov(Aim.aimFov(_baseFov, _aimBlend, M.camera.aspect), _sniperBlend, M.camera.aspect);   // 25° en lunette (Cam_Sniper)
     const near = _baseNear !== null ? Aim.aimNear(_baseNear, _aimBlend) : M.camera.near;
     const fovChanged = Math.abs(M.camera.fov - fov) > 0.01;
     const nearChanged = Math.abs(M.camera.near - near) > 1e-5;
@@ -4299,6 +4279,8 @@ function _updateThirdPersonCamera(dt, snap = false) {
     }
   }
 
+  if (snap || _camSnap) _camRig.snap(_rigState());      // téléportation, entrée dans le jeu : pas de glissement de l'épaule
+  else _camRig.update(dt, _rigState());
   _computeDesiredCamera(_camDesired, dt);
   if (snap || _camSnap) {
     M.camera.position.copy(_camDesired);
@@ -4310,7 +4292,14 @@ function _updateThirdPersonCamera(dt, snap = false) {
 
   // Regard : vers le joueur en 3e personne, droit devant (axe du réticule) en visée.
   _aimLook.copy(M.camera.position).addScaledVector(_camDir, 8);
-  _camLookAt.copy(_camTarget).lerp(_aimLook, _aimBlend);
+  _camLookAt.copy(_camLookRig).lerp(_aimLook, _aimBlend);
+  // Lunette : comme Sahel Game, la caméra regarde le point `look` de son preset (≈ 13,6° à gauche et 6,7° sous l'axe du corps),
+  // ce qui laisse la tête et l'arme visibles sur le côté de l'image ; le canon est calé sur le réticule au centre (_applyAimIK).
+  if (_sniperBlend > 0) {
+    const lt = Sniper.sniperLookTarget(_sniperGround, cameraYaw, playerPitch);
+    _sniperLook.set(lt.x, lt.y, lt.z);
+    _camLookAt.lerp(_sniperLook, _sniperBlend);
+  }
   M.camera.lookAt(_camLookAt);
   M.camera.updateMatrixWorld();
 }
@@ -4372,6 +4361,15 @@ function toggleRecord() {
 function _initControls() {
   if (_controlsInited) return;
   _controlsInited = true;
+  // T = tireur d'élite. Écouteur en phase de capture pour passer avant « T = relire le dernier appel » de Tapama, mais seulement
+  // quand l'arme est débloquée et que le jeu est en cours ; sinon T garde son rôle habituel.
+  window.addEventListener('keydown', (e) => {
+    if ((e.key || '').toLowerCase() !== 't' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (state !== S_FPS || window.__storyFreeze || !_gadgetUnlocked() || _inVehicle() || _swimming) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) return;
+    _toggleSniper();
+    e.preventDefault(); e.stopImmediatePropagation();
+  }, true);
   window.addEventListener('keydown', (e) => {
     if (state !== S_FPS || window.__storyFreeze) return;       // labo / dossier ouverts : Échap, F, X… ne doivent pas atteindre le jeu
     const k = e.key.toLowerCase();
@@ -4588,7 +4586,13 @@ function tickPortals(dt) {
   const ax = playerPos.x - PORTAL_A_TRIGGER.x;
   const az = playerPos.z - PORTAL_A_TRIGGER.z;
   if (Math.sqrt(ax * ax + az * az) < PORTAL_RADIUS) {
-    _showPortalVideo(PORTAL_A_DEST, 'roof');   // vidéo de transition A → B (toit)
+    // plus de vidéo de transition : téléportation immédiate (comme le retour toit → bas), avec le même éclair doré
+    playerPos.copy(PORTAL_A_DEST);
+    _portalCooldown = PORTAL_COOLDOWN_SEC;
+    _portalHold = { x: PORTAL_A_DEST.x, z: PORTAL_A_DEST.z };
+    _afterTeleport();
+    _teleportFlash();
+    _missionEvent('portal', 'roof');
     return;
   }
 
@@ -4649,6 +4653,11 @@ function _ensureAimReticle(){
     <div style="position:absolute;left:50%;top:50%;width:16px;height:2px;background:#fff;transform:translate(-50%,-50%);"></div>
   `;
   document.body.appendChild(reticle);
+  const scope = document.createElement('div');       // vignette de lunette : bords sombres, visible seulement en mode tireur d'élite
+  scope.id = 'snScope';
+  scope.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:59;opacity:0;' +
+    'background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 34%, rgba(24,12,6,.5) 72%, rgba(10,5,2,.88) 100%)';
+  document.body.appendChild(scope);
 }
 
 /**
@@ -4680,10 +4689,13 @@ function _updateAimPoint() {
  * Tir en visée : de la bouche du gadget vers le point visé, arrêté par le premier
  * obstacle. Le drone n'est touché que si ce trajet le traverse réellement.
  */
-function _fireAimedShot() {
-  _gadgetDir.copy(_aimPoint).sub(_gadgetOrigin);
+function _fireBulletShot(useReticle) {
+  _muzzleDirection(_muzzleDir);
+  if (useReticle) _bulletEnd.copy(_aimPoint);
+  else _bulletEnd.copy(_gadgetOrigin).addScaledVector(_muzzleDir, Aim.AIM_RANGE);
+  _gadgetDir.copy(_bulletEnd).sub(_gadgetOrigin);
   const dist = _gadgetDir.length();
-  _aimSegEnd.copy(_aimPoint);
+  _aimSegEnd.copy(_bulletEnd);
   if (dist > 0.05) {
     _gadgetDir.multiplyScalar(1 / dist);
     if (colliders && colliders.length) {
@@ -4704,20 +4716,75 @@ function _fireAimedShot() {
     if (dd < bestD) { bestD = dd; hit = true; hitCtx = c.r; _aimDronePos.copy(_tgtTmp); }
   }
 
-  _spawnGadgetBeam(_gadgetOrigin, hit ? _aimDronePos : _aimSegEnd,
-    hit ? () => _withCtx(hitCtx, () => _damageDroneN(GADGET_SHOT_DAMAGE)) : null);
-  _playGadgetShotSound(false);
+  // Flamme à la bouche du canon, traceur jusqu'au point d'impact, étincelles et poussière là où la balle s'arrête.
+  _ensureMuzzleFx();
+  // 0,7 = échelle du pistolet (Sahel Game, où le canon est vu à ~3 m). En vue de visée le canon est à ~0,7 m de la caméra : on réduit
+  // la flamme dans la même proportion pour qu'elle garde la même taille apparente (jamais sous 40 %).
+  const camDist = M.camera ? _gadgetOrigin.distanceTo(M.camera.position) : 3;
+  _muzzleFx.shot(_gadgetOrigin, _muzzleDir, 0.7 * Math.min(1, Math.max(0.4, camDist / 2.5)));
+  const end = hit ? _aimDronePos : _aimSegEnd;
+  _muzzleFx.tracer(_gadgetOrigin, end);
+  if (hit) _withCtx(hitCtx, () => _damageDroneN(GADGET_SHOT_DAMAGE));
+  if (hit || end.distanceToSquared(_bulletEnd) > 0.01) _muzzleFx.impact(end);   // la balle a rencontré quelque chose (drone, mur, sol)
+  _playPistolShotSound();
+}
+
+/** Direction de tir réelle du pistolet : axe +X du nœud Muzzle_Pistol (même convention que Sahel Game). */
+function _muzzleDirection(out) {
+  if (_gadgetMuzzle) {
+    _gadgetMuzzle.updateWorldMatrix(true, false);
+    return out.set(1, 0, 0).transformDirection(_gadgetMuzzle.matrixWorld);
+  }
+  return out.set(Math.sin(playerYaw), 0, Math.cos(playerYaw));
+}
+
+function _ensureMuzzleFx() {
+  if (_muzzleFx || !M?.scene) return;
+  _muzzleFx = new MuzzleFlash(M.scene, M.camera, M.renderer);
+}
+
+/** Détonation de pistolet : claquement bref (bruit filtré) + petit « thump » grave. */
+function _playPistolShotSound() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!_gadgetAudio) { _gadgetAudio = new AC(); window.GameAudio?.ctx(_gadgetAudio, 'effects'); }
+    const ctx = _gadgetAudio;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const t = ctx.currentTime;
+    const len = Math.floor(ctx.sampleRate * 0.16);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+    const noise = ctx.createBufferSource(); noise.buffer = buf;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.32, t + 0.003); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    noise.connect(hp); hp.connect(ng); ng.connect(ctx.destination); noise.start(t);
+    const thump = ctx.createOscillator(); const tg = ctx.createGain();
+    thump.type = 'sine'; thump.frequency.setValueAtTime(170, t); thump.frequency.exponentialRampToValueAtTime(55, t + 0.09);
+    tg.gain.setValueAtTime(0.0001, t); tg.gain.exponentialRampToValueAtTime(0.28, t + 0.004); tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    thump.connect(tg); tg.connect(ctx.destination); thump.start(t); thump.stop(t + 0.12);
+  } catch (_) {}
 }
 
 function _setAiming(on){
   if (on && (_inVehicle() || _swimming)) on = false;
   if (on && !_gadgetUnlocked()) on = false;
+  if (!on) { _sniper = false; _sniperLatched = false; }   // pas de lunette sans visée
   _ensureAimReticle();
   if (on && !_aiming) _aimSavedPitch = playerPitch;
   _aiming = on;
   const ret = document.getElementById('snAimReticle');
   ret.style.display = on ? 'block' : 'none';
   if (!on) _setAimLock(false);
+}
+
+/** Mode tireur d'élite : T au clavier, R3 à la manette. Il implique la visée (voir tickFPS) et la quitte avec elle. */
+function _toggleSniper() {
+  if (state !== S_FPS || _inVehicle() || _swimming || !_gadgetUnlocked()) return;
+  _sniperLatched = !_sniperLatched;
+  window.GamepadKit?.toast?.(_sniperLatched ? '🔭 Tireur d’élite : zoom + visée lente' : '🎯 Visée normale');
 }
 
 function _setAimLock(on){
@@ -4729,6 +4796,8 @@ function _setAimLock(on){
 function _resetAim(){
   _setAiming(false);
   _aimBlend = 0;
+  _sniper = false; _sniperLatched = false; _sniperBlend = 0;
+  { const sc = document.getElementById('snScope'); if (sc) sc.style.opacity = '0'; }
   _headFade?.setFade(0);
   if (_baseFov !== null && M?.camera){
     M.camera.fov = _baseFov;
@@ -4751,9 +4820,12 @@ function tickFPS(dt) {
   const gx = gp ? gp.lx : 0;
   const gz = gp ? gp.ly : 0;
 
-  // Visée : gâchette gauche L2/LT (manette) ou clic droit (souris). Quand on vise, la caméra glisse aux yeux du personnage et le FOV se réduit.
-  const wantAimGP = gp ? GP.down('LT') : false;
-  const wantAim = wantAimGP || _aimMouseRight;
+  // Visée : clic droit (souris) ou mode tireur d'élite (L2 maintenue, T, R3). Quand on vise, la caméra glisse aux yeux du personnage et le FOV se réduit.
+  // Comme dans Sahel Game : L2 (LT) MAINTENUE = tireur d'élite (zoom de lunette), relâchée = retour à la vue normale.
+  // T / R3 le font aussi par bascule. Il faut l'arme débloquée, hors voiture et hors nage.
+  const sniperHoldGP = !!gp && GP.down('LT') && _gadgetUnlocked() && !_inVehicle() && !_swimming;
+  _sniper = _sniperLatched || sniperHoldGP;
+  const wantAim = _aimMouseRight || _sniper;                  // le tireur d'élite maintient la visée sans garder le bouton enfoncé
   if (wantAim !== _aiming) _setAiming(wantAim);
   // FOV d'origine de la caméra, mémorisé quand la caméra est en 3e personne pour le restituer à l'identique.
   if (_baseFov === null && _aimBlend === 0) _baseFov = M.camera.fov;
@@ -4761,7 +4833,7 @@ function tickFPS(dt) {
 
   // Regard au stick droit / glisser à l'écran : orbite autour du personnage.
   if (gp && (Math.abs(gp.rx) > 0.06 || Math.abs(gp.ry) > 0.06)) {
-    const lookMul = Aim.lookMultiplier(_aiming);
+    const lookMul = Sniper.lookMultiplier(_aiming, _sniper);
     cameraYaw   -= gp.rx * GP_LOOK_SPEED * dt * lookMul;
     playerPitch -= gp.ry * GP_LOOK_SPEED * dt * lookMul;
     playerPitch  = _aiming ? Aim.clampAimPitch(playerPitch) : Math.max(PLAYER_CAM_PITCH_MIN, Math.min(PLAYER_CAM_PITCH_MAX, playerPitch));
@@ -4770,16 +4842,20 @@ function tickFPS(dt) {
   // Déplacement relatif à la caméra (clavier + joystick tactile + manette).
   let ix = joyInput.x + gx + (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
   let iz = -joyInput.y - gz + (keys.w ? 1 : 0) - (keys.s ? 1 : 0);
+  if (_uiBlocking()) { ix = 0; iz = 0; }                       // carte, guide, dialogue ouverts : on ne marche pas (touches tenues comprises)
   const inMag = Math.hypot(ix, iz);
   if (inMag > 1) { ix /= inMag; iz /= inMag; }
   // On peut se déplacer pendant le tir ; le personnage garde son orientation
   // vers la cible et strafe autour d'elle.
+  // Agenouillé : dès qu'il marche ou court (hors tir), l'animation de marche prend le relais et le joueur se relève.
+  if (_playerKneeling && !_gadgetShooting && !_playerDying && inMag > 0.08) _standUpFromKneel();
   const isMoving = !(_playerKneeling && _gadgetShooting) && inMag > 0.08;
   // Course : Maj au clavier, ou stick gauche enfoncé (L3) à la manette.
   const running  = isMoving && !_aiming && (keys.shift || !!(GP && GP.down('L3')));
 
   // Joueur neutralisé par le drone N : plus de contrôle, seule l'animation Dying joue.
   _playerRunning = running;
+  _playerMoving = isMoving;
   if (_playerDying) {
     _move.set(0, 0, 0);
     _playerRunning = false;
@@ -4823,13 +4899,13 @@ function tickFPS(dt) {
 
   // En visée, le corps reste orienté vers la caméra : le déplacement devient un strafe.
   if (_aiming) {
-    let dYaw = cameraYaw + _aimPose().bodyYaw - playerYaw;
+    let dYaw = cameraYaw + _aimBodyYaw() - playerYaw;
     dYaw = Math.atan2(Math.sin(dYaw), Math.cos(dYaw));
     playerYaw += dYaw * Math.min(1, PLAYER_TURN_RATE * dt);
   }
 
   if (isMoving && !_playerJumping && !_swimming) {
-    _walkSound.playbackRate = running ? 1.35 : 1;
+    _walkSound.playbackRate = running ? WALK_SOUND_RATE_RUN : WALK_SOUND_RATE_WALK;
     _startWalk();
   } else {
     _stopWalk();
@@ -4890,17 +4966,28 @@ function tickFPS(dt) {
   _updateThirdPersonCamera(dt);
   _updateAimPoint();
   _applyCameraShake(dt);
+  _muzzleFx?.update(dt);
+  // Repère du joueur (nom + barre de vie jaune) au-dessus de la tête ; caché en visée aux yeux / lunette, à la mort et au volant.
+  if (!_playerTag) _playerTag = new PlayerTag();
+  _tagPos.set(playerPos.x, playerPos.y - EYE_HEIGHT + 2.0, playerPos.z);
+  _playerTag.update(M.camera, _tagPos, {
+    name: window.GameUI?.player?.()?.name || 'Joueur',
+    frac: _playerHp / PLAYER_MAX_HP,
+    hidden: _playerDying || _aimBlend > 0.5 || _inVehicle() || !_playerRoot?.visible,
+  });
+  if (_hitInd) {                                   // arcs jaunes : ils tournent avec la caméra (cap de son regard)
+    M.camera.getWorldDirection(_hitDir);
+    _hitInd.update(dt, Math.atan2(_hitDir.x, _hitDir.z), playerPos);
+  }
   if (pointLight) {
     pointLight.position.copy(playerPos);
     pointLight.position.y += 0.45;   // au-dessus de la tête : évite l'effet « ampoule dans le corps »
   }
 
   _tickDirAnim(dt);
+  window.ShadowFollow?.update?.(_shadowC.set(playerPos.x, playerPos.y - EYE_HEIGHT, playerPos.z));       // la carte d'ombre du soleil suit le joueur : vraies ombres nettes
   _tickScanHint(dt);
-  tickTombScan(dt);
-  tickPetitTombScan(dt);
-  tickImamScan(dt);
-  tickEntreeScan(dt);
+  _searchTomb(dt); _tickSilentScans();
 
   hudAccum += dt;
   if (hudAccum > 0.1) {
@@ -4924,13 +5011,13 @@ function _sanctuaryMenuOpen() {
 }
 
 function update(dt) {
+  window.WetLook?.update(dt, _playerModel);
   dt = Math.min(dt, 0.05);
   if (dt <= 0) return;
-  if (window.__storyFreeze) return;                // scène plein écran de l'histoire (labo, dossier : app/dispositif1.js) : le monde 3D est gelé
-  if (_gadgetNode) _gadgetNode.visible = _gadgetUnlocked() && !_swimming && !(window.Vehicle && window.Vehicle.state === 'drive');   // pas de gadget avant le dispositif 1 (ni au volant)
+  if (window.__storyFreeze) { _stopWalk(); _stopInsideSound(); return; }       // scène plein écran de l'histoire (labo, dossier : app/dispositif1.js : plus de pas ni d'ambiance de mosquée) : le monde 3D est gelé
+  if (_gadgetNode) _gadgetNode.visible = _gadgetUnlocked() && !_swimming && !_pilotHold && !(window.Vehicle && window.Vehicle.state === 'drive');   // pas de pistolet avant le dispositif 1 (ni au volant, ni à la nage, ni en pilotant le drone)
 
   if (_gadgetCooldown > 0) _gadgetCooldown = Math.max(0, _gadgetCooldown - dt);
-  _updateGadgetFx(dt);
   _updateFireworkFx(dt);
 
   // Idle du drone N supplémentaire (l'ancien drone reste sur le sac).
@@ -4958,13 +5045,14 @@ function update(dt) {
       document.querySelector('.sn-scan-result.visible .sn-scan-close')?.click();
     }
     // ○/B : saut hors menu. ✕/X : bascule genoux à terre.
-    if (GP.justPressed('B') && !_sanctuaryMenuOpen() && state === S_FPS) {
+    if (GP.justPressed('B') && !_sanctuaryMenuOpen() && state === S_FPS && !(window.CityMap && window.CityMap.busy)) {   // carte ouverte (ou fermée à l'instant par ○) : pas de saut
       _tryJump();
     }
     if (GP.justPressed('X') && !_sanctuaryMenuOpen() && state === S_FPS) {
       _toggleKneeling();
     }
 
+    if (GP.justPressed('R3') && !_sanctuaryMenuOpen() && state === S_FPS) _toggleSniper();   // R3 = tireur d'élite
     if (GP.justPressed('RB') && !(_vehicleCtl && _vehicleCtl.active())) toggleRecord();   // en voiture : L1 puis R1 = phares
     if (state === S_FPS && !_sanctuaryMenuOpen()) {
       if (GP.justPressed('RT')) _startGadgetShot(false);
@@ -5025,7 +5113,9 @@ function update(dt) {
 /* ========================================================= */
 /* ---- enter / exit                                     ---- */
 /* ========================================================= */
+const _shadowC = new THREE.Vector3();
 function enter() {
+  window.ShadowFollow?.on?.();
   if (active) return;
   M = window.MosqueScene;
   if (!M) return;
@@ -5058,7 +5148,6 @@ function enter() {
   _droneNDead     = false;
   _droneNHealth   = DRONE_N_MAX_HP;
   _droneNRespawnT = 0;
-  _clearGadgetFx();
   _clearFireworkFx();
 
   animCamStart.copy(M.camera.position);
@@ -5115,15 +5204,18 @@ function enter() {
   // Aide manette (une fois par session, si une manette est branchée)
   if (window.GamepadKit?.connected() && !_gpHintShown) {
     _gpHintShown = true;
-    window.GamepadKit.toast('🎮 Stick G marcher · L3 courir · ○ sauter · ✕ genoux à terre (bascule) · R2 tir · L1 drone ↔ personnage · Options menu · RB vidéo');
+    window.GamepadKit.toast('🎮 Stick G marcher · L3 courir · ○ sauter · ✕ genoux à terre (bascule) · R2 tir · L1 drone ↔ personnage · Options menu · R1 vidéo');
   }
 
   M.setGameUpdate(update);
 }
 
 function exit() {
+  window.ShadowFollow?.off?.();
   if (!active) return;
   active = false; state = S_IDLE;
+  _hitInd?.clear();
+  _playerTag?.hide();
   _forceDry();
   setTimeout(() => window.dispatchEvent(new CustomEvent('sanctuary:exit')), 0);
   _aimMouseRight = false;
@@ -5162,7 +5254,6 @@ function exit() {
   _droneNHealth = DRONE_N_MAX_HP;
   _droneNRespawnT = 0;
   _retireMainDrone();
-  _clearGadgetFx();
   _clearFireworkFx();
   _cancelShootLayer();
   _playerCurrentAction = '';
@@ -5219,6 +5310,7 @@ function spots(){
   };
 }
 function resetScans(){
+  for (const k in _silentScanDone) delete _silentScanDone[k];
   resetTombScan();
   resetPetitTombScan();
   resetImamScan();
@@ -5238,6 +5330,10 @@ window.SanctuaryMode = {
   get waterState() { return _waterState; },
   // diagnostic : force le fondu de la tête (null = rend la main au jeu)
   debugForceHeadFade: (v) => { _headFadeForce = v; },
+  // diagnostic : fixe les points de vie du joueur (repère au-dessus de la tête)
+  debugPlayerHp: (n) => { _playerHp = Math.max(0, Math.min(PLAYER_MAX_HP, n)); _updatePlayerHpHud(); },
+  // diagnostic : fait apparaître l'arc jaune d'un tir reçu depuis (x, z) ; id distingue plusieurs tireurs (power : 1 touché, ~0,55 frôlé)
+  debugHitFrom: (x, z, power = 1, id = 'debug') => { _indicateShotFrom({ _hitId: `dbg-${id}` }, { x, z }, power); },
   // diagnostic : téléporte le personnage (test de l'IA de la Sentinelle)
   debugTeleport: (x, y, z) => { playerPos.set(x, y, z); },
   // diagnostic : inflige des dégâts à une sentinelle de la base (id = poste) ou à celle d'origine (sans id)
@@ -5275,7 +5371,7 @@ window.SanctuaryMode = {
   // commandes tactiles (app/touch-controls.js) : glisser de la caméra (dx, dy en px écran × sensibilité) et état de visée
   look: (dx, dy, mul = 1) => {
     if (state !== S_FPS) return;
-    const m = Aim.lookMultiplier(_aiming) * mul;
+    const m = Sniper.lookMultiplier(_aiming, _sniper) * mul;
     cameraYaw   -= dx * LOOK_SENSITIVITY * m;
     playerPitch -= dy * LOOK_SENSITIVITY * m;
     playerPitch  = _aiming ? Aim.clampAimPitch(playerPitch) : Math.max(PLAYER_CAM_PITCH_MIN, Math.min(PLAYER_CAM_PITCH_MAX, playerPitch));
@@ -5290,7 +5386,7 @@ window.SanctuaryMode = {
     shooting: _gadgetShooting,
     sideShot: _gadgetSideShot,
     jumping: _playerJumping,
-    swimming: _swimming, waterState: _waterState, waterSurf: _waterSurf, swimClips: [_swimMoveName, _swimIdleName], swimTilt: _swimTilt,
+    swimming: _swimming, waterWalked: _waterWalked, waterState: _waterState, waterSurf: _waterSurf, swimClips: [_swimMoveName, _swimIdleName], swimTilt: _swimTilt,
     kneeling: _playerKneeling,
     dying: _playerDying,
     lower: _playerLowerName,
@@ -5312,8 +5408,11 @@ window.SanctuaryMode = {
     camDist: _camDistView,
     camDistBase: _camDist,
     aiming: _aiming,
+    aimErrorDeg: _aimErrorDeg(),
+    sniper: _sniper,
+    sniperBlend: _sniperBlend,
     aimBlend: +_aimBlend.toFixed(3),
-    headFade: Aim.headFade(_aimBlend),
+    headFade: Aim.headFade(_aimBlend) * (1 - _sniperBlend),
     headFadeOk: !!_headFade?.ok,
     aimLocked: _aimLocked,
     aimPoint: _aimPoint.toArray(),
@@ -5339,6 +5438,7 @@ window.SanctuaryMode = {
     droneNAnim: _sanctuaryDroneN?.currentAction?._clip?.name || '',
     droneNDodging: !!_sanctuaryDroneN?.dodging,
     droneNAi: _sanctuaryDroneN?.ai?.state || '',
+    droneNAiDetail: _sanctuaryDroneN?.ai ? { wp: _sanctuaryDroneN.ai.waypoints[0] || null, wpN: _sanctuaryDroneN.ai.waypoints.length, pauseT: _sanctuaryDroneN.ai.pauseT, roam: !!_sanctuaryDroneN.ai.roam, dead: _droneNDead } : null,
     droneNYaw: _sanctuaryDroneN?.yaw ?? 0,
     playerHp: _playerHp,
     pilotHold: _pilotHold,

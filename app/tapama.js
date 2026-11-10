@@ -22,9 +22,11 @@ import {
   SEQUENCES, RADIO, HELP_LEVELS, PUZZLES, ANALYSES,
   PLAYER_NAME, TAPAMA_NAME,
   createSequence, createRadioQueue, helpFor, portraitUrl, safeMood, analysisSummary,
-} from './tapama-core.js';
-import { fillName } from './player-profile.js';
-import { t, translateTree } from './i18n.js';
+} from './tapama-core.js?v=2';
+import { fillName } from './player-profile.js?v=1';
+import { t, translateTree } from './i18n.js?v=1';
+import './tapama-voice.js?v=5';
+import { attachTapamaFace } from './tapama-face.js?v=5';   // bouche animée au rythme de la voix + clignements des yeux                       // voix féminine de Tapama (synthèse vocale du navigateur, provisoire)
 
 const INPUT_LOCK_MS = 280;   // ignore l'appui qui vient d'ouvrir l'écran
 
@@ -133,6 +135,7 @@ function play(seqOrId, opts = {}) {
 
   const face = portrait('neutre', 'tp-d-portrait');
   const shadow = h('div', 'tp-d-shadow');
+  const glow = h('div', 'tp-d-glow');                       // lueur de lumière derrière Tapama (respire doucement, s'intensifie quand elle parle)
 
   const stack = h('div', 'tp-d-stack');
   const tab = h('div', 'tp-d-tab');
@@ -156,11 +159,11 @@ function play(seqOrId, opts = {}) {
 
   const hints = h('div', 'tp-d-hints');
   hints.innerHTML = '<span><kbd class="tp-k">Entrée</kbd>Suivant</span>' +
-    '<span><kbd class="tp-k">A</kbd>Manette</span>' +
+    '<span><kbd class="tp-k">✕</kbd>Manette</span>' +
     '<span><kbd class="tp-k">Touche</kbd>Écran tactile</span>' +
     '<span><kbd class="tp-k">Échap</kbd>Passer</span>';
 
-  el.append(head, skip, shadow, face, stack, hints);
+  el.append(head, skip, shadow, glow, face, stack, hints);
   ensureRoot().appendChild(el);
   requestAnimationFrame(() => el.classList.add('on'));
 
@@ -172,6 +175,7 @@ function play(seqOrId, opts = {}) {
     if (e.target.closest('button')) return;
     nextLine();
   });
+  dialogue.faceFx = attachTapamaFace(face);
   lock();
   renderLine();
   startPadLoop();
@@ -188,6 +192,7 @@ function renderLine() {
   d.tabName.textContent = isT ? TAPAMA_NAME : (playerName() || t(PLAYER_NAME));
   d.tabRole.textContent = isT ? t('Chercheuse · par téléphone') : t('Toi · réponse');
   d.text.textContent = `« ${nm(t(line.text))} »`;
+  if (isT) { window.TapamaVoice?.line(line.text, line.mood, nm(t(line.text))); d.faceFx && d.faceFx.blink(); } else window.TapamaVoice?.stop();      // Tapama parle ; la réplique du joueur reste silencieuse
 
   if (isT) {
     d.face.src = portraitUrl(line.mood);
@@ -229,6 +234,7 @@ function closeDialogue(skipped) {
   const d = dialogue;
   if (!d) return;
   dialogue = null;
+  window.TapamaVoice?.stop(); try { d.faceFx && d.faceFx.detach(); } catch (_) {}
   d.el.classList.remove('on');
   setTimeout(() => d.el.remove(), 360);
   lock();
@@ -280,13 +286,39 @@ function buildRadio() {
   return el;
 }
 
+/* Notification sonore : deux notes de clochette dès que Tapama envoie un appel radio (synthétisée, aucun fichier ; volume « effets » du jeu).
+   Pas de son quand le joueur relit l'appel (touche T) ni pour un appel déjà annoncé. */
+let _chimeCtx = null, _chimedFor = null;
+function chime() {
+  try {
+    if (!_chimeCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      _chimeCtx = new AC(); window.GameAudio?.ctx?.(_chimeCtx, 'effects');
+    }
+    const ac = _chimeCtx; if (ac.state === 'suspended') ac.resume();
+    const t0 = ac.currentTime + 0.02;
+    [[1318.5, 0], [1760, 0.14]].forEach(([f, dt]) => {
+      const o = ac.createOscillator(), g = ac.createGain(), o2 = ac.createOscillator();
+      o.type = 'sine'; o.frequency.value = f; o2.type = 'sine'; o2.frequency.value = f * 2.01;          // fondamentale + harmonique : timbre de cloche
+      const g2 = ac.createGain(); g2.gain.value = 0.25;
+      g.gain.setValueAtTime(0.0001, t0 + dt); g.gain.exponentialRampToValueAtTime(0.3, t0 + dt + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.55);
+      o.connect(g); o2.connect(g2); g2.connect(g); g.connect(ac.destination);
+      o.start(t0 + dt); o2.start(t0 + dt); o.stop(t0 + dt + 0.6); o2.stop(t0 + dt + 0.6);
+    });
+  } catch (_) { /* pas d'audio : tant pis */ }
+}
+
+let _spokenFor = null;
 function paintRadio() {
   const cur = radioQueue.current();
   const el = buildRadio();
   if (!cur) {
     if (radioShown) { el.classList.remove('on'); radioShown = false; }
+    _spokenFor = null; window.TapamaVoice?.stop();
     return;
   }
+  if (cur !== _spokenFor) { _spokenFor = cur; window.TapamaVoice?.line(cur.text, cur.mood, nm(t(cur.text))); }
+  if (cur !== _chimedFor) { _chimedFor = cur; if (!cur.quiet) chime(); }
   el.querySelector('img').src = portraitUrl(cur.mood);
   el.querySelector('.tp-r-text').textContent = `« ${nm(t(cur.text))} »`;
   el.querySelector('.tp-r-bar span').style.width = '0%';
@@ -441,7 +473,8 @@ function help(puzzleId = 'general') {
   backdrop.addEventListener('click', () => closeHelp());
   requestAnimationFrame(() => { backdrop.classList.add('on'); el.classList.add('on'); });
 
-  helpPane = { el, backdrop, puzzleId: puzzle.id, face, quote, buttons };
+  helpPane = { el, backdrop, puzzleId: puzzle.id, face, quote, buttons, faceFx: attachTapamaFace(face) };
+  window.TapamaVoice?.line(puzzle.prompt, 'attentive', nm(t(puzzle.prompt)));      // elle lit la question, puis la réponse du niveau choisi
   lock(); startPadLoop();
   return true;
 
@@ -450,6 +483,7 @@ function help(puzzleId = 'general') {
     const a = helpFor(puzzle.id, level);
     face.src = portraitUrl(a.mood);
     quote.textContent = `« ${nm(t(a.text))} »`;
+    window.TapamaVoice?.line(a.text, a.mood, nm(t(a.text)));
     buttons.forEach((b, i) => b.classList.toggle('is-on', i + 1 === level));
   }
 }
@@ -463,6 +497,7 @@ function closeHelp() {
   const p = helpPane;
   if (!p) return;
   helpPane = null;
+  window.TapamaVoice?.stop(); try { p.faceFx && p.faceFx.detach(); } catch (_) {}
   p.el.classList.remove('on'); p.backdrop.classList.remove('on');
   setTimeout(() => { p.el.remove(); p.backdrop.remove(); }, 320);
   lock();
@@ -498,7 +533,7 @@ window.addEventListener('keydown', (e) => {
     if (window.GameUI && window.GameUI.isOpen && window.GameUI.isOpen()) return;   // un menu du jeu est ouvert : il garde le clavier
     // H / T ne sont utilisées par aucun mode de jeu : aide et relecture de l'appel radio
     if ((k === 'h' || k === 'H') && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); help('general'); return; }
-    if ((k === 't' || k === 'T') && !e.repeat && lastRadio) { e.preventDefault(); e.stopImmediatePropagation(); radio(lastRadio); }
+    if ((k === 't' || k === 'T') && !e.repeat && lastRadio) { e.preventDefault(); e.stopImmediatePropagation(); radio({ ...lastRadio, quiet: true }); }
     return;
   }
 
@@ -509,7 +544,7 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
 
   if (dialogue) {
-    if (k === 'Enter' || k === ' ' || k === 'x' || k === 'X' || k === 'ArrowRight') nextLine();
+    if (k === 'Enter' || k === ' ' || k === 'x' || k === 'X' || k === 'ArrowRight') { if (!(window.Guide && window.Guide.gate && window.Guide.gate())) nextLine(); }
     else if (k === 'Escape') (dialogue.histEl ? toggleHistory() : skipDialogue());
     else if (k === 'h' || k === 'H') toggleHistory();
   } else if (analysisPane) {
@@ -531,7 +566,7 @@ function startPadLoop() {
     const p = pad();
     if (!p || !p.connected() || locked()) return;
     if (dialogue) {
-      if (p.justPressed('A')) nextLine();
+      if (p.justPressed('A')) { if (!(window.Guide && window.Guide.gate && window.Guide.gate())) nextLine(); }
       else if (p.justPressed('B')) (dialogue.histEl ? toggleHistory() : skipDialogue());
       else if (p.justPressed('Y')) toggleHistory();
     } else if (analysisPane) {
@@ -548,7 +583,7 @@ function startPadLoop() {
 }
 
 window.Tapama = {
-  play, radio, analyse, help,
+  play, radio, analyse, help, chime,
   journal: () => journalEntries.map(e => ({ ...e })),
   isBusy,
   RADIO,

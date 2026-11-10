@@ -6,25 +6,26 @@
 <style>html,body{margin:0;background:transparent;overflow:hidden}canvas{display:block}</style>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  "three": "../assets/vendor/three/build/three.module.js",
+  "three/addons/": "../assets/vendor/three/examples/jsm/"
 } }
 </script>
 </head>
 <body>
 <script type="module">
 /* Personnage du menu : GLB du joueur + drone arrimé sur le pad du sac (même méthode que le sanctuaire),
-   animation « idle_look » (long repos), plateau tournant autour de l'axe vertical (Z dans Blender, Y dans three.js).
+   animation « idle » (repos, pistolet au bout du bras), plateau tournant autour de l'axe vertical (Z dans Blender, Y dans three.js).
    Paramètres d'URL : angle (°), t (s dans l'animation), w, h. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';   // le personnage Sahel est compressé en meshopt
 
 const q = new URLSearchParams(location.search);
 const W = Number(q.get('w')) || 900, H = Number(q.get('h')) || 1200;
 const ANGLE = (Number(q.get('angle')) || 0) * Math.PI / 180;
 const T = Number(q.get('t')) || 2;
-const CLIP = (q.get('clip') || 'idle_look').toLowerCase();
+const CLIP = (q.get('clip') || 'idle').toLowerCase();   // personnage Sahel : pistolet en main (idle_look n'existe plus)
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
@@ -53,13 +54,14 @@ rim.position.set(1.5, 2.5, -3.5);
 scene.add(rim);
 
 const draco = new DRACOLoader();
-draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+draco.setDecoderPath('../assets/vendor/three/examples/jsm/libs/draco/');
 const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
+loader.setMeshoptDecoder(MeshoptDecoder);
 const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
 
 const [player, drone] = await Promise.all([
-  load('../assets/models/personnage-joueur-gadget.glb'),
+  load('../assets/models/personnage-sahel.glb'),   // personnage actuel du jeu (tools/build-player-sahel.mjs)
   load('../assets/models/drone.glb'),
 ]);
 
@@ -81,6 +83,7 @@ dm.traverse((o) => { if (/^PropDisc_HELICE_/i.test(o.name || '')) o.scale.setSca
 const dockGroup = new THREE.Group();
 dockGroup.add(dm);
 dockGroup.position.set(0, 0.0539, 0);
+dockGroup.rotation.y = Math.PI;                      // même retournement (180°) que dans le sanctuaire
 dockGroup.scale.setScalar(0.19);
 const pad = model.getObjectByName('DroneLandingPad');
 if (pad) pad.add(dockGroup);
@@ -102,7 +105,7 @@ if (clip) {
 }
 window.__info = {
   clips: player.animations.map((c) => `${c.name} ${c.duration.toFixed(2)}s`),
-  clipFound: !!clip, padFound: !!pad, gadget: !!model.getObjectByName('Gadget_Nexus'),
+  clipFound: !!clip, padFound: !!pad, pistol: !!model.getObjectByName('Pistol'), backpack: !!model.getObjectByName('BP_Backpack'),
 };
 renderer.render(scene, camera);
 window.__ready = true;

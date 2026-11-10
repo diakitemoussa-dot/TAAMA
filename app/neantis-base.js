@@ -19,7 +19,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const M = window.MosqueScene;
 const URL = 'assets/models/neantis-base.glb?v=9';
-const DRACO = 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/';
+const DRACO = 'assets/vendor/three/examples/jsm/libs/draco/';
 const BLUE_HALO = 0x4aa8ff;
 
 const state = { loaded: false, root: null, center: new THREE.Vector3(), anchors: {}, requested: false };
@@ -156,6 +156,60 @@ function tickApproach(pp) {
   }
 }
 
+/* AIDE À L'ORIENTATION : tant que le dispositif n'est pas pris (objectif « base »), (1) un rayon bleu monte au-dessus de la chambre forte,
+   (2) une flèche d'écran + distance guide le joueur dans l'enceinte : entrée du centre de contrôle -> sas -> salle des écrans -> chambre forte -> dispositif,
+   (3) Tapama donne des indices (une fois chacun) et redonne la direction après 60 s sans progrès. */
+const GUIDE = { stage: 0, el: null, beam: null, said: {}, idleT: 0, best: 1e9 };
+const STAGES = [['Anchor_Porte_Entree', 'Entrée du centre de contrôle'], ['Anchor_Porte_Sas', 'Traverse le sas'], ['Anchor_Porte_Coffre', 'Salle des écrans → chambre forte'], ['Anchor_Dispositif', 'Le dispositif']];
+function guideActive() {
+  if (state.deviceTaken) return false;
+  try { return localStorage.getItem('taama.dispositif2') !== '1'; } catch (_) { return false; }
+}
+function guideEl() {
+  if (GUIDE.el) return GUIDE.el;
+  const e = document.createElement('div');
+  e.style.cssText = 'position:fixed;left:50%;top:15%;transform:translateX(-50%);z-index:55;pointer-events:none;display:none;text-align:center;color:#e8f2ff;font:700 15px "Open Sans",system-ui,sans-serif;text-shadow:0 1px 4px #000';
+  e.innerHTML = '<div class="nb-arrow" style="width:54px;height:54px;margin:0 auto 4px;filter:drop-shadow(0 0 8px rgba(74,168,255,.9))"><svg viewBox="0 0 54 54"><path d="M27 4 L46 44 L27 35 L8 44 Z" fill="#6ec0ff" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div><div class="nb-label"></div>';
+  document.body.appendChild(e); GUIDE.el = e; return e;
+}
+function guideBeam() {
+  if (GUIDE.beam) return GUIDE.beam;
+  const a = state.anchors.Anchor_Dispositif; if (!a) return null;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 70, 16, 1, true),
+    new THREE.MeshBasicMaterial({ color: BLUE_HALO, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  m.position.set(a.x, a.y + 35, a.z); m.frustumCulled = false; m.raycast = () => {};
+  M.scene.add(m); GUIDE.beam = m; return m;
+}
+function guideSay(key, text, mood = 'attentive') { if (GUIDE.said[key]) return; GUIDE.said[key] = true; window.Tapama?.radio?.({ text, mood, duration: 8 }); }
+function updateGuide(dt, pp) {
+  const on = guideActive() && !!pp && !!state.anchors.Anchor_Porte_Entree;
+  const b = guideBeam(); if (b) b.visible = guideActive();
+  if (b && b.visible) b.material.opacity = 0.22 + 0.1 * Math.sin(performance.now() / 600) + 0.12 * nightLevel();
+  const el = guideEl();
+  const c = state.center, near = on && Math.hypot(pp.x - c.x, pp.z - c.z) < 85;
+  if (!near || window.__storyFreeze || (window.CityMap && window.CityMap.isOpen)) { el.style.display = 'none'; return; }
+  // avancement monotone : une étape est franchie quand on passe à moins de 3,5 u de son ancre
+  for (let i = STAGES.length - 2; i >= GUIDE.stage; i--) {      // la plus avancée des portes déjà atteintes (même si on a sauté une étape)
+    const a = state.anchors[STAGES[i][0]];
+    if (a && Math.hypot(pp.x - a.x, pp.z - a.z) < 3.5 && Math.abs(pp.y - a.y) < 4) { GUIDE.stage = i + 1; break; }
+  }
+  const tgt = state.anchors[STAGES[GUIDE.stage][0]]; if (!tgt) { el.style.display = 'none'; return; }
+  const tx = tgt.x - pp.x, tz = tgt.z - pp.z, dist = Math.hypot(tx, tz);
+  const f = M.camera.getWorldDirection(new THREE.Vector3()); let fl = Math.hypot(f.x, f.z) || 1; const fx = f.x / fl, fz = f.z / fl;
+  const ang = Math.atan2(tx * -fz + tz * fx, tx * fx + tz * fz) * 180 / Math.PI;      // droite de l'écran = (-fz, fx)
+  el.style.display = 'block';
+  el.querySelector('.nb-arrow').style.transform = 'rotate(' + ang.toFixed(1) + 'deg)';
+  el.querySelector('.nb-label').textContent = STAGES[GUIDE.stage][1] + ' — ' + Math.max(1, Math.round(dist)) + ' m';
+  // indices de Tapama
+  if (GUIDE.stage === 0) guideSay('enceinte', 'Le centre de contrôle, {nom}, c’est le grand bâtiment avec le N lumineux. Suis la flèche bleue.');
+  if (GUIDE.stage === 1) guideSay('sas', 'Tu es dedans. Traverse le sas : les portes s’ouvrent quand tu approches.');
+  if (GUIDE.stage === 2) guideSay('ecrans', 'La chambre forte est au fond, après la salle des écrans. Le dispositif brille, tu ne peux pas le rater.');
+  // 60 s sans se rapprocher : rappel de la direction
+  if (dist < GUIDE.best - 2) { GUIDE.best = dist; GUIDE.idleT = 0; } else { GUIDE.idleT += dt; }
+  if (GUIDE.idleT > 60) { GUIDE.idleT = 0; GUIDE.said.rappel = false; guideSay('rappel', 'Tu tournes en rond, {nom} ? Regarde la flèche bleue en haut de l’écran : elle montre la prochaine porte.', 'souriante'); }
+  if (GUIDE.lastStage !== GUIDE.stage) { GUIDE.lastStage = GUIDE.stage; GUIDE.best = 1e9; GUIDE.idleT = 0; }
+}
+
 let tAnim = 0;
 function updateDevice(dt, pp) {
   if (!device || state.deviceTaken) return;
@@ -228,6 +282,7 @@ M?.addFrameHook((dt) => {
   const pp = playerPos();
   updateDoors(dt, pp);
   updateDevice(dt, pp);
+  updateGuide(dt, pp);
   tickApproach(pp);
   const f = nightLevel();
   if (Math.abs(f - level) < 0.004) return;
@@ -260,7 +315,7 @@ window.NeantisBase = {
   get deviceTaken() { return !!state.deviceTaken; },
   goTo,
   resetDevice() {                                              // remise à zéro de l'histoire côté base (clés taama.* du chapitre 1)
-    state.deviceTaken = false; story.s9 = story.s10 = false; if (device) device.visible = true;
+    state.deviceTaken = false; GUIDE.stage = 0; GUIDE.said = {}; story.s9 = story.s10 = false; if (device) device.visible = true;
     ['taama.acte', 'taama.d1.spotted', 'taama.dispositif1', 'taama.piste', 'taama.lab1', 'taama.lab1.q', 'taama.vol', 'taama.dossier', 'taama.gadget', 'taama.dispositif2', 'taama.lab2', 'taama.lab2.q', 'taama.revelation', 'taama.chapitre1', 'taama.next']
       .forEach((k) => { try { localStorage.removeItem(k); } catch (_) {} });
   },

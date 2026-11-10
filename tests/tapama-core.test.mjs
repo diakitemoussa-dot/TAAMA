@@ -136,3 +136,12 @@ test('analysisSummary : compte les hypothèses confirmées et ouvertes', () => {
   assert.deepEqual(T.analysisSummary(T.ANALYSES.projection), { confirmed: 2, open: 1 });
   assert.deepEqual(T.analysisSummary(null), { confirmed: 0, open: 0 });
 });
+
+test('createRadioQueue : le drapeau quiet (relecture : pas de notification sonore) traverse la file', () => {
+  const q = T.createRadioQueue();
+  q.push({ text: 'Premier appel' });
+  assert.equal(q.current().quiet, false);
+  q.push({ text: 'Relecture', quiet: true });
+  q.dismiss();
+  assert.equal(q.current().quiet, true);
+});

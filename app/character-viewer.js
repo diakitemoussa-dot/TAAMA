@@ -1,7 +1,7 @@
 /* ==========================================================
    PERSONNAGE EN 3D DANS L'INTERFACE
    ----------------------------------------------------------
-   Affiche le vrai modèle du joueur (personnage-joueur-gadget.glb) avec
+   Affiche le vrai modèle du joueur (personnage-sahel.glb, via hero.js) avec
    son drone arrimé sur le sac, l'animation « idle_look » (long repos)
    et un plateau tournant à 360° autour de l'axe vertical
    (Z dans Blender, Y dans three.js).
@@ -21,10 +21,16 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-import { heroUrl } from './hero.js?v=2';
+import { heroUrl } from './hero.js?v=3';
+import { smoothValues, dampValues } from './clip-smooth.js?v=2';
+import { useMeshopt, loadModel } from './gltf-extras.js?v=1';
 const DRONE_URL = 'assets/models/drone.glb';
-const DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
-const CLIP = 'idle_look';
+const DRACO_PATH = 'assets/vendor/three/examples/jsm/libs/draco/';   // décodeurs Draco locaux (plus de dépendance à gstatic)
+/* Enchaînement des poses du menu (en boucle, fondu de 0,6 s) : repos -> regard autour (long repos) -> tireur d'élite -> agenouillé.
+   [clip du GLB (minuscules), durée affichée en s, part du balancement conservée au lissage]. Un clip absent est sauté. */
+const SEQUENCE = [['idle', 3.5, 0.35], ['idle_look', 5, 1], ['pistol aim sniper', 3.5, 1], ['pistol kneel', 3.5, 1]];
+const FADE = 0.6;
+const CLIP = 'idle';                    // personnage Sahel : repos, pistolet au bout du bras (comme l'image du menu)
 const SPEED = 0.55;                     // rad/s : un tour en ~11 s
 const START_ANGLE = 155 * Math.PI / 180;   // 3/4 arrière : sac, drone et gadget visibles
 
@@ -33,10 +39,12 @@ let loading = null;      // promesse de chargement
 let failed = false;
 let host = null;         // cadre actuel
 let raf = 0;
-let angle = START_ANGLE;
+let angle = START_ANGLE;        // angle affiché (rattrape angleTarget en douceur : plus de saccade aux appuis / au glissé)
+let angleTarget = START_ANGLE;
 let dragging = false;
 let lastT = 0;
 let ro = null;
+let seq = [], seqI = 0, seqT = 0;   // poses du menu : actions, indice courant, temps écoulé dans la pose
 
 function init() {
   if (V || failed) return V;
@@ -81,7 +89,8 @@ function loadModels() {
   draco.setDecoderPath(DRACO_PATH);
   const loader = new GLTFLoader();
   loader.setDRACOLoader(draco);
-  const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+  useMeshopt(loader);
+  const load = (url) => new Promise((res, rej) => loadModel(loader, url, res, undefined, rej));
 
   loadedHero = heroUrl();
   loading = Promise.all([load(loadedHero), load(DRONE_URL)]).then(([player, drone]) => {
@@ -112,8 +121,11 @@ function loadModels() {
     V.turntable.add(model);
 
     V.mixer = new THREE.AnimationMixer(model);
-    const clip = player.animations.find((c) => String(c.name).trim().toLowerCase() === CLIP) || player.animations[0];
-    if (clip) V.mixer.clipAction(clip).play();
+    const byName = (n) => player.animations.find((c) => String(c.name).trim().toLowerCase() === n);
+    seq = SEQUENCE.map(([n, d, damp]) => { const c = byName(n); return c ? { action: V.mixer.clipAction(calmClip(c, damp)), dur: d } : null; }).filter(Boolean);
+    if (!seq.length) { const c = byName(CLIP) || player.animations[0]; if (c) seq = [{ action: V.mixer.clipAction(calmClip(c, 0.35)), dur: 1e9 }]; }
+    seqI = 0; seqT = 0;
+    if (seq.length) { seq[0].action.reset().play(); }
     V.ready = true;
     window.dispatchEvent(new CustomEvent('character:ready'));
   }).catch((e) => {
@@ -122,12 +134,6 @@ function loadModels() {
   });
   return loading;
 }
-
-window.addEventListener('hero:change', () => {          // Homme / Femme : recharge le modèle affiché
-  if (!V || !host) return;
-  const c = host;
-  loadModels().then(() => { if (host === c && V.ready) { resize(); V.canvas.style.opacity = '1'; } });
-});
 
 function resize() {
   if (!V || !host) return;
@@ -146,9 +152,20 @@ function frame(now) {
   if (!V || !host || document.hidden) { lastT = now; return; }
   const dt = Math.min(0.05, (now - (lastT || now)) / 1000);
   lastT = now;
-  if (!dragging) angle += SPEED * dt;
+  if (!dragging) angleTarget += SPEED * dt;
+  angle += (angleTarget - angle) * (1 - Math.exp(-10 * dt));
   V.turntable.rotation.y = angle;
-  if (V.mixer) V.mixer.update(dt);
+  if (V.mixer) {
+    if (seq.length > 1) {
+      seqT += dt;
+      if (seqT >= seq[seqI].dur) {                      // pose suivante : fondu enchaîné
+        const prev = seq[seqI].action; seqI = (seqI + 1) % seq.length; seqT = 0;
+        const next = seq[seqI].action;
+        next.reset().setEffectiveWeight(1).play(); next.crossFadeFrom(prev, FADE, false);
+      }
+    }
+    V.mixer.update(dt);
+  }
   V.renderer.render(V.scene, V.camera);
 }
 
@@ -162,13 +179,26 @@ function bindDrag(container) {
   };
   c.onpointermove = (e) => {
     if (!dragging) return;
-    angle += (e.clientX - x0) * 0.012;
+    angleTarget += (e.clientX - x0) * 0.012;
     x0 = e.clientX;
   };
   const end = () => { dragging = false; c.style.cursor = 'grab'; };
   c.onpointerup = end;
   c.onpointercancel = end;
   c.style.pointerEvents = container ? 'auto' : 'none';
+}
+
+/** Le repos capturé tremble (bruit haute fréquence) et balance le bassin : pendant que le plateau tourne, les pieds « glissent » et le personnage vibre.
+ *  Même traitement que dans le jeu (sanctuary-mode.js, _smoothClip) : lissage gaussien en boucle + 35 % du balancement conservé. */
+function calmClip(clip, damp = 0.35) {
+  const tracks = clip.tracks.map((t) => {
+    const isQuat = t instanceof THREE.QuaternionKeyframeTrack;
+    if (!isQuat && !/\.position$/.test(t.name)) return t.clone();
+    const size = t.getValueSize();
+    const smooth = smoothValues(t.values, size, { radius: 6, sigma: 2.5, loop: true, quaternion: isQuat });
+    return new t.constructor(t.name, t.times, dampValues(smooth, size, damp, isQuat));
+  });
+  return new THREE.AnimationClip(clip.name, clip.duration, tracks);
 }
 
 export function attachCharacter(container, { interactive = false } = {}) {
@@ -200,7 +230,7 @@ export function attachCharacter(container, { interactive = false } = {}) {
 
 /** ← → : fait tourner le personnage (≈ 25° par appui). */
 export function rotateCharacter(dir) {
-  angle += (dir > 0 ? 1 : -1) * 0.45;
+  angleTarget += (dir > 0 ? 1 : -1) * 0.45;
 }
 
 export function releaseCharacter() {

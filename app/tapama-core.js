@@ -174,14 +174,14 @@ export function createRadioQueue(maxQueued = 3) {
 
   const shift = () => {
     const n = queue.shift();
-    current = n ? { text: n.text, mood: safeMood(n.mood), left: n.duration, total: n.duration } : null;
+    current = n ? { text: n.text, mood: safeMood(n.mood), left: n.duration, total: n.duration, quiet: !!n.quiet } : null;
     return n;
   };
 
   return {
     push(call) {
       if (!call || !call.text) return false;
-      const item = { text: call.text, mood: call.mood, duration: call.duration || radioDuration(call.text) };
+      const item = { text: call.text, mood: call.mood, duration: call.duration || radioDuration(call.text), quiet: !!call.quiet };   // quiet : pas de notification sonore (relecture)
       if (!current) { queue.push(item); shift(); return true; }
       if (queue.length >= maxQueued) return false;
       queue.push(item);

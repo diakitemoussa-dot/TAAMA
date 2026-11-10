@@ -36,3 +36,12 @@ test-*.png
 # Exception: images utilisées dans les projets
 !projects/active/**/asset/image/**
 !shared/assets/**/
+
+# Sauvegardes locales volumineuses, sorties de console, outils de test (ne pas publier)
+backups/
+stdout.txt
+stderr.txt
+.playwright-mcp/
+.claude/settings.local.json
+*.tmp
+_tmp/
