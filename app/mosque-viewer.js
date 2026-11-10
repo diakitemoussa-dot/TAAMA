@@ -13,6 +13,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { TileStreamer } from './spatial-streaming.js?v=3';
+import { detectQuality, QUALITY_PRESETS, createDynamicRes, currentBytesPlan } from './device-quality.js?v=6';
+import { loadCity } from './gltf-extras.js?v=1';
 
 const canvas    = document.getElementById('mosqueCanvas');
 const stage     = document.getElementById('mosqueStage');
@@ -20,24 +23,29 @@ const loadingEl = document.getElementById('mosqueLoading');
 if (!canvas) throw new Error('mosqueCanvas introuvable');
 
 const MODEL_URL     = 'assets/models/djenne-ar.glb';
-const DRACO_DECODER = 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/';
+const DRACO_DECODER = 'assets/vendor/three/examples/jsm/libs/draco/';
 
 // URL de la vidéo du grand crépissage (à renseigner — laisser vide affiche "bientôt disponible")
 const VIDEO_CREPISSAGE = '';
 
 /* ---------- Renderer ---------- */
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const QUALITY = detectQuality();
+const QUALITY_PRESET = QUALITY_PRESETS[QUALITY];
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: QUALITY !== 'low' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY_PRESET.maxPixelRatio));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 // Rendu fidèle aux couleurs (comme l'aperçu Blender) — ACES assombrissait trop l'argile
 renderer.toneMapping = THREE.NoToneMapping;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = QUALITY_PRESET.shadows;
+// filtre des ombres selon le palier (PC : PCFSoft comme avant ; mobile : filtre plus léger)
+renderer.shadowMap.type = { basic: THREE.BasicShadowMap, pcf: THREE.PCFShadowMap, pcfsoft: THREE.PCFSoftShadowMap }[QUALITY_PRESET.shadowType] || THREE.PCFSoftShadowMap;
+// résolution dynamique (mobile seulement) : baisse d'un cran si < 40 fps pendant 2 s, remonte si stable
+const dynRes = createDynamicRes({ min: QUALITY_PRESET.minPixelRatio, max: Math.min(window.devicePixelRatio, QUALITY_PRESET.maxPixelRatio) });
 
 /* ---------- Scène + fog atmosphérique ---------- */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x8fb8de);       // bleu ciel (filet visible hors dôme)
-scene.fog = new THREE.Fog(0xf0dcab, 300, 900);      // brume sable (ajustée après chargement)
+scene.background = new THREE.Color(0xe9a06b);       // orangé du couchant (filet visible hors dôme)
+scene.fog = new THREE.Fog(0xefc9a0, 300, 900);      // brume chaude du soir (ajustée après chargement)
 
 /* ---------- Caméra ---------- */
 const camera = new THREE.PerspectiveCamera(52, 1, 0.5, 4000);
@@ -96,7 +104,12 @@ finalComposer.addPass(renderScene);
 finalComposer.addPass(mixPass);
 finalComposer.addPass(new OutputPass());
 
+const hiddenSprites = [];                 // sprites (nuages/soleil) masqués pendant la passe de halo
 function darkenNonBloomed(obj){
+  if ((obj.isSprite || obj.isPoints) && obj.visible){
+    obj.visible = false;
+    hiddenSprites.push(obj);
+  }
   if (obj.isMesh && bloomLayer.test(obj.layers) === false){
     savedMats[obj.uuid] = obj.material;
     obj.material = darkMat;
@@ -116,16 +129,18 @@ function renderSelectiveBloom(){
   scene.traverse(darkenNonBloomed);
   bloomComposer.render();
   scene.traverse(restoreMat);
+  hiddenSprites.forEach((s) => { s.visible = true; });
+  hiddenSprites.length = 0;
   scene.background = bg;
   scene.fog = fg;
   finalComposer.render();
 }
 
-/* ---------- Lumières (extérieur, fin de journée douce) ---------- */
-const sun = new THREE.DirectionalLight(0xfff3da, 1.7);
-sun.position.set(180, 280, 120);
+/* ---------- Lumières (extérieur, coucher de soleil) ---------- */
+const sun = new THREE.DirectionalLight(0xffb877, 1.3);   // lumière dorée, soleil bas
+sun.position.set(-245, 74, -245);                         // aligné sur le soleil du ciel (sky.js)
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(QUALITY_PRESET.shadowSize, QUALITY_PRESET.shadowSize);   // PC : 4096 comme avant
 sun.shadow.camera.near   =   1;
 sun.shadow.camera.far    = 700;
 sun.shadow.camera.left   = -320;
@@ -135,10 +150,13 @@ sun.shadow.camera.bottom = -320;
 sun.shadow.bias          = -0.003;
 sun.shadow.normalBias    =  0.15;
 scene.add(sun);
-const hemi = new THREE.HemisphereLight(0xcfe2f5, 0xd8c49a, 1.15);  // ciel bleu / sol ocre clair
+const hemi = new THREE.HemisphereLight(0xffd9b0, 0xb98a5e, 1.0);   // reflets chauds du couchant
 scene.add(hemi);
-const amb = new THREE.AmbientLight(0xffffff, 0.35);  // réduit pour que les ombres restent visibles
+const amb = new THREE.AmbientLight(0xfff1e0, 0.32);  // réduit pour que les ombres restent visibles
 scene.add(amb);
+const moonLight = new THREE.DirectionalLight(0xaec4f0, 0);  // clair de lune (piloté par daycycle.js)
+moonLight.position.set(160, 240, -160);
+scene.add(moonLight);
 
 /* ---------- Collines d'horizon (illusion de relief autour du village) ---------- */
 function addHills(center, R, groundY = 0) {
@@ -206,6 +224,7 @@ let   hasSavedCam    = false;
 let introT = 0; let introDur = 2.8;
 let introSmooth = false;                      // true = easeInOutCubic (vols boutons), false = easeOutCubic (travelling d'ouverture)
 let mixer = null;                             // lecteur d'animations du GLB (nuages)
+const frameHooks = [];                        // hooks appelés chaque frame (ciel, nuages générés…)
 const camStart = new THREE.Vector3();
 const camEnd   = new THREE.Vector3();
 const target   = new THREE.Vector3();         // point visé en FIN de vol
@@ -220,8 +239,12 @@ const viewTarget   = new THREE.Vector3();   // centre de la mosquée
 /* Cadrage "Façade" (vue de face, comme la capture) */
 const facadeTarget = new THREE.Vector3();   // centre de la façade
 const facadeNormal = new THREE.Vector3(0, 0, 1);   // normale sortante (vers l'avant)
+const doorTarget   = new THREE.Vector3();   // centre de la porte principale (missions)
+const canarisTarget = new THREE.Vector3();  // centre des canaris du toit (missions)
 let   facadeDist   = 120;                   // distance caméra ↔ façade
 let   domeR        = 0;                      // rayon du dôme (limite)
+const skyboxMeshes = [];                     // meshes du dôme de ciel (skybox) — masqués définitivement
+const mosqueBox    = new THREE.Box3();       // boîte englobante de la mosquée (missions)
 
 /* Déplacement fluide de la caméra vers un point de vue (réutilise le travelling) */
 function flyTo(dest, tgt, dur = 1.6){
@@ -241,18 +264,28 @@ draco.setDecoderPath(DRACO_DECODER);
 const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
 
-loader.load(
-  MODEL_URL,
-  (gltf) => {
-    const root = gltf.scene;
+/* Met à jour le pourcentage affiché pendant le chargement. */
+function setLoadingPct(pct) {
+  const v = Math.max(0, Math.min(100, Math.round(pct)));
+  window.dispatchEvent(new CustomEvent('mosque:loading', { detail: { pct: v } }));   // écran de chargement (game-ui.js)
+  if (!loadingEl) return;
+  const b = loadingEl.querySelector('b');
+  if (b) b.textContent = v + '%';
+}
+
+/**
+ * Prépare la scène dès que le cœur de la maquette est disponible.
+ * `root` contient au minimum le groupe `MosqueeTiles` (tuiles) ou la scène GLB complète.
+ */
+function onSceneReady(root, animations) {
     scene.add(root);
 
 
     // Animations du GLB (ex. nuages) -> lecture en boucle
-    if (gltf.animations && gltf.animations.length){
+    if (animations && animations.length){
       mixer = new THREE.AnimationMixer(root);
       mixer.timeScale = 0.5;                        // vitesse de lecture (0.5 = 2× plus lent)
-      gltf.animations.forEach((clip) => {
+      animations.forEach((clip) => {
         const action = mixer.clipAction(clip);
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
@@ -263,6 +296,7 @@ loader.load(
     let mosque = null;
     let domeRadius = 0;
     const domeCenter = new THREE.Vector3();
+    const skyboxFound = [];                 // dôme de ciel repéré pendant le parcours
     root.traverse((o) => {
       if (o.isMesh) {
         const n = o.name || '';
@@ -275,7 +309,11 @@ loader.load(
           const ss = sb.getSize(new THREE.Vector3());
           domeRadius = Math.max(domeRadius, Math.max(ss.x, ss.y, ss.z) / 2);
           sb.getCenter(domeCenter);
+          skyboxFound.push(o);               // sera masqué : skybox supprimée
         }
+        // Nouvelle ville : l'ancien grand sol plat (Plane012, y=2.36) cacherait le relief et le fleuve.
+        // Il reste dans la scène (le sanctuaire l'ignore alors comme collider, cf. MosqueScene.newCity).
+        if (newCityLoaded && /^Plane012$/i.test(n)) o.visible = false;
         // Ombres naturelles sur tous les meshes sauf ciel/nuages
         if (!/Sky|Sphere/i.test(n)) {
           o.castShadow    = true;
@@ -285,9 +323,15 @@ loader.load(
       if (!mosque && /Mosquee_Base/i.test(o.name)) mosque = o;
     });
 
+    // Skybox supprimée : le dôme de ciel ne s'affiche plus (le fond bleu + le fog
+    // atmosphérique prennent le relais). Les calculs internes (domeRadius, collines,
+    // barrière de vol, brouillard) continuent d'utiliser ses dimensions.
+    skyboxFound.forEach((m) => { m.visible = false; skyboxMeshes.push(m); });
+
     // Cadrage sur la mosquée (ou la scène entière en secours)
     const focus = mosque || root;
     const box = new THREE.Box3().setFromObject(focus);
+    mosqueBox.copy(box);
     box.getCenter(target);
     const size = box.getSize(new THREE.Vector3());
     const r = Math.max(size.x, size.y, size.z) || 40;
@@ -310,17 +354,20 @@ loader.load(
     // Brouillard d'horizon : mosquée nette, village lointain fondu dans la brume
     // (ciel & nuages exemptés de fog -> horizon atmosphérique propre)
     scene.fog.color.set(0xe9d8ae);
-    scene.fog.near = dist * 0.6;                // brume rapprochée de la caméra
-    scene.fog.far  = domeRadius * 0.95;
+    // Ville v2 : brume réduite (portée ×2,2, début ×1,5) pour voir plus loin, notamment en vol de drone.
+    // daycycle.js module ensuite `far` avec la brume du matin à partir de fogFarBase.
+    fogFarBase = domeRadius * 0.95 * (newCityLoaded ? 2.2 : 1);
+    scene.fog.near = dist * 0.6 * (newCityLoaded ? 1.5 : 1);   // brume rapprochée de la caméra
+    scene.fog.far  = fogFarBase;
     if (scene.fog.far <= scene.fog.near) scene.fog.far = scene.fog.near * 1.6;
 
     // La caméra reste À L'INTÉRIEUR du dôme de ciel
     controls.minDistance = r * 0.7;
-    controls.maxDistance = domeRadius * 0.8;
+    controls.maxDistance = domeRadius * 0.8 * (newCityLoaded ? 2.6 : 1);   // ville v2 : on peut s'éloigner pour la survoler
 
     // Illusion de collines tout autour du village (horizon, sous le dôme)
     // box.min.y = niveau réel du sol (bas de la mosquée) pour ne pas flotter ni être sous terre
-    addHills(domeCenter, domeRadius, box.min.y);
+    if (!newCityLoaded) addHills(domeCenter, domeRadius, box.min.y);   // la nouvelle ville a son propre relief
 
     // Points de vue pour les boutons GAME (ensemble) / INTÉRIEUR (rapproché)
     viewTarget.copy(target);
@@ -375,19 +422,120 @@ loader.load(
     facadeDist = Math.max((H / 2) / Math.tan(vfov / 2), (W / 2) / Math.tan(hfovRef / 2)) * 1.06 + depth / 2;
     facadeTarget.copy(facCenter);
 
+    // Centres ciblés par les missions (photo de la porte / des canaris)
+    doorTarget.copy(facCenter);
+    if (mainDoor) new THREE.Box3().setFromObject(mainDoor).getCenter(doorTarget);
+    canarisTarget.set(target.x, box.max.y, target.z);
+    if (canarisRoots[0]) new THREE.Box3().setFromObject(canarisRoots[0]).getCenter(canarisTarget);
+
     loaded = true;
+    window.dispatchEvent(new CustomEvent('mosque:loaded'));
     if (active && loadingEl) loadingEl.classList.add('hidden');
     if (active) revealStage();                              // affiche le titre puis les boutons
-  },
-  (xhr) => {
-    if (loadingEl && xhr.total) {
-      const pct = Math.round((xhr.loaded / xhr.total) * 100);
-      const b = loadingEl.querySelector('b');
-      if (b) b.textContent = pct + '%';
-    }
-  },
-  (err) => console.error('Erreur chargement maquette GLB :', err)
-);
+}
+
+/* ---------- Chargement : tuiles spatiales (défaut) ou GLB monolithique (?tiles=0) ---------- */
+const TILES_INDEX_URL = `assets/models/${QUALITY_PRESET.tilesDir}/index.json?v=1`;
+const URL_PARAMS = new URLSearchParams(location.search);
+const USE_TILES = URL_PARAMS.get('tiles') !== '0';
+let tileStreamer = null;
+/* Budget de streaming = palier appareil (rayons, requêtes) x palier réseau (rayon réduit, octets/s). PC + bon réseau : valeurs d'origine. */
+function tileOptions() {
+  const pl = currentBytesPlan();
+  return {
+    loadRadius: QUALITY_PRESET.tileLoad * pl.radiusFactor,
+    unloadRadius: QUALITY_PRESET.tileUnload * pl.radiusFactor,
+    nearRadius: 120 * pl.radiusFactor,
+    maxConcurrent: pl.concurrent,
+    bytesPerSec: pl.bytesPerSec,
+  };
+}
+let _netToastDone = false;
+window.addEventListener('quality:net', (e) => {                  // le réseau change en cours de partie : le streaming s'adapte
+  if (tileStreamer && tileStreamer.setBudget) tileStreamer.setBudget(tileOptions());
+  if (e.detail && e.detail.net === 'slow' && !_netToastDone && loaded) {
+    _netToastDone = true;
+    toast('Connexion lente : qualité réduite pour économiser tes données. Réglable dans Options › Affichage.');
+  }
+});
+// Ville v2 : seulement avec les tuiles (le GLB monolithique contient déjà l'ancienne ville)
+const NEW_CITY = USE_TILES && URL_PARAMS.get('oldcity') !== '1';
+
+function loadMonolithicScene() {
+  setLoadingPct(0);
+  loader.load(
+    MODEL_URL,
+    (gltf) => onSceneReady(gltf.scene, gltf.animations),
+    (xhr) => { if (xhr.total) setLoadingPct((xhr.loaded / xhr.total) * 100); },
+    (err) => console.error('Erreur chargement maquette GLB :', err),
+  );
+}
+
+/* ---------- Ville de Djenné v2 (allégée) ----------
+   assets/models/djenne-ville-leger.glb : sol + relief + fleuve + maisons + arbres, déjà recalée dans le
+   repère de la mosquée du jeu (voir djenne-ville-leger.INFO.md). Le cœur (mosquée, ciel, nuages) reste
+   celui des tuiles ; les anciennes maisons ne sont plus chargées. ?oldcity=1 rétablit l'ancienne ville. */
+// Mobile / réseau lent : ville à textures KTX2 (repli : JPEG mobile, puis original) ; PC : original. Voir gltf-extras.js
+let cityPromise = Promise.resolve(false);
+let newCityLoaded = false;
+let fogFarBase = 0;                  // portée de base de la brume (m), lue par daycycle.js
+
+function loadNewCity() {
+  cityPromise = new Promise((resolve) => {
+    loadCity(() => { const l = new GLTFLoader(); l.setDRACOLoader(draco); return l; }, renderer,
+      (gltf) => {
+        const city = gltf.scene;
+        city.name = 'VilleDjenne';
+        city.traverse((o) => {
+          if (!o.isMesh) return;
+          const n = o.name || '';
+          const water = /^Fleuve/i.test(n);
+          o.receiveShadow = !water;
+          o.castShadow = /^Bat_/i.test(n);
+          if (/^Arbres_/i.test(n) && QUALITY !== 'low') {                        // les arbres projettent une ombre (feuillage plat : ombre des deux faces)
+            o.castShadow = true;
+            for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m) { m.shadowSide = THREE.DoubleSide; m.needsUpdate = true; }
+          }
+          if (QUALITY === 'low' && /^Arbres_F/i.test(n)) o.visible = false;   // arbres lointains : pas sur mobile
+          if (water) o.renderOrder = 1;
+        });
+        scene.add(city);
+        newCityLoaded = true;
+        resolve(true);
+      },
+      (xhr) => { if (xhr.total) setLoadingPct(50 + (xhr.loaded / xhr.total) * 50); },
+      (err) => { console.warn('[Ville v2] indisponible, ancienne ville conservée :', err); resolve(false); },
+    );
+  });
+  return cityPromise;
+}
+
+if (USE_TILES) {
+  tileStreamer = new TileStreamer({
+    scene, camera, loader, renderer,
+    indexUrl: TILES_INDEX_URL,
+    alwaysOnly: NEW_CITY,
+    ...tileOptions(),
+    hud: URL_PARAMS.has('streaming'),
+    onProgress: (s) => {
+      const pct = (s.bytes / (s.preloadBytes || s.bytesTotal || 1)) * 100;
+      setLoadingPct(NEW_CITY ? pct * 0.5 : pct);
+    },
+  });
+  tileStreamer.init()
+    .then(async ({ root, animations }) => {
+      if (NEW_CITY) await loadNewCity();
+      onSceneReady(root, animations);
+      tileStreamer.refresh();                 // évalue tout de suite les tuiles voisines
+    })
+    .catch((err) => {
+      console.warn('[Streaming] tuiles indisponibles, repli sur le GLB complet :', err);
+      tileStreamer = null;
+      loadMonolithicScene();
+    });
+} else {
+  loadMonolithicScene();
+}
 
 /* ---------- Chargement Piliers + Tapis_Priere (Draco) ---------- */
 loader.load(
@@ -422,7 +570,7 @@ loader.load(
 // Cache-buster : force le rechargement de la dernière version à chaque ré-export
 // (évite d'avoir à vider le cache / Ctrl+Shift+R après un nouvel export Blender)
 loader.load(
-  `assets/models/personnages.glb?v=${Date.now()}`,
+  `assets/models/personnages.glb?v=1`,
   (gltf) => {
     gltf.scene.traverse((o) => {
       if (!o.isMesh) return;
@@ -459,8 +607,10 @@ let gameUpdate = null;   // fonction(dt) fournie par drone-game.js quand le mode
 const tick = () => {
   raf = requestAnimationFrame(tick);
   const dt = clock.getDelta();
+  { const pr = dynRes.update(dt); if (pr) { renderer.setPixelRatio(pr); bloomComposer.setPixelRatio(pr); finalComposer.setPixelRatio(pr); resize(); } }
 
   if (mixer) mixer.update(dt);                      // joue l'animation des nuages
+  for (const fn of frameHooks){ try { fn(dt); } catch (_) {} }   // hooks externes (ciel, nuages…)
 
   if (gameUpdate) {
     gameUpdate(dt);
@@ -478,6 +628,9 @@ const tick = () => {
   } else {
     controls.update();
   }
+
+  // Streaming spatial : charge/libère les tuiles selon la position de la caméra.
+  if (tileStreamer) tileStreamer.update(dt);
 
   // Pulsation douce du halo (respiration lumineuse) sur les meshes illuminés
   if (glowActive && glowMeshes.length) {
@@ -512,8 +665,52 @@ window.MosqueScene = {
   scene, camera, renderer, controls,
   viewOverview, viewTarget,
   get domeRadius(){ return domeR; },
+  get mosqueBox(){ return mosqueBox; },
+  get facadeTarget(){ return facadeTarget; },
+  get facadeNormal(){ return facadeNormal; },
+  get facadeDist(){ return facadeDist; },
+  get doorTarget(){ return doorTarget; },
+  get canarisTarget(){ return canarisTarget; },
+  get tileStreamer(){ return tileStreamer; },
+  get flying(){ return loaded && introT < introDur; },   // travelling de caméra en cours (la manette n'oriente pas pendant)
+  get newCity(){ return newCityLoaded; },          // ville v2 chargée (sol/relief/maisons de djenne-ville-leger.glb)
+  get cityReady(){ return cityPromise; },          // promesse : ville v2 prête (true) ou indisponible (false)
+  get fogFarBase(){ return fogFarBase; },          // portée de base de la brume (0 tant que la scène n'est pas prête)
   flyTo,
   setGameUpdate(fn){ gameUpdate = (typeof fn === 'function') ? fn : null; },
+  setAutoRotate(on){                    // rotation douce de la maquette (menu principal)
+    controls.autoRotate = !!on;
+    controls.autoRotateSpeed = 0.6;
+  },
+  setSkyboxVisible(on){                 // afficher/masquer le dôme de ciel (skybox)
+    skyboxMeshes.forEach((m) => { m.visible = !!on; });
+  },
+  addFrameHook(fn){                     // hook appelé chaque frame — fonction(dt)
+    if (typeof fn === 'function') frameHooks.push(fn);
+  },
+  setSunLightDirection(x, y, z){        // recale la lumière du jour (synchro soleil du ciel, sky.js)
+    sun.position.set(x, y, z).normalize().multiplyScalar(354);
+  },
+  get sunLight(){ return sun; },        // lumières exposées pour le cycle jour/nuit (daycycle.js)
+  get hemiLight(){ return hemi; },
+  get ambLight(){ return amb; },
+  get moonLight(){ return moonLight; },
+  get loaded(){ return loaded; },
+  setShadows(on){                       // Options › Ombres portées
+    renderer.shadowMap.enabled = !!on;
+    sun.castShadow = !!on;
+    scene.traverse((o) => {
+      const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      ms.forEach((m) => { m.needsUpdate = true; });
+    });
+  },
+  applyQuality(level){                  // Options › Qualité graphique (la résolution change tout de suite ; les tuiles au prochain lancement)
+    const p = QUALITY_PRESETS[level] || QUALITY_PRESET;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, p.maxPixelRatio));
+    dynRes.reset(Math.min(window.devicePixelRatio, p.maxPixelRatio));
+    resize();
+    return p;
+  },
   pauseLoop()  { cancelAnimationFrame(raf); raf = 0; },
   resumeLoop() { if (!raf) tick(); },
 };
@@ -565,6 +762,7 @@ function revealStage(){
   }
 
   stage.classList.add('revealed');
+  window.dispatchEvent(new CustomEvent('mosque:revealed'));
   clearTimeout(readyTimer);
   readyTimer = setTimeout(() => { if (ui) ui.classList.add('ready'); }, 7000);
   try { window.playDroneReveal?.(); } catch(_) {}
@@ -840,18 +1038,22 @@ function setMode(activeBtn){
 const _gameBtnSound = new Audio('assets/audio/soundclic_for_btn_Game.mp3');
 _gameBtnSound.preload = 'auto';
 _gameBtnSound.volume  = 0.9;
+window.GameAudio?.track(_gameBtnSound, 'effects');
 
 const _actionSound = new Audio('assets/audio/action-sound.mp3');
 _actionSound.preload = 'auto';
 _actionSound.volume  = 0.85;
+window.GameAudio?.track(_actionSound, 'effects');
 
 const _writingSound = new Audio('assets/audio/writing-sound.mp3');
 _writingSound.preload = 'auto';
 _writingSound.volume  = 0.7;
+window.GameAudio?.track(_writingSound, 'effects');
 
 const _backSound = new Audio('assets/audio/back-sound.mp3');
 _backSound.preload = 'auto';
 _backSound.volume  = 0.85;
+window.GameAudio?.track(_backSound, 'effects');
 
 function _playWritingLoop() {
   _writingSound.loop = true;
@@ -867,6 +1069,7 @@ function _stopWritingLoop() {
 
 /* Déverrouillage iOS */
 document.addEventListener('audioUnlock', () => {
+  if (!_gameBtnSound.paused) return;
   _gameBtnSound.play().catch(() => {}); _gameBtnSound.pause(); _gameBtnSound.currentTime = 0;
 }, { once: true });
 
@@ -912,7 +1115,7 @@ if (btnInterior) btnInterior.addEventListener('click', () => {
 });
 
 if (btnAr) btnAr.addEventListener('click', () => {
-  import('./ar-mode.js').then(mod => mod.enter());
+  import('./ar-mode.js?v=3').then(mod => mod.enter()).catch((e) => console.warn('[AR] module introuvable :', e && e.message));
 });
 
 if (btnMenu) btnMenu.addEventListener('click', (e) => {
@@ -960,6 +1163,7 @@ function closeVideoModal(){
   videoModal.setAttribute('aria-hidden', 'true');
 }
 if (btnVideo)      btnVideo.addEventListener('click', (e) => { e.stopPropagation(); openVideo(); });
+if (btnVideo && !VIDEO_CREPISSAGE) btnVideo.style.display = 'none';   // pas de vidéo branchée : on masque le bouton plutôt qu'une fenêtre « bientôt »
 if (videoClose)    videoClose.addEventListener('click', closeVideoModal);
 if (videoBackdrop) videoBackdrop.addEventListener('click', closeVideoModal);
 

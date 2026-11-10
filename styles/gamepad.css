@@ -1,0 +1,31 @@
+/* ==========================================================
+   Manette (GamepadKit) — notification de connexion + aides
+   ========================================================== */
+.gp-toast{
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translate(-50%, 14px);
+  z-index: 9500;
+  max-width: min(86vw, 620px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-family: 'Rubik', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: #ffe8c0;
+  background: rgba(20, 14, 26, .84);
+  border: 1px solid rgba(249, 213, 139, .45);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .35s ease, transform .35s ease;
+}
+.gp-toast.is-on{
+  opacity: 1;
+  transform: translate(-50%, 0);
+}

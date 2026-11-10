@@ -29,7 +29,7 @@
   const loadModelSound = () => {
     if (modelSound) return;
     modelSound = new Audio('assets/audio/model-sound.mp3');
-    modelSound.preload = 'auto';
+    modelSound.preload = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ? 'none' : 'auto';   // mobile : chargé à la première lecture
   };
   loadModelSound();
   const playModelSound = () => {
@@ -45,6 +45,7 @@
   const initAudio = () => {
     if (ac) return;
     ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (window.GameAudio) GameAudio.ctx(ac, 'effects');
   };
 
   /* Active l'audio dès le premier geste utilisateur.
@@ -56,7 +57,7 @@
 
     // Déverrouillage iOS : play+pause sur chaque élément audio de ce module
     [_countdownSound, _transitionSound, _textSound, modelWind, modelSound].forEach(a => {
-      if (!a) return;
+      if (!a || !a.paused) return;     // un son déjà lancé (vent de la maquette démarré par ce même clic) n'est pas coupé par le déverrouillage
       a.play().catch(() => {});
       a.pause();
       a.currentTime = 0;
@@ -176,6 +177,14 @@
       modelWind.play().catch(() => {});
     }
   });
+  /* Volumes par catégorie (Options › Audio) : game-audio.js multiplie le volume de chaque son */
+  if (window.GameAudio) {
+    GameAudio.track(_countdownSound, 'effects');
+    GameAudio.track(_transitionSound, 'effects');
+    GameAudio.track(_textSound, 'effects');
+    GameAudio.track(modelWind, 'ambience');
+    GameAudio.track(modelSound, 'music');
+  }
   const playModelWind = () => { if (soundOn) modelWind.play().catch(() => {}); };
   const stopModelWind = () => { modelWind.pause(); modelWind.currentTime = 0; };
   window.playModelWind = playModelWind;
@@ -423,8 +432,10 @@
       video.load();
     }
   };
-  preloadVideo();
-  window.addEventListener('resize', () => { updateMode(); preloadVideo(); });
+  // mobile : pas de préchargement de la vidéo d'intro (elle se charge au décollage)
+  const _lite = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  if (!_lite) preloadVideo();
+  window.addEventListener('resize', () => { updateMode(); if (!_lite) preloadVideo(); });
 
   /* ==========================================================
      SÉQUENCE DE DÉCOLLAGE + VIDÉO
@@ -592,7 +603,9 @@
      ========================================================== */
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-  if (!isTouchDevice) {
+  if (window.__NEW_UI) {
+    // Nouvelle interface (game-ui.js) : l'ancienne intro ne démarre pas.
+  } else if (!isTouchDevice) {
     runIntro();
   } else {
     // Affiche un hint "touchez pour commencer"

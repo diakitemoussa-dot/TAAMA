@@ -1,0 +1,41 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-29T21:45:00Z" },
+  "title": "Taama — Tous les menus",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Lancement.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 810, "title": "1 · Écran de lancement" },
+    "Chargement.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 810, "title": "2 · Chargement" },
+    "Cinematique.dc.html": { "x": 3040, "y": 0, "w": 1440, "h": 810, "title": "3 · Cinématique d'introduction" },
+    "Main.dc.html": { "x": 4560, "y": 0, "w": 1440, "h": 810, "title": "4 · Menu principal" },
+    "NouvellePartie.dc.html": { "x": 0, "y": 1180, "w": 1440, "h": 810, "title": "5 · Nouvelle partie" },
+    "Continuer.dc.html": { "x": 1520, "y": 1180, "w": 1440, "h": 810, "title": "6 · Continuer" },
+    "Carte.dc.html": { "x": 3040, "y": 1180, "w": 1440, "h": 810, "title": "7 · Carte des destinations" },
+    "Pause.dc.html": { "x": 4560, "y": 1180, "w": 1440, "h": 810, "title": "8 · Pause en jeu" },
+    "OptionsAudio.dc.html": { "x": 0, "y": 2360, "w": 1440, "h": 810, "title": "9 · Options · Audio" },
+    "OptionsCommandes.dc.html": { "x": 1520, "y": 2360, "w": 1440, "h": 810, "title": "10 · Options · Commandes" },
+    "OptionsAffichage.dc.html": { "x": 3040, "y": 2360, "w": 1440, "h": 810, "title": "11 · Options · Affichage" },
+    "OptionsJeu.dc.html": { "x": 4560, "y": 2360, "w": 1440, "h": 810, "title": "12 · Options · Jeu et langue" },
+    "Credits.dc.html": { "x": 0, "y": 3540, "w": 1440, "h": 810, "title": "13 · Crédits" },
+    "TapamaDialogue.dc.html": { "x": 0, "y": 4720, "w": 1440, "h": 810, "title": "14 · Tapama · dialogue avant la partie" },
+    "TapamaRadio.dc.html": { "x": 1520, "y": 4720, "w": 1440, "h": 810, "title": "15 · Tapama · appel pendant la partie" },
+    "TapamaAnalyse.dc.html": { "x": 3040, "y": 4720, "w": 1440, "h": 810, "title": "16 · Tapama · analyse d'un indice" },
+    "TapamaAide.dc.html": { "x": 4560, "y": 4720, "w": 1440, "h": 810, "title": "17 · Tapama · demander de l'aide" }
+  },
+  "order": [
+    "Lancement.dc.html", "Chargement.dc.html", "Cinematique.dc.html", "Main.dc.html",
+    "NouvellePartie.dc.html", "Continuer.dc.html", "Carte.dc.html", "Pause.dc.html",
+    "OptionsAudio.dc.html", "OptionsCommandes.dc.html", "OptionsAffichage.dc.html", "OptionsJeu.dc.html",
+    "Credits.dc.html",
+    "TapamaDialogue.dc.html", "TapamaRadio.dc.html", "TapamaAnalyse.dc.html", "TapamaAide.dc.html"
+  ],
+  "notes": {
+    "t1": { "x": 0, "y": -250, "text": "Démarrage : lancement, chargement, cinématique, menu principal", "kind": "title1", "maxW": 6000 },
+    "t2": { "x": 0, "y": 930, "text": "Parties : nouvelle partie, continuer, destinations, pause en jeu", "kind": "title1", "maxW": 6000 },
+    "t3": { "x": 0, "y": 2110, "text": "Options : audio, commandes, affichage, jeu et langue", "kind": "title1", "maxW": 6000 },
+    "t4": { "x": 0, "y": 3290, "text": "Informations : crédits", "kind": "title1", "maxW": 6000 },
+    "t5": { "x": 0, "y": 4470, "text": "Tapama en 2D : portrait et bulles de texte, avant et pendant la partie", "kind": "title1", "maxW": 6000 }
+  },
+  "designSystems": []
+}

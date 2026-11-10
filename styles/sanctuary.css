@@ -17,6 +17,40 @@
 .sn-hud button { pointer-events: auto; }
 .sn-hud.is-on  { opacity: 1; visibility: visible; }
 
+/* ---------- Aide contrôles (haut centre) ---------- */
+.sn-hint {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(62vw, 560px);
+  margin: 0;
+  padding: 7px 16px;
+  border: 1px solid rgba(249,213,139,.22);
+  border-radius: 20px;
+  background: rgba(30,20,35,.5);
+  color: rgba(249,213,139,.88);
+  font-size: 13px;
+  line-height: 1.35;
+  letter-spacing: .4px;
+  text-align: center;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .6s ease;
+}
+.sn-hint.is-on { opacity: 1; }
+@media (max-width: 700px) {
+  .sn-hint {
+    top: 12px;
+    max-width: calc(100vw - 150px);
+    padding: 6px 10px;
+    font-size: 11px;
+    white-space: normal;
+  }
+}
+
 /* Ajustement iOS Safari (barre de nav visible) */
 .sn-hud.sn-bar { bottom: auto; height: 100svh; }
 
@@ -97,6 +131,9 @@
   transition: transform .05s;
 }
 
+/* PC (souris) : le joystick à l'écran est inutile (ZQSD / flèches) ; sur tactile, les commandes tactiles le remplacent déjà (tc-live) */
+@media (hover: hover) and (pointer: fine) { .sn-stick { display: none; } }
+
 /* ---------- Barre d'actions (bas centre / gauche mobile) ---------- */
 .sn-toolbar {
   position: absolute;
@@ -140,6 +177,161 @@
 }
 .sn-tool:hover    { background: rgba(249,213,139,.25); }
 .sn-tool.is-active { background: var(--dg-gold); color: var(--dg-accent); }
+
+/* ---------- Viseur, cible et tir au gadget ---------- */
+.sn-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(249,213,139,.30);
+  border-radius: 50%;
+  opacity: .45;
+  pointer-events: none;
+  transition: border-color .15s, box-shadow .15s, opacity .15s;
+}
+.sn-reticle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(249,213,139,.72);
+}
+.sn-reticle::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px dashed rgba(249,213,139,.16);
+  border-radius: 50%;
+}
+.sn-reticle.is-lock {
+  border-color: rgba(142,234,255,.9);
+  box-shadow: 0 0 18px rgba(71,215,255,.55), inset 0 0 12px rgba(71,215,255,.16);
+  opacity: .95;
+}
+.sn-reticle.is-lock::before { background: #c9f7ff; box-shadow: 0 0 10px #54d8ff; }
+.sn-reticle.is-lock::after  { border-color: rgba(142,234,255,.35); }
+
+.sn-target {
+  position: absolute;
+  top: 82px;
+  left: 50%;
+  width: min(290px, 58vw);
+  padding: 7px 12px 9px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(142,234,255,.30);
+  border-radius: 10px;
+  background: rgba(30,20,35,.62);
+  box-shadow: 0 8px 28px rgba(0,0,0,.22);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .2s ease, visibility .2s ease;
+  pointer-events: none;
+}
+.sn-target.is-on { opacity: 1; visibility: visible; }
+.sn-target-kicker {
+  display: block;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 2.4px;
+  color: rgba(249,213,139,.65);
+}
+.sn-target-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+.sn-target-line b {
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 1.1px;
+  color: #9feaff;
+  font-weight: 700;
+}
+.sn-target-line em {
+  font-style: normal;
+  font-size: 11px;
+  color: rgba(249,213,139,.75);
+  white-space: nowrap;
+}
+.sn-target-bar {
+  height: 4px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255,255,255,.12);
+}
+.sn-target-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #47d7ff, #c8f7ff);
+  box-shadow: 0 0 10px rgba(71,215,255,.8);
+  transition: width .18s ease;
+}
+.sn-target.is-blocked { border-color: rgba(249,213,139,.22); }
+.sn-target.is-blocked .sn-target-line b { color: rgba(249,213,139,.65); }
+.sn-target.is-blocked .sn-target-bar i {
+  background: rgba(249,213,139,.45);
+  box-shadow: none;
+}
+
+.sn-combat {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  left: 24px;
+  display: flex;
+  gap: 10px;
+}
+.sn-fire {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid rgba(71,215,255,.72);
+  background: radial-gradient(circle at 35% 30%, rgba(142,234,255,.30), rgba(30,20,35,.74));
+  color: #c9f7ff;
+  font: 700 11px/1 'Rajdhani', sans-serif;
+  letter-spacing: .8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 18px rgba(71,215,255,.14);
+  transition: transform .08s, background .15s;
+}
+.sn-fire span { font-size: 18px; line-height: 1; }
+.sn-fire:hover { background: radial-gradient(circle at 35% 30%, rgba(142,234,255,.46), rgba(30,20,35,.78)); }
+.sn-fire:active { transform: scale(.94); }
+.sn-fire-side {
+  border-color: rgba(249,213,139,.72);
+  color: var(--dg-gold);
+  background: radial-gradient(circle at 35% 30%, rgba(249,213,139,.26), rgba(30,20,35,.74));
+  box-shadow: 0 0 18px rgba(249,213,139,.12);
+}
+.sn-fire-side:hover { background: radial-gradient(circle at 35% 30%, rgba(249,213,139,.42), rgba(30,20,35,.78)); }
+
+@media (max-width: 700px) {
+  .sn-target { top: 66px; width: min(280px, calc(100vw - 150px)); }
+}
+@media (max-width: 600px) {
+  .sn-combat { left: 18px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+  .sn-fire { width: 56px; height: 56px; font-size: 10px; }
+  .sn-fire span { font-size: 16px; }
+}
 
 /* ---------- Scan Tombeaux — laser plein écran ---------- */
 .sn-scan-hud {
@@ -327,3 +519,15 @@
 }
 .sn-poi button:last-child { border-bottom: none; }
 .sn-poi button:hover { background: rgba(249,213,139,.12); border-radius: 6px; }
+
+/* Réticule de visée précise : passe au rouge quand il est sur le drone ennemi. */
+#snAimReticle.is-lock > div:first-child {
+  border-color: rgba(255, 96, 72, .95) !important;
+  box-shadow: 0 0 22px rgba(255, 96, 72, .6) !important;
+}
+
+/* boutons TIR / CÔTÉ retirés de l'écran (le tir reste disponible : clic, RT, visée) */
+.sn-fire, .sn-fire-side, #snFire, #snFireSide{ display: none !important; }
+
+/* point + cercle au centre de l'écran retirés (le viseur de tir « snAimReticle » reste visible quand on vise) */
+.sn-reticle, #snReticle{ display: none !important; }

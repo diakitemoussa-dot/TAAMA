@@ -1,0 +1,15 @@
+{
+ "date": "2026-11-09T19:36:30.735Z",
+ "problems": [
+  {
+   "sev": "INFO",
+   "where": "app/drone-skin.js",
+   "msg": "module jamais chargé (ni dans index.html ni importé)"
+  },
+  {
+   "sev": "INFO",
+   "where": "app/missions.js",
+   "msg": "module jamais chargé (ni dans index.html ni importé)"
+  }
+ ]
+}

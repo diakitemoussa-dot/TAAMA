@@ -1,0 +1,243 @@
+/* ==========================================================
+   COMMANDES TACTILES — palette brun / ocre / sable + jaune doré
+   (glassmorphism sobre ; cohérent avec les HUD du jeu)
+   ========================================================== */
+:root{
+  --tc-brown: 58, 40, 30;       /* fond des boutons (rgb) */
+  --tc-gold: #F9D58B;
+  --tc-sand: #fbeed1;
+  --tc-ocre: #c98f4a;
+}
+
+/* ---------- Racine : plein écran, laisse passer le toucher sauf sur les contrôles ---------- */
+#tcRoot{
+  position: fixed; inset: 0; z-index: 61;              /* au-dessus des HUD (60), sous cartes / menus (63+) et Tapama (9000) */
+  pointer-events: none;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Rubik', 'Open Sans', system-ui, sans-serif;
+}
+#tcRoot[hidden], #tcEditor[hidden], #tcSettings[hidden], #tcGuBtn[hidden]{ display: none !important; }
+.tc-field{
+  position: absolute;
+  top: env(safe-area-inset-top, 0px); right: env(safe-area-inset-right, 0px);
+  bottom: env(safe-area-inset-bottom, 0px); left: env(safe-area-inset-left, 0px);
+}
+.tc-field[hidden]{ display: none; }
+
+/* ---------- Anciennes commandes écran masquées quand les nouvelles sont actives ---------- */
+html.tc-live .sn-stick, html.tc-live .sn-toolbar, html.tc-live .sn-combat, html.tc-live .sn-quit, html.tc-live .sn-hint,
+html.tc-live .dg-stick, html.tc-live .dg-toolbar, html.tc-live .dg-quit{ display: none !important; }
+html.tc-live .tc-prompt{ visibility: hidden !important; }       /* l'invite « E / F » devient le bouton Interagir */
+
+/* ---------- Contrôle de base ---------- */
+.tc-ctl{
+  position: absolute; width: var(--d); height: var(--d);
+  transform: translate(-50%, -50%);
+  pointer-events: auto; touch-action: none;
+  opacity: var(--op, .85);
+  transition: opacity .18s ease, transform .12s ease;
+}
+.tc-btn{
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tc-sand);
+  background: radial-gradient(circle at 35% 28%, rgba(120, 86, 62, .55), rgba(var(--tc-brown), .62) 62%);
+  border: 1.5px solid rgba(249, 213, 139, .55);
+  box-shadow: 0 3px 12px rgba(20, 12, 8, .45), inset 0 1px 0 rgba(255, 236, 200, .18);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.tc-ico{ width: 46%; height: 46%; display: block; pointer-events: none; }
+.tc-ico svg{ width: 100%; height: 100%; display: block; }
+.tc-ctl.edge-r .tc-lbl{ left: auto; right: 0; transform: none; }
+.tc-ctl.edge-l .tc-lbl{ left: 0; transform: none; }
+.tc-lbl{
+  position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%);
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; pointer-events: none;
+  color: var(--tc-sand); text-shadow: 0 1px 3px rgba(0, 0, 0, .85);
+  display: none;
+}
+.tc-btn.is-down{ transform: translate(-50%, -50%) scale(.92); background: radial-gradient(circle at 35% 28%, rgba(249, 213, 139, .9), rgba(201, 143, 74, .85)); color: #3a281e; border-color: #fff3c9; opacity: 1; }
+.tc-btn.is-latched, .tc-btn.is-on{ background: radial-gradient(circle at 35% 28%, rgba(249, 213, 139, .85), rgba(201, 143, 74, .8)); color: #3a281e; border-color: #fff3c9; opacity: 1; box-shadow: 0 0 14px rgba(249, 213, 139, .55), 0 3px 12px rgba(20, 12, 8, .45); }
+.tc-btn.is-off{ display: none; }
+.tc-arrow{ border-radius: 28%; }
+.tc-arrow .tc-ico{ width: 52%; height: 52%; }
+
+/* Interagir : n'apparaît que si une action est possible ; doré, avec son libellé */
+.tc-btn.is-ctx{ background: radial-gradient(circle at 35% 28%, rgba(249, 213, 139, .95), rgba(201, 143, 74, .9)); color: #3a281e; border-color: #fff3c9; opacity: 1; animation: tcPulse 1.6s ease-in-out infinite; }
+.tc-btn.is-ctx .tc-lbl{ display: block; font-size: 11px; color: var(--tc-sand); background: rgba(var(--tc-brown), .78); padding: 2px 8px; border-radius: 8px; border: 1px solid rgba(249, 213, 139, .5); max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+@keyframes tcPulse{ 0%, 100%{ box-shadow: 0 0 0 0 rgba(249, 213, 139, .55), 0 3px 12px rgba(20, 12, 8, .45); } 50%{ box-shadow: 0 0 0 10px rgba(249, 213, 139, 0), 0 3px 12px rgba(20, 12, 8, .45); } }
+
+/* ---------- Sticks (flottants : la zone de toucher dépasse l'anneau) ---------- */
+.tc-stick{ width: calc(var(--d) * 1.9); height: calc(var(--d) * 1.9); }
+.tc-ring{
+  position: absolute; left: 50%; top: 50%; width: var(--d); height: var(--d); transform: translate(-50%, -50%);
+  border-radius: 50%; border: 2px solid rgba(249, 213, 139, .55);
+  background: radial-gradient(circle, rgba(var(--tc-brown), .18), rgba(var(--tc-brown), .5));
+  box-shadow: inset 0 0 18px rgba(20, 12, 8, .35);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); pointer-events: none;
+}
+.tc-knob{
+  position: absolute; left: 50%; top: 50%; width: calc(var(--d) * .42); height: calc(var(--d) * .42); margin: calc(var(--d) * -.21) 0 0 calc(var(--d) * -.21);
+  border-radius: 50%; background: radial-gradient(circle at 35% 28%, #ffe6ae, #c98f4a 80%);
+  border: 1.5px solid #fff3c9; box-shadow: 0 2px 8px rgba(20, 12, 8, .55); pointer-events: none;
+}
+.tc-stick.is-down{ opacity: 1; }
+
+/* ---------- Zone caméra ---------- */
+.tc-look{ position: absolute; left: 42%; right: 0; top: 0; bottom: 0; pointer-events: auto; touch-action: none; }
+.tc-look-ed{ pointer-events: none; border: 1.5px dashed rgba(249, 213, 139, .35); background: rgba(249, 213, 139, .05); border-radius: 18px; left: 42%; top: 18%; bottom: 4%; right: 1%; display: flex; align-items: flex-start; justify-content: center; }
+.tc-look-ed .tc-lbl{ display: block; position: static; transform: none; margin-top: 8px; opacity: .8; }
+
+/* ---------- Engrenage ⚙ ---------- */
+.tc-gear{
+  position: absolute; right: 1.2%; top: 2.5%; width: var(--d); height: var(--d); padding: 0; z-index: 3;
+  pointer-events: auto; touch-action: manipulation; color: var(--tc-sand); opacity: .55; border-radius: 50%;
+  background: rgba(var(--tc-brown), .5); border: 1px solid rgba(249, 213, 139, .35); display: flex; align-items: center; justify-content: center;
+}
+.tc-field[data-mode="drone"] .tc-gear{ top: 17%; right: 1.2%; }
+.tc-gear svg{ width: 55%; height: 55%; }
+
+/* ---------- Message « tourne ton téléphone » ---------- */
+.tc-rotate{
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(78vw, 320px); text-align: center; pointer-events: none;
+  padding: 18px 20px; border-radius: 22px; color: var(--tc-sand); background: rgba(var(--tc-brown), .78);
+  border: 1.5px solid rgba(249, 213, 139, .6); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(20, 12, 8, .5);
+}
+.tc-rotate[hidden]{ display: none; }
+.tc-rotate p{ margin: 6px 0 0; font: 700 15px/1.35 'Open Sans', system-ui, sans-serif; }
+.tc-rotate-ico{ display: block; font-size: 40px; color: var(--tc-gold); animation: tcSpin 2.4s ease-in-out infinite; }
+@keyframes tcSpin{ 0%, 100%{ transform: rotate(0); } 50%{ transform: rotate(-90deg); } }
+
+/* ---------- Chips / boutons de menu ---------- */
+.tc-chip{
+  font: 700 12px/1 'Rubik', system-ui, sans-serif; color: var(--tc-sand); padding: 8px 10px; min-height: 36px; border-radius: 12px; cursor: pointer;
+  background: rgba(var(--tc-brown), .72); border: 1px solid rgba(249, 213, 139, .45); touch-action: manipulation; white-space: nowrap;
+}
+.tc-chip.is-on, .tc-chip.on{ background: rgba(249, 213, 139, .92); color: #3a281e; border-color: #fff3c9; }
+.tc-primary{ background: linear-gradient(180deg, #ffe0a0, #e2a75a); color: #3a281e; border-color: #fff3c9; }
+.tc-wide{ width: 100%; font-size: 14px; padding: 13px 14px; }
+select.tc-chip{ appearance: none; -webkit-appearance: none; padding-right: 12px; max-width: 150px; }
+.tc-x{ width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(249, 213, 139, .5); background: rgba(var(--tc-brown), .7); color: var(--tc-sand); font-size: 15px; cursor: pointer; flex: none; }
+
+/* ==========================================================
+   Éditeur plein écran
+   ========================================================== */
+#tcEditor{
+  position: fixed; inset: 0; z-index: 9600; touch-action: none; user-select: none; -webkit-user-select: none; color: var(--tc-sand);
+  font-family: 'Rubik', 'Open Sans', system-ui, sans-serif;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(201, 143, 74, .38), transparent 60%),
+    linear-gradient(180deg, #4a3445 0%, #3a2a2e 55%, #2d2019 100%);
+}
+.tc-ed-field{
+  position: absolute; top: env(safe-area-inset-top, 0px); right: env(safe-area-inset-right, 0px);
+  bottom: env(safe-area-inset-bottom, 0px); left: env(safe-area-inset-left, 0px);
+}
+.tc-ed-field[hidden], .tc-ed-bar[hidden]{ display: none; }
+.tc-grid{
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(to right, rgba(249, 213, 139, .09) 1px, transparent 1px), linear-gradient(to bottom, rgba(249, 213, 139, .09) 1px, transparent 1px);
+  background-size: 5% 10%;
+}
+.tc-edit{ cursor: grab; }
+.tc-edit .tc-lbl{ display: block; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; }
+.tc-edit.is-hidden{ opacity: .35 !important; }
+.tc-edit.is-hidden.tc-btn, .tc-edit.is-hidden .tc-ring{ border-style: dashed; }
+.tc-edit.is-sel{ outline: 2px solid var(--tc-gold); outline-offset: 5px; border-radius: 50%; }
+.tc-edit.tc-stick.is-sel{ outline-offset: -4px; }
+.tc-edit.is-off{ display: flex; }
+.tc-ed-bar{
+  position: absolute; left: calc(env(safe-area-inset-left, 0px) + 10px); top: calc(env(safe-area-inset-top, 0px) + 8px); width: min(74vw, 700px);
+  display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 16px; z-index: 5;
+  background: rgba(var(--tc-brown), .82); border: 1px solid rgba(249, 213, 139, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.tc-ed-row1, .tc-ed-row2{ display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.tc-ed-row1::-webkit-scrollbar, .tc-ed-row2::-webkit-scrollbar{ display: none; }
+.tc-ed-title{ font-size: 13px; color: var(--tc-gold); margin-right: 4px; white-space: nowrap; }
+.tc-ed-tabs{ display: flex; gap: 5px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tc-ed-row1 > .tc-primary{ flex: none; }
+.tc-ed-row1{ overflow: visible; }
+.tc-ed-insp{ gap: 6px !important;
+  position: absolute; top: 58%; transform: translateY(-50%); right: calc(env(safe-area-inset-right, 0px) + 12px); width: 224px; z-index: 6; padding: 10px 12px;
+  border-radius: 16px; background: rgba(var(--tc-brown), .9); border: 1px solid rgba(249, 213, 139, .55);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); display: flex; flex-direction: column; gap: 8px; font-size: 12px;
+}
+.tc-ed-insp[hidden]{ display: none; }
+.tc-ed-insp.on-left{ right: auto; left: calc(env(safe-area-inset-left, 0px) + 12px); }
+.tc-in-head{ display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--tc-gold); }
+.tc-ed-insp label{ display: grid; grid-template-columns: 64px 1fr 38px; align-items: center; gap: 6px; font-weight: 600; }
+.tc-ed-insp label select{ grid-column: 2 / 4; width: 100%; font: 600 12px 'Rubik', system-ui, sans-serif; padding: 8px; border-radius: 10px; color: var(--tc-sand); background: rgba(40, 28, 22, .9); border: 1px solid rgba(249, 213, 139, .45); }
+.tc-ed-insp em{ font-style: normal; text-align: right; opacity: .85; }
+.tc-in-btns{ display: flex; gap: 6px; }
+.tc-in-btns .tc-chip{ flex: 1; padding: 8px 6px; }
+input[type=range]{ accent-color: var(--tc-gold); width: 100%; min-height: 28px; touch-action: pan-x; }
+.tc-ed-rotate{ position: fixed; }
+
+/* ==========================================================
+   Réglages (section Options « Commandes tactiles »)
+   ========================================================== */
+#tcSettings{
+  position: fixed; inset: 0; z-index: 9550; display: flex; align-items: center; justify-content: center; padding: 12px;
+  background: rgba(30, 20, 18, .62); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); font-family: 'Rubik', 'Open Sans', system-ui, sans-serif; color: var(--tc-sand);
+}
+.tc-set-card{
+  width: min(460px, 100%); max-height: 100%; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden;
+  background: linear-gradient(180deg, rgba(85, 65, 93, .96), rgba(58, 40, 30, .97)); border: 1.5px solid rgba(249, 213, 139, .6); box-shadow: 0 16px 50px rgba(0, 0, 0, .55);
+}
+.tc-set-head{ display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 8px; }
+.tc-set-head h2{ margin: 0; font-size: 17px; color: var(--tc-gold); letter-spacing: .03em; }
+.tc-set-body{ overflow-y: auto; padding: 2px 16px 14px; display: flex; flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+.tc-row{ display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; min-height: 34px; }
+.tc-row.col{ flex-direction: column; align-items: stretch; gap: 6px; }
+.tc-row > span{ flex: 0 0 42%; }
+.tc-seg{ display: flex; flex: 1; border-radius: 12px; overflow: hidden; border: 1px solid rgba(249, 213, 139, .45); }
+.tc-seg button{ flex: 1; padding: 10px 4px; font: 700 12px 'Rubik', system-ui, sans-serif; color: var(--tc-sand); background: rgba(var(--tc-brown), .6); border: 0; cursor: pointer; min-height: 40px; }
+.tc-seg button.on{ background: var(--tc-gold); color: #3a281e; }
+.tc-rng{ display: flex; align-items: center; gap: 8px; flex: 1; }
+.tc-rng em{ font-style: normal; width: 44px; text-align: right; font-size: 12px; }
+.tc-sw{ width: 52px; height: 30px; border-radius: 15px; border: 1px solid rgba(249, 213, 139, .5); background: rgba(var(--tc-brown), .7); position: relative; cursor: pointer; flex: none; }
+.tc-sw i{ position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--tc-sand); transition: transform .18s; }
+.tc-sw.on{ background: var(--tc-gold); }
+.tc-sw.on i{ transform: translateX(22px); background: #3a281e; }
+.tc-presets{ display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+.tc-presets .tc-chip{ padding: 8px 4px; font-size: 11px; white-space: normal; line-height: 1.15; }
+
+/* Bouton d'accès depuis les écrans Options / Pause du jeu */
+#tcGuBtn{
+  position: fixed; z-index: 9100; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; cursor: pointer;
+  font: 700 13px 'Rubik', system-ui, sans-serif; color: #3a281e; background: linear-gradient(180deg, #ffe0a0, #e2a75a);
+  border: 1.5px solid #fff3c9; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); touch-action: manipulation;
+}
+#tcGuBtn svg{ width: 18px; height: 18px; }
+
+@media (max-height: 430px){
+  .tc-lbl{ font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce){
+  .tc-btn.is-ctx, .tc-rotate-ico{ animation: none; }
+  .tc-ctl{ transition: none; }
+}
+.tc-row.col > span{ flex: none; }
+.tc-set-body > *{ flex: none; }
+.tc-seg{ min-height: 40px; }
+
+/* paysage court (téléphone) : réglages sur deux colonnes pour tout voir sans défiler */
+@media (max-height: 460px){
+  .tc-set-card{ width: min(780px, 100%); }
+  .tc-set-body{ display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; row-gap: 4px; align-content: start; }
+  .tc-set-body > .tc-row.full, .tc-set-body > .tc-row.col{ grid-column: 1 / -1; }
+  .tc-set-head{ padding: 8px 16px 2px; }
+  .tc-row{ min-height: 32px; font-size: 13px; }
+  .tc-row > span{ flex: 0 0 38%; }
+  .tc-wide{ padding: 9px 14px; }
+  .tc-presets .tc-chip{ padding: 6px 4px; }
+}
+#tcGuBtn{ left: auto; right: calc(16px + env(safe-area-inset-right, 0px)); transform: none; }
+/* paysage court (téléphone) : le bouton prend la bande libre sous le panneau Pause (à gauche, où les aides clavier sont masquées) */
+@media (max-height: 520px){
+  #tcGuBtn{ right: auto; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(5px + env(safe-area-inset-bottom, 0px)); padding: 6px 14px; font-size: 12px; }
+  #tcGuBtn svg{ width: 15px; height: 15px; }
+}

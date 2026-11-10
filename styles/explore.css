@@ -1,0 +1,38 @@
+/* ==========================================================
+   EXPLORATION LIBRE — bulles de lieux + interface réduite (AR et menu à trois traits seulement)
+   ========================================================== */
+body.mode-explore .mq-actions,
+body.mode-explore #cityMap,
+body.mode-explore .cm-backdrop,
+body.mode-explore .mq-video-btn{ display: none !important; }
+
+#exploreLabels{ position: fixed; inset: 0; z-index: 35; pointer-events: none; overflow: hidden; }
+.xl{ position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; --stem: 40px; }
+.xl-dot{
+  position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%;
+  background: #F9D58B; border: 3px solid #55415D; box-shadow: 0 0 0 2px rgba(249,213,139,.55), 0 2px 8px rgba(0,0,0,.45);
+}
+.xl-stem{ position: absolute; left: -1px; bottom: 0; width: 2px; height: var(--stem); background: linear-gradient(0deg, #F9D58B, rgba(249,213,139,.85)); box-shadow: 0 0 4px rgba(0,0,0,.4); }
+.xl-pill{
+  position: absolute; left: 0; bottom: var(--stem); transform: translateX(-50%); pointer-events: auto; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: 270px;
+  padding: 5px 14px; border-radius: 999px; white-space: nowrap;
+  background: #F9D58B; color: #3b2a45; border: 2px solid #55415D;
+  font: 800 14px 'Rubik', 'Open Sans', sans-serif; letter-spacing: .01em; box-shadow: 0 4px 14px rgba(40,26,46,.5);
+  transition: background .2s, color .2s, transform .2s;
+}
+.xl.near .xl-pill{ background: #55415D; color: #FBEFD0; border-color: #F9D58B; font-size: 16px; }
+.xl-pill:hover, .xl.sel .xl-pill{ background: #fff3c9; color: #3b2a45; transform: translateX(-50%) scale(1.08); }
+.xl-info{ display: none; font: 600 12px/1.35 'Open Sans', system-ui, sans-serif; white-space: normal; text-align: center; max-width: 240px; }
+.xl.sel .xl-info{ display: block; }
+.xl.sel .xl-pill{ border-radius: 18px; padding: 7px 16px; }
+.xl-leave{
+  position: fixed; left: 20px; bottom: 20px; z-index: 36; cursor: pointer;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(248,243,234,.5);
+  background: rgba(60,40,70,.68); color: #F8F3EA; font: 700 13px 'Open Sans', system-ui, sans-serif;
+}
+.xl-leave:hover{ background: rgba(85,65,93,.9); }
+@media (max-width: 640px){ .xl-pill{ font-size: 12px; padding: 4px 10px; } .xl.near .xl-pill{ font-size: 13px; } }
+
+/* partie en cours : plus de bouton GAME / SANCTUAIRE (le jeu démarre directement dans le sanctuaire) */
+body.mode-campaign .mq-actions{ display: none !important; }

@@ -3,8 +3,11 @@
    Dépend de window.MosqueScene exposé par mosque-viewer.js.
    ========================================================== */
 import * as THREE from 'three';
+import { mediaUrl, currentBytesPlan } from './device-quality.js?v=6';
+import { t as _t } from './i18n.js?v=1';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { createRemote, fovFor, aimDrop } from './drone-remote.js?v=1';
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
 
 // Accélération des collisions : raycast via BVH (O(log n)) au lieu de la force brute
@@ -17,18 +20,21 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 const _scannerSound = new Audio('assets/audio/scanner_sound.mp3');
 _scannerSound.preload = 'auto';
 _scannerSound.volume  = 0.85;
+window.GameAudio?.track(_scannerSound, 'effects');
 const _playScanner = () => { _scannerSound.currentTime = 0; _scannerSound.play().catch(() => {}); };
 
 /* Déverrouillage iOS : play+pause synchrone sur premier geste */
 document.addEventListener('audioUnlock', () => {
   [_scannerSound].forEach(a => {
+    if (!a.paused) return;
     a.play().catch(() => {}); a.pause(); a.currentTime = 0;
   });
 }, { once: true });
 
 /* Son drone part — joué 30s après le début du jeu */
-const _dronePart = new Audio('assets/audio/sound_for_drone_part.mp3');
-_dronePart.preload = 'auto';
+const _dronePart = new Audio(mediaUrl('dronePart'));       // mobile : version allégée (0,7 Mo au lieu de 4,7 Mo)
+_dronePart.preload = currentBytesPlan().deferHeavyAudio ? 'none' : 'auto';   // mobile / réseau lent : chargé au premier vol
+window.GameAudio?.track(_dronePart, 'drone');
 let _dronePartTimer = null;
 
 _dronePart.addEventListener('timeupdate', () => {
@@ -52,6 +58,7 @@ const takeoffHint  = document.getElementById('dgTakeoffHint');
 
 const elHeading = document.getElementById('dgHeading');
 const elFan     = document.getElementById('dgFan');
+const elNeedle  = document.getElementById('dgNeedle');
 const elAngle   = document.getElementById('dgAngle');
 const elSpeed   = document.getElementById('dgSpeed');
 const elAlt     = document.getElementById('dgAlt');
@@ -72,6 +79,13 @@ let recorder = null, chunks = [];
 
 let night = false;
 let dayBg = null, dayFog = null;
+
+/* ---------- Visée / zoom (L2/LT manette ou clic droit souris) ---------- */
+let aiming = false;
+const AIM_FOV      = 25;      // FOV en visée (plus petit = plus zoomé)
+const AIM_DIST     = 3.5;     // distance caméra–drone en visée (au lieu de ORBIT_HDIST = 7)
+let _savedFov = null;         // FOV d'origine pour restauration
+let _aimMouseRight = false;   // état clic droit souris
 
 const btnList = document.getElementById('dgList');
 const poiPanel = document.getElementById('dgPoi');
@@ -312,7 +326,7 @@ function tickScan(dt){
 const rig = new THREE.Object3D();        // position + orientation (yaw) du drone
 let rigAdded = false;
 
-const DRACO_DECODER = 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/';
+const DRACO_DECODER = 'assets/vendor/three/examples/jsm/libs/draco/';
 
 // Registre des modèles pilotables. yaw = offset d'orientation pour aligner le nez sur le
 // sens de vol (+Z monde). pick = fonction de sélection du clip selon les entrées.
@@ -326,7 +340,7 @@ const MODELS = {
     pick: pickClipDrone,
   },
   vaisseau: {
-    url: `assets/models/vaisseau.glb?v=${Date.now()}`, // cache-buster (ré-exports fréquents)
+    url: `assets/models/vaisseau.glb?v=1`, // version fixe : à incrémenter à chaque ré-export (le cache navigateur sert le reste)
     yaw: -Math.PI / 2,         // nez du modèle sur -X local -> -90° pour aligner le nez sur l'avant du rig (-Z)
     idle: 'Hover',
     spinProps: false,          // hélices déjà en boucle continue dans chaque clip
@@ -358,9 +372,12 @@ function makeBlobShadow(){
   return mesh;
 }
 let activeModelId = 'drone'; // le drone est toujours le modèle affiché à l'entrée
+let _gpHintShown  = false;   // aide manette déjà affichée ? (une fois par session)
 
 // Entrées normalisées -1..1 (gauche: lx=yaw, ly=altitude ; droite: rx=strafe, ry=avance)
-const input = { lx:0, ly:0, rx:0, ry:0 };
+// input = fusion joysticks tactiles + manette (recalculé à chaque frame par applyGamepad())
+const input      = { lx:0, ly:0, rx:0, ry:0 };
+const touchInput = { lx:0, ly:0, rx:0, ry:0 };   // joysticks à l'écran uniquement
 
 // Vitesses (amorties) en unités/s
 const vel = { fwd:0, side:0, up:0, yaw:0 };
@@ -376,7 +393,36 @@ const _side = new THREE.Vector3();
 const _camPos = new THREE.Vector3();
 let camYaw = 0;         // cap lissé de la caméra : elle tourne AVEC le drone (pas de "rodéo")
 let landed = false;     // drone posé au sol et immobile -> hélices arrêtées
+/* Fondu de caméra entre le personnage (sanctuaire) et le pilotage : au lancement, la caméra part de la vue du personnage et glisse vers la vue du drone (plus de coupure). */
+let _camBlend = null;
+const _camQ = new THREE.Quaternion();
+const CAM_BLEND_DUR = 0.9;   // s
+let launchGrace = 0;     // s : juste après le lancement depuis le sac, hélices en rotation (jamais « posé »)
 let propSpeed = 1;      // vitesse de l'animation (hélices), lissée : 1 en vol, 0 posé
+let launchActive = false; // décollage depuis le sac : L1/LB fait revenir le drone
+
+/* --- Vue du pilote (vol depuis le sac) : caméra aux yeux du joueur, qui regarde le drone au loin ; télécommande + téléphone en incrustation (app/drone-remote.js) --- */
+const remote = createRemote();
+/* Barre d'outils de la vue du pilote : icônes dessinées (enregistrer, photo, menu, drone, caméra) à la place des émojis ; le bouton du milieu est mis en avant */
+const TB_ICONS = {
+  dgGallery: '<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z M8 3v6h7V3 M8 21v-7h8v7"/></svg>',
+  dgPhoto: '<svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.6"/></svg>',
+  dgList: '<svg viewBox="0 0 24 24"><path d="M5 7h14 M5 12h14 M5 17h14"/></svg>',
+  dgModel: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><circle cx="5.5" cy="5.5" r="2.6"/><circle cx="18.5" cy="5.5" r="2.6"/><circle cx="5.5" cy="18.5" r="2.6"/><circle cx="18.5" cy="18.5" r="2.6"/><path d="M7.4 7.4l3 3 M16.6 7.4l-3 3 M7.4 16.6l3-3 M16.6 16.6l-3-3"/></svg>',
+  dgVideo: '<svg viewBox="0 0 24 24"><path d="M3 7h12v10H3z M15 11l6-3v8l-6-3"/></svg>',
+};
+let _tbStyled = false;
+function styleToolbar() {
+  if (_tbStyled) return; _tbStyled = true;
+  for (const [id, svg] of Object.entries(TB_ICONS)) { const b = document.getElementById(id); if (b) { b.dataset.emoji = b.textContent; b.innerHTML = svg; b.classList.add('dg-tool--svg'); } }
+  document.getElementById('dgList')?.classList.add('dg-tool--main');
+}
+const pilotPos = new THREE.Vector3(), pilotDir = new THREE.Vector3(), _pvLook = new THREE.Vector3(), _pvCam = new THREE.Vector3();
+let pilotYaw = 0, pv = 0, pvFov = 50, fovBase = 50;       // pv : fondu 0 (poursuite) -> 1 (vue du pilote)
+const droneCam = new THREE.PerspectiveCamera(72, 256 / 144, 0.3, 6000);   // la caméra du drone (écran du téléphone)
+const PILOT_CAM = false;                    // true : caméra aux yeux du pilote ; false : caméra de poursuite derrière le drone (comme avant) — la télécommande et le téléphone restent affichés dans les deux cas
+const PV_BACK = 2.3, PV_UP = 0.55;           // caméra du pilote : recul et hauteur par rapport à ses yeux
+const _dcOff = new THREE.Vector3(0, -0.04, -0.45);
 
 /* --- Caméra orbitale (quand drone posé) --- */
 let orbitMode      = false;   // true : l'utilisateur peut faire pivoter la cam librement
@@ -551,33 +597,66 @@ function setModel(id){
 function activeState(){ return modelState[activeModelId]; }
 
 /* ---------- Entrée / sortie ---------- */
-function enter(){
+function enter(opts){
   if (active) return;
   M = window.MosqueScene;
   if (!M) return;
   active = true;
+  const launch = opts && opts.launch;
+  launchActive = !!(launch && launch.position);
 
   if (!rigAdded){ M.scene.add(rig); rigAdded = true; }
   rig.visible = true;                 // réaffiche le drone en entrant en mode jeu
   ensureModel(activeModelId, attachActive);
 
-  // Position de départ : coordonnées Blender converties en Three.js (Y-up)
-  //   Blender (X=-12.206, Y=-77.37, Z=2.6166)
-  //   → Three.js (X=-12.206, Y=2.6166, Z=77.37)
-  rig.position.set(-12.206, 2.6166, 77.37);
-  rig.rotation.set(0, 0, 0);  // drone face à la mosquée (front local = -Z = vers Z=0)
-  camYaw = 0;                 // caméra derrière le drone (+Z), mosquée devant
-  vel.fwd = vel.side = vel.up = vel.yaw = 0;
-  battery = 100;
-  _prevPos.copy(rig.position);
+  if (launch && launch.position){
+    // Décollage depuis le sac du personnage : on reprend la position du drone
+    rig.position.copy(launch.position);
+    rig.rotation.set(0, (launch.yaw || 0) + Math.PI, 0);   // nez dans le même sens que le personnage
+    camYaw = rig.rotation.y;
+    vel.fwd = vel.side = vel.up = vel.yaw = 0;
+    battery = 100;
+    _prevPos.copy(rig.position);
+    { const pp = window.SanctuaryMode?.vehicle?.pos; if (pp) pilotPos.copy(pp); else pilotPos.copy(rig.position); pilotYaw = launch.yaw || 0; pv = 0; fovBase = M.camera.fov; pvFov = fovBase; }
 
-  // Activer directement la caméra orbitale (drone posé au sol dès le départ)
-  // orbitElev légèrement négatif : caméra plus basse → regarde légèrement vers le haut
-  // → mosquée visible en haut du cadre, drone en bas (vue comme dans Blender)
-  orbitMode      = true;
-  orbitReturning = false;
-  orbitAzim      = 0;       // caméra derrière le drone (+Z)
-  orbitElev      = -0.15;   // caméra légèrement sous le niveau du drone → regard vers le haut
+    // la caméra actuelle (vue du personnage) sert de point de départ au fondu vers la vue du pilote
+    _camBlend = { t: 0, pos: M.camera.position.clone(), quat: M.camera.quaternion.clone(), fov: M.camera.fov };
+
+    // Déjà en vol : caméra poursuite derrière le drone
+    orbitMode      = false;
+    orbitReturning = false;
+    orbitAzim      = camYaw;
+    orbitElev      = -0.15;
+    landed         = false;
+    launchGrace    = 2.5; propSpeed = 1;      // le drone apparaît hélices déjà lancées, en vol stationnaire (Idle_Hover)
+    { const _s0 = activeState(); if (_s0 && _s0.mixer) _s0.mixer.timeScale = 1; }
+
+    // Caméra chase immédiate (évite un flash de la vue d'ensemble au passage sanctuaire → pilotage)
+    M.camera.position.set(
+      rig.position.x + Math.sin(camYaw) * ORBIT_HDIST,
+      rig.position.y + ORBIT_VOFF + Math.tan(-0.15) * ORBIT_HDIST,
+      rig.position.z + Math.cos(camYaw) * ORBIT_HDIST
+    );
+    M.camera.lookAt(rig.position.x, rig.position.y + 1.2, rig.position.z);
+  } else {
+    // Position de départ : coordonnées Blender converties en Three.js (Y-up)
+    //   Blender (X=-12.206, Y=-77.37, Z=2.6166)
+    //   → Three.js (X=-12.206, Y=2.6166, Z=77.37)
+    rig.position.set(-12.206, 2.6166, 77.37);
+    rig.rotation.set(0, 0, 0);  // drone face à la mosquée (front local = -Z = vers Z=0)
+    camYaw = 0;                 // caméra derrière le drone (+Z), mosquée devant
+    vel.fwd = vel.side = vel.up = vel.yaw = 0;
+    battery = 100;
+    _prevPos.copy(rig.position);
+
+    // Activer directement la caméra orbitale (drone posé au sol dès le départ)
+    // orbitElev légèrement négatif : caméra plus basse → regarde légèrement vers le haut
+    // → mosquée visible en haut du cadre, drone en bas (vue comme dans Blender)
+    orbitMode      = true;
+    orbitReturning = false;
+    orbitAzim      = 0;       // caméra derrière le drone (+Z)
+    orbitElev      = -0.15;   // caméra légèrement sous le niveau du drone → regard vers le haut
+  }
 
   // Masquer l'UI normale, couper les OrbitControls
   document.querySelector('.mq-ui')?.classList.add('dg-hidden');
@@ -594,8 +673,17 @@ function enter(){
   if (typeof window.stopModelWind === 'function') window.stopModelWind();
   _dronePartTimer = setTimeout(_playDronePart, 30000);
 
-  // Affiche le message "décolle" — disparaîtra au premier envol
-  takeoffHint.classList.add('is-on');
+  // Affiche le message "décolle" — inutile quand le drone vient de décoller du sac
+  if (!launch) takeoffHint.classList.add('is-on');
+  else takeoffHint.classList.remove('is-on');
+
+  // Aide manette (une fois par session, si une manette est branchée)
+  if (window.GamepadKit?.connected() && !_gpHintShown){
+    _gpHintShown = true;
+    window.GamepadKit.toast(launchActive
+      ? '🎮 Sticks = vol · L1 retour personnage · ✕ photo · R1 vidéo · Options menu'
+      : '🎮 Manette : sticks = vol · ✕ photo · R1 vidéo · Options menu');
+  }
 
   // Bouton bascule de modèle (drone <-> vaisseau)
   const _modelBtn = document.getElementById('dgModel');
@@ -613,10 +701,13 @@ function enter(){
   }
   updateModelButton();
 
+  inspectionEnter();
   M.setGameUpdate(update);
 }
 
-function exit(){
+function exit(opts){
+  opts = opts || {};
+  const toSanctuary = !!opts.toSanctuary;
   if (!active) return;
   active = false;
   if (_dronePartTimer) { clearTimeout(_dronePartTimer); _dronePartTimer = null; }
@@ -637,12 +728,22 @@ function exit(){
   hud.setAttribute('aria-hidden','true');
   rotateEl.classList.remove('is-on');
   takeoffHint.classList.remove('is-on');
+  launchActive = false;
+  remote.show(false); hud.classList.remove('dg-pilot'); document.body.classList.remove('dg-flight'); pv = 0;                    // fin de la vue du pilote : corps et champ de vision rétablis
+  try { const pr = window.SanctuaryMode?.vehicle?.root?.(); if (pr) pr.visible = true; if (M.camera.fov !== fovBase) { M.camera.fov = fovBase; M.camera.updateProjectionMatrix(); } } catch (_) {}
+  inspectionExit();
 
   try { screen.orientation.unlock(); } catch(_){}
   try {
     if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
     else if (document.webkitExitFullscreen && document.webkitFullscreenElement) document.webkitExitFullscreen();
   } catch(_){}
+
+  if (toSanctuary){
+    // Retour au personnage : le sanctuaire reprend la caméra, l'update et le personnage.
+    M.controls.enabled = false;
+    return;
+  }
 
   document.querySelector('.mq-ui')?.classList.remove('dg-hidden');
   M.controls.enabled = true;
@@ -654,6 +755,42 @@ function exit(){
   M.controls.target.copy(M.viewTarget);
   M.controls.update();
   if (typeof window.playModelWind  === 'function') window.playModelWind();
+  try { window.SanctuaryMode?.endPilotHold?.(); } catch(_){}
+}
+
+/* Retour du drone vers le personnage (L1/LB, uniquement après un décollage du sac). */
+function returnToCharacter(){
+  if (!active || !launchActive) return false;
+  const st   = activeState();
+  const root = st && st.root;
+  if (!root) return false;
+
+  // Capture de la pose monde du drone avant de quitter le mode pilotage.
+  root.updateWorldMatrix(true, false);
+  const pose = {
+    position:   new THREE.Vector3(),
+    quaternion: new THREE.Quaternion(),
+    scale:      new THREE.Vector3(),
+  };
+  root.getWorldPosition(pose.position);
+  root.getWorldQuaternion(pose.quaternion);
+  root.getWorldScale(pose.scale);
+
+  pose.cam = { pos: M.camera.position.clone(), quat: M.camera.quaternion.clone(), fov: M.camera.fov };   // vue du pilote : le sanctuaire fond depuis elle jusqu'au personnage
+  window.GamepadKit?.rumble?.(90, 0.35);
+  _camBlend = null;
+  exit({ toSanctuary: true });
+  const ok = window.SanctuaryMode?.returnDrone?.(pose);
+  if (!ok){
+    // Sécurité : si le sanctuaire ne peut pas reprendre, on restaure la vue d'ensemble.
+    document.querySelector('.mq-ui')?.classList.remove('dg-hidden');
+    M.controls.enabled = true;
+    M.camera.position.set(M.viewOverview.x, M.viewOverview.y, M.viewOverview.z);
+    M.controls.target.copy(M.viewTarget);
+    M.controls.update();
+    try { window.SanctuaryMode?.endPilotHold?.(); } catch(_){}
+  }
+  return true;
 }
 
 /* ---------- Choix de l'animation selon le vol ---------- */
@@ -695,7 +832,7 @@ function setClipOn(st, name){
 /* ---------- Collisions (raycasting) ---------- */
 const raycaster = new THREE.Raycaster();
 let colliders = null;                 // meshes solides (construits une fois)
-const DRONE_SIZE    = 1.3;            // taille du drone (minuscule face à la mosquée ~20m ; caméra rapprochée)
+const DRONE_SIZE    = 0.75;           // taille du drone (minuscule face à la mosquée ~20m ; plus petit que le personnage quand il décolle du sac)
 const CLEARANCE     = 0.8;            // garde au sol (les patins effleurent la surface)
 const DRONE_RADIUS  = DRONE_SIZE / 2; // demi-largeur approx du drone (anti-mur)
 const _down       = new THREE.Vector3(0, -1, 0);
@@ -724,7 +861,9 @@ function buildColliders(){
 
 // Altitude minimale autorisée = surface sous le drone + garde au sol. -Infinity si rien.
 function groundUnder(){
-  _rayOrigin.copy(rig.position); _rayOrigin.y += 30;
+  // Rayon juste au-dessus du drone : on veut la surface SOUS lui (sol/étage),
+  // pas le toit qui se trouve au-dessus quand on décolle depuis l'intérieur.
+  _rayOrigin.copy(rig.position); _rayOrigin.y += 0.5;
   raycaster.set(_rayOrigin, _down);
   raycaster.far = 1000;
   const hits = raycaster.intersectObjects(colliders, false);
@@ -794,15 +933,112 @@ function moveHorizontal(dt){
 let _hapticCooldown = 0;
 function triggerHaptic(){
   if (_hapticCooldown > 0) return;
-  if (!navigator.vibrate) return;
-  navigator.vibrate([70, 35, 40]);   // choc + rebond
-  _hapticCooldown = 0.30;            // 300 ms avant la prochaine
+  _hapticCooldown = 0.30;                     // 300 ms avant la prochaine
+  window.GamepadKit?.rumble?.(90, 0.7);       // vibration manette (si branchée)
+  if (navigator.vibrate) navigator.vibrate([70, 35, 40]);   // choc + rebond (mobile)
+}
+
+/* ---------- Manette (GamepadKit) ----------
+   Sticks = vol (mêmes axes que les joysticks tactiles).
+   Drone posé (caméra orbitale) : le stick droit fait tourner la caméra.
+   Boutons : A photo · RB vidéo · Options/BACK menu des lieux (avec Quitter) ·
+             L1/LB retour au personnage uniquement après un décollage du sac.
+   △/Y, ○/B et X hors menu sont volontairement inactifs.
+   Retourne true si la manette demande la sortie du mode jeu. */
+function applyGamepad(dt){
+  const GP = window.GamepadKit;
+  const g  = (GP && GP.connected()) ? GP.state() : null;
+
+  // Caméra orbitale au stick droit quand le drone est posé
+  const orbitCam = orbitMode && !!g;
+  if (orbitCam){
+    orbitAzim -= g.rx * 2.6 * dt;
+    orbitElev  = Math.max(ORBIT_ELEV_MIN, Math.min(ORBIT_ELEV_MAX, orbitElev + g.ry * 1.7 * dt));
+  }
+
+  // Fusion tactile + manette (bornée à -1..1)
+  input.lx = touchInput.lx + (g ? g.lx : 0);
+  input.ly = touchInput.ly + (g ? g.ly : 0);
+  input.rx = touchInput.rx + (g && !orbitCam ? g.rx : 0);
+  input.ry = touchInput.ry + (g && !orbitCam ? g.ry : 0);
+  for (const k of ['lx','ly','rx','ry']){
+    if (input[k] >  1) input[k] =  1;
+    if (input[k] < -1) input[k] = -1;
+  }
+
+  if (!g) return false;
+  // Retour du drone sur le personnage : L1/LB uniquement.
+  if (launchActive && GP.justPressed('LB')){
+    returnToCharacter();
+    return true;
+  }
+  if (GP.justPressed('A')){                              // 📷 photo
+    takePhoto();
+    GP.toast('📷 Photo prise !');
+  }
+  if (GP.justPressed('RB'))   toggleRecord();            // 🎥 démarrer / arrêter la vidéo
+  if (GP.justPressed('Y') && _insp.pickup) inspectionPickup();   // △/Y : récupérer le dispositif (scène 1)
+  if (GP.justPressed('START') || GP.justPressed('BACK')) toggleList();   // ☰ menu des lieux
+  // △/Y, ○/B et X hors menu : aucune action (les menus sont gérés par
+  // KeyboardMenu : croix directionnelle + X pour valider).
+  return false;
+}
+
+/* ---------- Viseur de visée (zoom L2/LT ou clic droit souris) ---------- */
+function _ensureAimReticle(){
+  if (document.getElementById('dgAimReticle')) return;
+  const reticle = document.createElement('div');
+  reticle.id = 'dgAimReticle';
+  reticle.style.cssText = [
+    'position:fixed','left:50%','top:50%','transform:translate(-50%,-50%)',
+    'width:170px','height:170px','pointer-events:none','z-index:60',
+    'display:none'
+  ].join(';');
+  reticle.innerHTML = `
+    <div style="position:absolute;inset:0;border:3px solid rgba(249,213,139,.7);border-radius:50%;box-shadow:0 0 15px rgba(249,213,139,.4);"></div>
+    <div style="position:absolute;left:50%;top:50%;width:3px;height:28px;background:rgba(249,213,139,1);transform:translate(-50%,-50%);"></div>
+    <div style="position:absolute;left:50%;top:50%;width:28px;height:3px;background:rgba(249,213,139,1);transform:translate(-50%,-50%);"></div>
+    <div style="position:absolute;left:50%;top:50%;width:2px;height:14px;background:#fff;transform:translate(-50%,-50%);"></div>
+    <div style="position:absolute;left:50%;top:50%;width:14px;height:2px;background:#fff;transform:translate(-50%,-50%);"></div>
+  `;
+  document.body.appendChild(reticle);
+}
+
+function _toggleAim(on){
+  _ensureAimReticle();
+  const ret = document.getElementById('dgAimReticle');
+  if (on){
+    _savedFov = M.camera.fov;
+    M.camera.fov = AIM_FOV;
+    M.camera.updateProjectionMatrix();
+    ret.style.display = 'block';
+  } else {
+    if (_savedFov !== null){
+      M.camera.fov = _savedFov;
+      M.camera.updateProjectionMatrix();
+      _savedFov = null;
+    }
+    ret.style.display = 'none';
+  }
 }
 
 /* ---------- Boucle de vol ---------- */
 function update(dt){
   dt = Math.min(dt, 0.05);   // borne pour éviter les sauts
   if (dt <= 0) return;       // frame nulle : évite une vitesse NaN (division par dt plus bas)
+  try { window.SanctuaryMode?.pilotTick?.(dt, rig.position); } catch(_) {}   // personnage visible pendant le vol
+  if (applyGamepad(dt)) return;   // manette : sortie demandée
+
+  // --- Visée zoom : L2/LT manette, ou clic droit souris ---
+  const GP = window.GamepadKit;
+  const gp = GP && GP.connected() ? GP.state() : null;
+  const wantAimGP = gp ? GP.down('LT') : false;   // gâchette gauche (L2 sur beaucoup de manettes)
+  const wantAim = wantAimGP || _aimMouseRight;
+  if (wantAim !== aiming){
+    aiming = wantAim;
+    _toggleAim(aiming);
+  }
+
   const _st = activeState();
   if (_st && _st.mixer){
     const _def = MODELS[activeModelId];
@@ -845,8 +1081,9 @@ function update(dt){
   if (_wallHit) triggerHaptic();            // vibration haptique si le drone touche un mur
   rig.position.y += vel.up * dt;            // déplacement vertical
 
-  // Barrière invisible : bloque le drone avant les collines (inner = 0.70R)
-  const maxR = (M.domeRadius || 600) * 0.62;
+  // Barrière invisible : bloque le drone avant les collines (inner = 0.70R).
+  // Ville v2 : plus de barrière autour de la mosquée, seulement le bord du terrain (≈ 5 km).
+  const maxR = M.newCity ? 4800 : (M.domeRadius || 600) * 0.62;
   const dx = rig.position.x - M.viewTarget.x;
   const dz = rig.position.z - M.viewTarget.z;
   const r = Math.hypot(dx, dz);
@@ -886,7 +1123,8 @@ function update(dt){
   // "Posé" = au sol, sans commande et quasi immobile -> on coupe les hélices
   const noInput = (Math.abs(input.lx) + Math.abs(input.ly) + Math.abs(input.rx) + Math.abs(input.ry)) < 0.1;
   const slow    = (Math.abs(vel.fwd) + Math.abs(vel.side) + Math.abs(vel.up)) < 2;
-  landed = grounded && noInput && slow;
+  if (launchGrace > 0) launchGrace -= dt;
+  landed = grounded && noInput && slow && launchGrace <= 0;
 
   // camYaw se met toujours à jour (sert de cible pour le retour orbital)
   let dyaw = rig.rotation.y - camYaw;
@@ -932,8 +1170,37 @@ function update(dt){
       rig.position.z + Math.cos(camYaw) * ORBIT_HDIST
     );
   }
-  M.camera.position.copy(_camPos);
-  M.camera.lookAt(rig.position.x, rig.position.y + _lookOffY, rig.position.z);
+  // Vue du pilote : fondu vers les yeux du joueur (position fixe), qui suivent le drone ; champ de vision réglé pour garder le drone lisible
+  const wantPilot = PILOT_CAM && launchActive && !aiming;
+  pv += ((wantPilot ? 1 : 0) - pv) * (1 - Math.exp(-3 * dt));
+  if (pv > 0.002) {
+    pilotDir.set(Math.sin(pilotYaw), 0, Math.cos(pilotYaw));
+    _pvCam.copy(pilotPos).addScaledVector(pilotDir, -PV_BACK); _pvCam.y += PV_UP;        // quelques mètres derrière sa tête : le drone qui décolle au-dessus de lui reste dans le champ
+    const dist = _pvCam.distanceTo(rig.position);
+    const tf = fovFor(dist);
+    pvFov += (tf - pvFov) * (1 - Math.exp(-6 * dt));
+    _pvLook.copy(rig.position); _pvLook.y -= aimDrop(dist, pvFov);          // le drone apparaît dans la moitié haute : la télécommande occupe le bas
+    { const dx = _pvLook.x - _pvCam.x, dz = _pvLook.z - _pvCam.z, hd = Math.max(0.5, Math.hypot(dx, dz)), el = Math.atan2(_pvLook.y - _pvCam.y, hd);
+      const ce = Math.max(-0.7, Math.min(0.5, el)); if (ce !== el) _pvLook.y = _pvCam.y + Math.tan(ce) * hd; }      // jamais de regard vertical (pas de bascule) : le drone peut sortir par le haut
+    _camPos.lerp(_pvCam, pv);
+    M.camera.position.copy(_camPos);
+    M.camera.lookAt(rig.position.x + (_pvLook.x - rig.position.x) * pv, rig.position.y + _lookOffY + (_pvLook.y - rig.position.y - _lookOffY) * pv, rig.position.z + (_pvLook.z - rig.position.z) * pv);
+    M.camera.fov = fovBase + (pvFov - fovBase) * pv; M.camera.updateProjectionMatrix();
+  } else {
+    M.camera.position.copy(_camPos);
+    M.camera.lookAt(rig.position.x, rig.position.y + _lookOffY, rig.position.z);
+  }
+  const pilotOn = launchActive && !aiming;                  // télécommande + petites interfaces : en vol depuis le sac, hors visée
+  if (pilotOn !== remote.visible) { remote.show(pilotOn); hud.classList.toggle('dg-pilot', pilotOn); document.body.classList.toggle('dg-flight', pilotOn); if (pilotOn) styleToolbar(); }
+  { const pr = window.SanctuaryMode?.vehicle?.root?.(); if (pr) pr.visible = !(pv > 0.35); }          // vue à la première personne : le corps du pilote n'est pas dans le champ
+  if (remote.visible) {
+    const dist0 = rig.position.distanceTo(_prevPos);
+    droneCam.position.copy(_dcOff).applyQuaternion(rig.quaternion).add(rig.position);
+    droneCam.quaternion.copy(rig.quaternion); droneCam.rotateX(-0.14); droneCam.updateMatrixWorld(true);
+    const _ag = (minY > -Infinity) ? (minY - CLEARANCE) : M.viewTarget.y;
+    remote.update(dt, { lx: input.lx, ly: input.ly, rx: input.rx, ry: input.ry, altM: rig.position.y - _ag, speedMs: dist0 / dt, headingDeg: ((THREE.MathUtils.radToDeg(rig.rotation.y) % 360) + 360) % 360, battery },
+      ((window.Quality && window.Quality.level) || 'mid') !== 'low' ? { renderer: M.renderer, scene: M.scene, camera: droneCam, THREE } : null);
+  }
 
   // --- Son du drone ---
   const dist = rig.position.distanceTo(_prevPos);
@@ -951,22 +1218,39 @@ function update(dt){
     const headingDeg = ((THREE.MathUtils.radToDeg(rig.rotation.y) % 360) + 360) % 360;
     elHeading.textContent = Math.round(headingDeg) + '°';
     elFan.style.transform = `rotate(${headingDeg}deg)`;
+    if (elNeedle) elNeedle.style.transform = `rotate(${-headingDeg}deg)`;          // l'aiguille garde le nord
     elAngle.textContent = (Math.abs(vel.fwd) * 0.25).toFixed(1) + '°';
     elSpeed.textContent = speedMph + ' MPH';
-    elAlt.textContent   = 'H : ' + Math.round(rig.position.y - (M.viewTarget.y)) + 'M';
+    const _groundY = (minY > -Infinity) ? (minY - CLEARANCE) : M.viewTarget.y;
+    elAlt.textContent   = 'H : ' + Math.max(0, Math.round(rig.position.y - _groundY)) + 'M';
 
     battery = Math.max(0, battery - 0.01);
     elBatt.textContent = Math.round(battery) + '%';
-    const bars = 1 + Math.round(Math.random()*3);
+    const bars = Math.max(0, Math.min(4, Math.ceil(battery / 25)));            // les barres montrent la batterie
     elSignal.textContent = '▮'.repeat(bars) + '▯'.repeat(4-bars);
   }
 
   tickScan(dt);
+  inspectionTick(dt);
 
+  let _fovTrue = null;
+  if (_camBlend) {                                            // fondu depuis la caméra du personnage (sortie du sac) vers la caméra du drone
+    _camBlend.t += dt;
+    const u = Math.min(1, _camBlend.t / CAM_BLEND_DUR), k = u * u * (3 - 2 * u);
+    _fovTrue = M.camera.fov;
+    _camQ.copy(M.camera.quaternion);
+    M.camera.position.lerpVectors(_camBlend.pos, M.camera.position, k);
+    M.camera.quaternion.slerpQuaternions(_camBlend.quat, _camQ, k);
+    const f = _camBlend.fov + (_fovTrue - _camBlend.fov) * k;
+    if (Math.abs(f - _fovTrue) > 0.01) { M.camera.fov = f; M.camera.updateProjectionMatrix(); } else _fovTrue = null;
+    if (u >= 1) _camBlend = null;
+  }
   M.renderer.render(M.scene, M.camera);
+  if (_fovTrue !== null) { M.camera.fov = _fovTrue; M.camera.updateProjectionMatrix(); }
 }
 
 btnQuit?.addEventListener('click', exit);
+document.getElementById('dgMapPill')?.addEventListener('click', () => { try { window.CityMap?.toggle?.(); } catch (_) {} });
 
 /* ---------- Joysticks (tactile + souris) ---------- */
 function makeStick(el, onMove){
@@ -993,11 +1277,11 @@ function makeStick(el, onMove){
 }
 
 makeStick(document.getElementById('dgStickL'), (x,y)=>{
-  input.lx=x; input.ly=y;
+  touchInput.lx=x; touchInput.ly=y;
 });
 const STICK_R_SENS = 0.45; // réduit la sensibilité du joystick droit
 makeStick(document.getElementById('dgStickR'), (x,y)=>{
-  input.rx=x*STICK_R_SENS; input.ry=y*STICK_R_SENS;
+  touchInput.rx=x*STICK_R_SENS; touchInput.ry=y*STICK_R_SENS;
 });
 
 /* ---------- Outil Photo ---------- */
@@ -1006,6 +1290,7 @@ function takePhoto(){
   M.renderer.render(M.scene, M.camera);
   const url = M.renderer.domElement.toDataURL('image/png');
   photos.push(url);
+  inspectionPhoto();
   // Téléchargement immédiat
   const a = document.createElement('a');
   a.href = url; a.download = `djenne-drone-${photos.length}.png`;
@@ -1043,9 +1328,11 @@ function toggleRecord(){
     a.href = URL.createObjectURL(blob); a.download = 'djenne-drone.webm'; a.click();
     btnVideo.classList.remove('is-active');
     recorder = null;
+    window.GamepadKit?.toast?.('🎥 Vidéo enregistrée');
   };
   recorder.start();
   btnVideo.classList.add('is-active');
+  window.GamepadKit?.toast?.('🎥 Enregistrement en cours…');
 }
 btnVideo?.addEventListener('click', toggleRecord);
 
@@ -1080,7 +1367,14 @@ function toggleList(){
     b.addEventListener('click', ()=> flyToPoi(p));
     poiPanel.appendChild(b);
   });
+  // Sortie du mode pilotage depuis le menu (utile à la manette).
+  const quit = document.createElement('button');
+  quit.type = 'button';
+  quit.textContent = '↩ Quitter';
+  quit.addEventListener('click', ()=>{ poiPanel.hidden = true; exit(); });
+  poiPanel.appendChild(quit);
   poiPanel.hidden = false;
+  window.KeyboardMenu?.move?.(1);   // focus sur le 1er item (manette)
 }
 btnList?.addEventListener('click', toggleList);
 
@@ -1170,6 +1464,7 @@ function _makeOutdoorIR(ctx){
 function sndStart(){
   if (_sndOn) return;
   _sndCtx = new (window.AudioContext || window.webkitAudioContext)();
+  window.GameAudio?.ctx(_sndCtx, 'drone');
   if (_sndCtx.state === 'suspended') _sndCtx.resume();
 
   // Chaîne de sortie : Master → Compresseur → Destination
@@ -1316,4 +1611,160 @@ function sndStop(){
   }, 900);
 }
 
-window.DroneGame = { enter, exit, setModel, getModel: () => activeModelId };
+/* ==========================================================
+   SCÈNES 0-1 — VOL D'INSPECTION (bible de scénario, chapitre 1)
+   ----------------------------------------------------------
+   Après l'ouverture (taama.acte = '0:done'), le joueur pilote le drone et inspecte la mosquée, en commençant par le toit.
+   • objectif affiché en haut de l'écran tant que le dispositif 1 n'est pas récupéré ;
+   • repérage : drone à ≤ 12 m du dispositif et dispositif dans le champ (ou photo prise dans cette zone) →
+     événement « dispositif1:spotted », taama.d1.spotted = '1', radio, séquence 4 terminée ;
+   • ~60 s sans repérage : radio d'indice ;
+   • ≤ 6 m : Dispositif1.activate() (le dispositif s'illumine) ; ≤ 3 m et activé : « E / ▲ Récupérer le dispositif » → Dispositif1.take(),
+     puis le drone revient sur le personnage (à pied, devant la mosquée, près du pick-up).
+   ========================================================== */
+const INSP_SPOT_R = 12, INSP_ACT_R = 6, INSP_TAKE_R = 3, INSP_HINT_S = 60;
+const _insp = { on: false, spotted: false, activated: false, pickup: false, taking: false, t: 0, hinted: false, ph: 0 };
+const _inspV = new THREE.Vector3();
+let _inspUi = null, _inspTakeUi = null;
+const _lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+const _lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+const _radio = (key) => { try { const r = window.Tapama?.RADIO?.[key]; if (r) window.Tapama.radio({ text: r.text, mood: r.mood }); } catch (_) {} };
+
+function inspectionWanted(){
+  if (_lsGet('taama.dispositif1') === '1') return false;
+  const a = _lsGet('taama.acte');
+  return a === '0:done' || a === '1:vol';
+}
+
+function _inspEl(id, css, html){
+  const d = document.createElement('div');
+  d.id = id; d.style.cssText = css; d.innerHTML = html; d.style.display = 'none';
+  document.body.appendChild(d);
+  return d;
+}
+
+function inspectionEnter(){
+  _insp.on = inspectionWanted();
+  _insp.spotted = _lsGet('taama.d1.spotted') === '1';
+  _insp.activated = false; _insp.pickup = false; _insp.taking = false; _insp.t = 0; _insp.hinted = false;
+  if (!_insp.on) return;
+  if (_lsGet('taama.acte') === '0:done') {
+    _lsSet('taama.acte', '1:vol');
+    setTimeout(() => { if (active && _insp.on) _radio('inspection'); }, 1800);
+  }
+  if (!_inspUi) {
+    _inspUi = _inspEl('dgInspect',
+      'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:58;padding:7px 16px;border-radius:14px;max-width:86vw;text-align:center;' +
+      'background:rgba(45,40,34,.82);border:1px solid rgba(249,213,139,.8);color:#F8F3EA;font:700 14px "Open Sans",system-ui,sans-serif;pointer-events:none',
+      '<span style="color:#F9D58B;margin-right:8px">◎</span><span data-t></span>');
+    _inspTakeUi = _inspEl('dgTakePrompt',
+      'position:fixed;left:50%;top:34%;transform:translateX(-50%);z-index:70;padding:10px 22px;border-radius:16px;cursor:pointer;' +
+      'background:rgba(85,65,93,.92);border:2px solid #F9D58B;color:#F8F3EA;font:700 16px "Open Sans",system-ui,sans-serif;box-shadow:0 0 18px rgba(249,213,139,.45)',
+      '<span style="color:#F9D58B;margin-right:10px">E / ▲</span><span data-t></span>');
+    _inspTakeUi.addEventListener('click', () => { if (_insp.pickup) inspectionPickup(); });
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyE' && !e.repeat && active && _insp.pickup) { e.stopImmediatePropagation(); inspectionPickup(); }
+    }, true);
+  }
+}
+
+function inspectionExit(){
+  _insp.on = false; _insp.pickup = false;
+  if (_inspUi) _inspUi.style.display = 'none';
+  if (_inspTakeUi) _inspTakeUi.style.display = 'none';
+}
+
+function inspectionSpot(){
+  if (_insp.spotted) return;
+  _insp.spotted = true;
+  _lsSet('taama.d1.spotted', '1');
+  try { window.dispatchEvent(new CustomEvent('dispositif1:spotted')); } catch (_) {}
+  _radio('inspectionRepere');
+  try { window.GameUI?.completeSequence?.(4); } catch (_) {}
+}
+
+function inspectionPhoto(){
+  if (!_insp.on || _insp.spotted) return;
+  const D = window.Dispositif1;
+  if (!D || !D.built || D.taken) return;
+  if (rig.position.distanceTo(D.position) <= INSP_SPOT_R * 1.5) inspectionSpot();   // photo prise dans la zone
+}
+
+function inspectionTick(dt){
+  if (!_insp.on) return;
+  const D = window.Dispositif1;
+  if (D && D.taken) { _insp.pickup = false; return; }
+  _insp.t += dt;
+  if (!_insp.spotted && !_insp.hinted && _insp.t > INSP_HINT_S && !window.Tapama?.isBusy?.()) { _insp.hinted = true; _radio('inspectionIndice'); }
+  if (!D || !D.built || _insp.taking) { _insp.pickup = false; return; }
+
+  _inspV.copy(D.position); _inspV.y += 0.5;
+  const dist = rig.position.distanceTo(_inspV);
+
+  if (!_insp.spotted && dist <= INSP_SPOT_R) {
+    _inspV.project(M.camera);                                   // dispositif dans le champ de la caméra ?
+    if (_inspV.z < 1 && Math.abs(_inspV.x) < 1 && Math.abs(_inspV.y) < 1) inspectionSpot();
+  }
+  if (!_insp.activated && dist <= INSP_ACT_R) {
+    _insp.activated = true;
+    try { D.activate(); } catch (_) {}
+  }
+  _insp.pickup = !!(D.active && dist <= INSP_TAKE_R && !window.Tapama?.isBusy?.());
+  _insp.ph += dt;
+  if (_insp.ph > 0.1) {
+    _insp.ph = 0;
+    const show = hud.classList.contains('is-on');
+    if (_inspUi) {
+      _inspUi.querySelector('[data-t]').textContent = _t(_insp.spotted ? 'Rapproche-toi du dispositif' : 'Inspecte la mosquée en commençant par le haut');
+      _inspUi.style.display = show ? '' : 'none';
+    }
+    if (_inspTakeUi) {
+      _inspTakeUi.querySelector('[data-t]').textContent = _t('Récupérer le dispositif');
+      _inspTakeUi.style.display = (show && _insp.pickup) ? '' : 'none';
+    }
+  }
+}
+
+function inspectionPickup(){
+  const D = window.Dispositif1;
+  if (!_insp.on || !_insp.pickup || _insp.taking || !D) return;
+  _insp.taking = true; _insp.pickup = false;
+  if (_inspTakeUi) _inspTakeUi.style.display = 'none';
+  D.take();
+  const done = () => {
+    window.removeEventListener('dispositif1:taken', done);
+    if (_lsGet('taama.acte') === '1:vol') _lsSet('taama.acte', '1:d1');
+    // le drone revient sur le personnage, à pied devant la mosquée (pick-up garé à côté) ; sans personnage, retour à la vue d'ensemble puis sanctuaire
+    setTimeout(() => {
+      if (!active) return;
+      if (launchActive && returnToCharacter()) return;
+      exit();
+      try { document.querySelector('[data-action="interior"]')?.click(); } catch (_) {}
+    }, 2200);
+  };
+  window.addEventListener('dispositif1:taken', done);
+}
+
+window.DroneGame = {
+  enter, exit, setModel, getModel: () => activeModelId,
+  // Les tuiles de la maquette arrivent/sont libérées en cours de jeu :
+  // on force la reconstruction de la liste des colliders au prochain tick.
+  invalidateColliders: () => { colliders = null; },
+  isActive: () => active,
+  debugPilot: () => ({ pv, pvFov, fov: M && M.camera.fov, vis: remote.visible, pos: rig.position.toArray(), aiming, launchActive, landed }),
+  // commandes tactiles (app/touch-controls.js) : sticks virtuels (-1..1, y écran vers le bas) et retour au personnage
+  setTouchAxes: (lx, ly, rx, ry) => { touchInput.lx = lx; touchInput.ly = ly; touchInput.rx = rx * STICK_R_SENS; touchInput.ry = ry * STICK_R_SENS; },
+  launched: () => launchActive,
+  preload: () => { ensureModel(activeModelId, attachActive); },          // charge le modèle du drone à l'avance : il apparaît aussitôt au premier vol
+  modelReady: () => { const st = modelState[activeModelId]; return !!(st && st.loaded); },
+  returnToCharacter: () => returnToCharacter(),
+  // diagnostic : téléporte le drone (tests du vol d'inspection)
+  debugTeleport: (x, y, z) => { rig.position.set(x, y, z); vel.fwd = vel.side = vel.up = 0; },
+  inspection: () => ({ ..._insp, pos: rig.position.toArray() }),
+};
+
+// le modèle du drone se charge dès que le jeu a démarré (197 Ko) : plus d'attente au premier lancement
+setTimeout(() => { try { if (window.MosqueScene) ensureModel(activeModelId, attachActive); } catch (_) {} }, 2500);
+
+// Une tuile chargée ou libérée change le décor solide : on reconstruit les colliders.
+window.addEventListener('mosque:tiles-changed', () => { colliders = null; });

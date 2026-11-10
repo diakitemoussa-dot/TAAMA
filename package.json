@@ -1,14 +1,49 @@
 {
+  "name": "mosquee-djenne-copie",
+  "private": true,
+  "description": "Les Gardiens de Djenné — expérience 3D/AR de la Grande Mosquée",
+  "scripts": {
+    "serve": "node _serve.cjs",
+    "tiles": "node tools/split-tiles.mjs --cell 96",
+    "tiles:check": "node tools/validate-tiles.mjs",
+    "test:tiles": "node tools/browser-check.mjs http://localhost:8123/tests/tiles-check.html",
+    "test:compare": "node tools/browser-check.mjs http://localhost:8123/tests/compare.html",
+    "test:app": "node tools/app-check.mjs",
+    "test:aim-logic": "node tests/aim-system.test.mjs",
+    "test:anim-logic": "node tests/anim-state.test.mjs",
+    "test:camera-logic": "node tests/camera-rig.test.mjs",
+    "test:drone-n-logic": "node tests/drone-n-ai.test.mjs",
+    "test:drone-n": "node tools/drone-n-ai-check.mjs",
+    "test:aim": "node tools/aim-check.mjs",
+    "test:quality-logic": "node tests/device-quality.test.mjs",
+    "test:tapama-logic": "node tests/tapama-core.test.mjs",
+    "test:tapama": "node tools/tapama-check.mjs",
+    "test:save-logic": "node tests/game-save.test.mjs",
+    "test:player-logic": "node tests/player-profile.test.mjs",
+    "test:i18n-logic": "node tests/i18n.test.mjs",
+    "test:audio-logic": "node tests/game-audio.test.mjs",
+    "test:map-logic": "node tests/destinations-map.test.mjs",
+    "build:map": "node tools/build-map-data.mjs",
+    "test:server-logic": "node tests/players-handler.test.mjs",
+    "build:ui": "node tools/build-game-ui.mjs",
+    "test:ui": "node tools/game-ui-check.mjs",
+    "audit": "node tools/audit.mjs",
+    "audit:navigateur": "node tools/audit.mjs --browser"
+  },
   "devDependencies": {
     "@gltf-transform/core": "^4.4.0",
     "@gltf-transform/extensions": "^4.4.0",
     "@gltf-transform/functions": "^4.4.0",
     "draco3d": "^1.5.7",
     "meshoptimizer": "^1.1.1",
-    "vite": "^8.1.0"
+    "puppeteer-core": "^25.16.0",
+    "topojson-client": "^3.1.0",
+    "vite": "^8.1.0",
+    "world-atlas": "^2.0.2"
   },
   "dependencies": {
     "animejs": "^4.5.0",
+    "leaflet": "^1.9.4",
     "three": "^0.165.0",
     "three-mesh-bvh": "^0.7.8"
   }
