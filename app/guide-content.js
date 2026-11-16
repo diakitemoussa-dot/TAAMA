@@ -159,7 +159,8 @@ export const OBJECTIVES = {
   ramasser: L('Rapproche-toi du dispositif et ramasse-le !', 'Get close to the device and pick it up!'),
   labo: L('Va au cercle jaune : c’est mon labo !', 'Go to the yellow circle: it’s my lab!'),
   devant: L('Retourne devant la grande mosquée.', 'Go back to the big mosque.'),
-  base: L('Va à la base des robots avec ton gadget !', 'Go to the robots’ base with your gadget!'),
+  tombe: L('Va à la tombe de Tapama : le dispositif t’attend.', 'Go to Tapama’s tomb: the device is waiting for you.'),
+  biblio: L('Lis les livres de Barey So, retiens les phrases.', 'Read the books of Barey So, keep the sentences.'),
   retour: L('Rapporte le dispositif au cercle jaune.', 'Bring the device back to the yellow circle.'),
   fin: L('Bravo {nom} ! Choisis ta prochaine aventure sur la carte.', 'Well done {nom}! Pick your next adventure on the map.'),
 };

@@ -1046,7 +1046,7 @@ function toggleSubtitles() {
 
 /* Nouvelle partie : clés de progression de l'histoire à effacer (hors profil joueur taama.player.v1) */
 const NEW_GAME_KEYS = ['taama.dispositif1', 'taama.dispositif2', 'taama.vol', 'taama.piste', 'taama.revelation', 'taama.acte', 'taama.d1.spotted',
-  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.chapitre1', 'taama.next'];
+  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.drone.phrases'];
 
 let playClock = 0;
 let progressTick = 0;

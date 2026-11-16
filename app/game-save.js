@@ -214,9 +214,9 @@ const OBJECTIVES = {
   5: 'Trouver le premier dispositif et l’activer.',
   6: 'Suivre l’indice de Tapama jusqu’au deuxième emplacement.',
   7: 'Retourner à la Grande Mosquée avec le pick-up : Tapama a un mauvais pressentiment.',   // séance de test : l'ancien texte (« agents de NÉANTIS ») faisait chercher une poursuite qui n'existe pas encore
-  8: 'Poursuivre les agents dans les ruelles.',
-  9: 'Repérer l’installation avec le drone et trouver un chemin.',
-  10: 'Récupérer le deuxième dispositif et quitter la base.',
+  8: 'Récupérer le dispositif sur la tombe de Tapama Djenepo.',
+  9: 'Lire les livres de Barey So et retenir les bonnes phrases.',
+  10: 'Retourner au laboratoire de Tapama avec les phrases retenues.',
   11: 'Activer les deux dispositifs ensemble avec Tapama.',
   12: 'Surveiller les prochaines pistes.',
   13: 'Revoir les éléments découverts et choisir la suite.',

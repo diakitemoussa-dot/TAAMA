@@ -173,6 +173,12 @@ function checkFini() {
   if (state.fini || lus().length < BOOKS.length) return;
   state.fini = true;
   window.GamepadKit?.toast?.(t('Tous les livres sont lus. Tapama t’attend à son laboratoire.'));
+  try { localStorage.setItem('taama.dispositif2', '1'); } catch (_) {}
+  try { window.GameUI?.completeSequence?.(9); window.GameUI?.completeSequence?.(10); } catch (_) {}
+  // Tapama : « Rejoins-moi » ; à la fin de la bulle, la carte s'ouvre sur le labo (le stade 2 du labo décortique les phrases)
+  const call = { text: 'Tu as tout lu, {nom} ! Rejoins-moi à mon laboratoire avec les phrases que tu as retenues : on va les décortiquer ensemble.', mood: 'souriante', duration: 9 };
+  const go = () => { try { localStorage.setItem('taama.acte', '3:retour'); window.CityMap?.openTo?.('deuxieme'); } catch (_) {} };
+  if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 10000); }
   window.dispatchEvent(new CustomEvent('bibliotheque:fini', { detail: { phrases: DroneBase.phrases().length } }));
 }
 

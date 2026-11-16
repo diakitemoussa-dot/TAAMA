@@ -175,6 +175,7 @@ function finishTake() {
   }), 900);
 }
 window.addEventListener('neantis:dispositif', () => badge(2, 'Dispositif 2'));
+window.addEventListener('bibliotheque:fini', () => badge(2, 'Dispositif 2'));
 
 /* ==========================================================
    CHEF D'ORCHESTRE — enchaînement des scènes S2 → S14 (bible : docs/scenario-chapitre1.md)
@@ -182,7 +183,7 @@ window.addEventListener('neantis:dispositif', () => badge(2, 'Dispositif 2'));
    ========================================================== */
 const ACTE = 'taama.acte', LAB1 = 'taama.lab1', LAB2 = 'taama.lab2', DEV2 = 'taama.dispositif2', DOSSIER = 'taama.dossier', GADGET = 'taama.gadget';
 const VOL_KEY = 'taama.vol', REV_KEY = 'taama.revelation', GADGET_PENDING = 'taama.gadget.pending', INTRO_CAM = 'taama.intro.cam';
-const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', REV_KEY, 'taama.chapitre1', 'taama.next'];
+const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.drone.phrases'];
 const CIRCLE = { x: -175.012, z: -219.890, r: 1.8, away: 6 };      // cercle jaune = labo de Tapama (même rayon que PORTAL_RADIUS) ; verrou levé à 6 m
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };

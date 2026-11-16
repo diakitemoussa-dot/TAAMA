@@ -42,7 +42,8 @@ test('objectif selon l’avancement de l’histoire', () => {
   assert.equal(id({ acte: '1:d1', spotted: '1', dispositif1: '1' }), 'labo');
   assert.equal(id({ dispositif1: '1', lab1: 'open' }), 'labo', 'labo commencé mais pas fini');
   assert.equal(id({ dispositif1: '1', lab1: 'done', vol: null }), 'devant');
-  assert.equal(id({ dispositif1: '1', lab1: 'done', vol: '1', gadget: '1' }), 'base');
+  assert.equal(id({ dispositif1: '1', lab1: 'done', vol: '1', gadget: '1' }), 'tombe', 'gadget en poche : la tombe de Tapama');
+  assert.equal(id({ dispositif1: '1', lab1: 'done', vol: '1', gadget: '1', tombe: '1' }), 'biblio', 'dispositif de la tombe pris : les livres de Barey So');
   assert.equal(id({ dispositif1: '1', lab1: 'done', vol: '1', gadget: '1', dispositif2: '1' }), 'retour');
   assert.equal(id({ dispositif2: '1', lab2: 'done', chapitre1: 'done' }), 'fin');
   assert.equal(id({ chapitre1: 'done' }), 'fin');
@@ -52,7 +53,7 @@ test('sujet proposé selon l’avancement : il existe dans le guide', () => {
   const topics = new Set(C.PAGES.map((p) => p.id));
   for (const o of Object.values(L.OBJ)) { assert.ok(topics.has(o.topic), `${o.id} → ${o.topic}`); assert.ok(C.OBJECTIVES[o.id], `texte de ${o.id}`); }
   assert.equal(L.suggestTopic({}), 'drone');
-  assert.equal(L.suggestTopic({ gadget: '1' }), 'gadget');
+  assert.equal(L.suggestTopic({ gadget: '1' }), 'map');
 });
 
 test('état mémorisé : vu, passé, rejouer, données abîmées', () => {
