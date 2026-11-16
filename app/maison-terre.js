@@ -2,7 +2,7 @@
    MAISON DE TERRE — bibliothèque en terre inspirée de la mosquée de Djenné
    ----------------------------------------------------------
    Modèle : assets/models/maison-terre.glb (source : blender/maison-terre-bibliotheque.blend).
-   Placée au bord du fleuve (berge à environ -204 / 180 m du repère du jeu), à la place de la base NÉANTIS
+   Placée au bord du fleuve, à la position choisie dans Blender (vide « Bibliotheque »), à la place de la base NÉANTIS
    qui est masquée (voir neantis-base.js : la logique de la base reste en mémoire).
    API : window.MaisonTerre { loaded, root, position }.
    ========================================================== */
@@ -11,9 +11,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const M = window.MosqueScene;
-const URL = 'assets/models/maison-terre.glb?v=1';
+const URL = 'assets/models/maison-terre.glb?v=2';
 const DRACO = 'assets/vendor/three/examples/jsm/libs/draco/';
-const SPOT = { x: -204, z: 180 };                 // berge du fleuve (repère du jeu)
+const SPOT = { x: -640, z: -405 };               // position placée dans Blender (vide « Bibliotheque ») convertie dans le repère du jeu ; y = sol
 
 const state = { loaded: false, root: null, position: new THREE.Vector3(), requested: false };
 
