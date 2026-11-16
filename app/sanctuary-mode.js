@@ -2345,6 +2345,13 @@ function _updatePlayerAnimation(dt, moving, running) {
    Le jeu cherche des clips nommés d'après l'ancien personnage. Les clips qui existent déjà sous le même
    nom (idle, walk, run, jump, pistol strafe right, pistol walk backward) n'ont besoin de rien ; absents :
    idle_look et control_idle retombent sur « idle » (voir _playAction), shoot_gadget_side sur shoot_gadget. */
+// Violence retirée : clips de combat exclus ; poses armées redirigées vers les poses sans arme
+const VIOLENT_CLIP = /punch|kick|whip|hit reaction|death|dying|rifle|pistol|shoot|gadget|sniper|reload|melee|cross|elbow|fire|aim|kneel|\btir\b/;
+const NO_VIOLENCE_KEY_MAP = {
+  'pistol idle': 'idle', 'pistol walk': 'walk', 'pistol run': 'run', 'pistol walk backward': 'walk backward',
+  'pistol strafe': 'strafe left', 'pistol strafe right': 'strafe right', 'pistol jump': 'jump', 'pistol kneel': 'crouch idle',
+  'pistol kneeling idle': 'crouch idle',
+};
 const SAHEL_CLIP_ALIASES = {
   'dying': 'death',
   'pistol kneeling idle': 'pistol kneel',
@@ -2461,10 +2468,15 @@ function _loadPlayerModel() {
     M.scene.add(_playerRoot);
 
     _playerMixer = new THREE.AnimationMixer(model);
+    // Violence retirée : pas de clips de tir, de coup, de mort ni de fusil. Les poses armées (marche, course…) deviennent les poses sans arme.
     gltf.animations.forEach((clip) => {
       const key = String(clip.name || '').trim().toLowerCase();
-      if (key) _playerActions[key] = _playerMixer.clipAction(clip);
+      if (!key || NO_VIOLENCE_KEY_MAP[key] || VIOLENT_CLIP.test(key)) return;
+      _playerActions[key] = _playerMixer.clipAction(clip);
     });
+    for (const [armed, unarmed] of Object.entries(NO_VIOLENCE_KEY_MAP)) {
+      if (_playerActions[unarmed]) _playerActions[armed] = _playerActions[unarmed];
+    }
     _installSahelClips(gltf.animations);
     _loadFlyingClip();
 
