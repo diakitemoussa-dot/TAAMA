@@ -4,13 +4,13 @@
    ========================================================== */
 
 import { PAGES, UI } from './guide-content.js?v=51';
-import * as A from './guide-art.js?v=50';
+import * as A from './guide-art.js?v=51';
 import { t, getLang, onLangChange } from './i18n.js?v=1';
 import { core as K } from './guide-ui.js?v=51';
 
 if (!document.getElementById('gdCss2')) {
   const l = document.createElement('link');
-  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=50';
+  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=51';
   document.head.appendChild(l);
   await new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 }

@@ -13,14 +13,14 @@
 
 import * as LG from './guide-logic.js?v=51';
 import { PAGES, OBJECTIVES, UI } from './guide-content.js?v=51';
-import * as A from './guide-icons.js?v=50';
+import * as A from './guide-icons.js?v=51';
 import { t, getLang, onLangChange } from './i18n.js?v=1';
 import { fillName } from './player-profile.js?v=1';
 
 /* ---------- feuille de style (chargée avec le module) ---------- */
 if (!document.getElementById('gdCss')) {
   const l = document.createElement('link');
-  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=50';
+  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=51';
   document.head.appendChild(l);
   await new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 }
@@ -94,7 +94,7 @@ detect();
    ÉCRAN « COMMENT JOUER » : module séparé (guide-screen.js), chargé seulement à l'ouverture
    ========================================================== */
 let scr = null;
-const loadScreen = () => scr || (scr = import('./guide-screen.js?v=50').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
+const loadScreen = () => scr || (scr = import('./guide-screen.js?v=51').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
 const setOpen = (b) => { isOpen = b; };
 const open = (topic) => loadScreen().then((s) => s.open(topic));
 const start = () => loadScreen().then((s) => s.start());
@@ -119,7 +119,7 @@ let artMod = null, artP = null;
 const screenCss = () => {
   if (document.getElementById('gdCss2')) return Promise.resolve();
   const l = document.createElement('link');
-  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=50';
+  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=51';
   document.head.appendChild(l);
   return new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 };
@@ -131,7 +131,7 @@ const lowData = () => {
     return !!(g.saveData || c.saveData || /^(slow-)?2g$/.test(c.effectiveType || '') || ls('taama.saveData') === '1');
   } catch (_) { return false; }
 };
-const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=50'), screenCss()]).then(([m]) => (artMod = m)));
+const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=51'), screenCss()]).then(([m]) => (artMod = m)));
 
 const coachRoot = () => {
   if (cRoot) return cRoot;
