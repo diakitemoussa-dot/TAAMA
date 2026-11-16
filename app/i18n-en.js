@@ -568,6 +568,7 @@ export const EN = {
   'Quitter le mode jeu': 'Leave game mode',
   'Galerie': 'Gallery',
   'Photo': 'Photo',
+  'Mosquée en hologramme': 'Hologram mosque',
   'Points d’intérêt': 'Points of interest',
   'Changer de drone': 'Change drone',
   'Enregistrer une vidéo': 'Record a video',
