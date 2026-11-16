@@ -541,3 +541,6 @@
 
 /* barre photo / menu / vidéo en bas : retirée sur grand écran */
 @media (min-width: 900px) { .sn-toolbar { display: none !important; } }
+
+/* Violence retirée : plus de bouton de tir, de réticule de visée ni de lunette (code d'origine dans archive-violence/) */
+#snFire, #snFireSide, #snAimReticle, #snScope { display: none !important; }

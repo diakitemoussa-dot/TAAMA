@@ -2634,7 +2634,8 @@ function _gadgetLineClear(origin, target) {
 
 const _tgtTmp = new THREE.Vector3();
 /* Le gadget reste caché : il est débloqué à la fin du dossier NÉANTIS (S8, app/dispositif1.js écrit taama.gadget = '1') */
-function _gadgetUnlocked() { try { return localStorage.getItem('taama.gadget') === '1'; } catch (_) { return false; } }
+// Violence retirée : le gadget de tir n'est plus jamais débloqué (visée, lunette, tir désactivés). Code d'origine : archive-violence/app/sanctuary-mode.js
+function _gadgetUnlocked() { return false; }
 
 function _startGadgetShot(side) {
   if (_inVehicle() || _swimming) return;
