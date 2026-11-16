@@ -4356,6 +4356,7 @@ function _resetPlayerHealth() {
 // neutralisé qu'à zéro.
 /** Arc jaune du côté du tireur (Sahel Game) : `from` = origine du tir ; power 1 = touché, moins = balle qui frôle. */
 function _indicateShotFrom(src, from, power) {
+  return;   // Violence retirée : plus d'arcs de tir (code d'origine : archive-violence/)
   if (!_hitInd) _hitInd = new HitIndicators();
   if (src._hitId == null) src._hitId = `dn${++_hitIdN}`;       // un même drone réutilise le même arc
   _hitInd.shotFrom(src._hitId, from, power);
@@ -4376,6 +4377,7 @@ function _droneNAssistTalk() {
 }
 
 function _damagePlayerByDroneN(amount) {
+  return;   // Violence retirée : le personnage ne peut plus être touché (code d'origine : archive-violence/)
   if (_playerDying || _inVehicle()) return;                 // au volant, le joueur n'est pas touché par les tirs de drones
   if (_droneNAssistSkip()) { _triggerCameraShake(0.06, 0.03); return; }   // la balle frôle : pas de dégât
   _playerHp = Math.max(0, _playerHp - amount);
@@ -4403,6 +4405,7 @@ function _updatePlayerHealth(dt) {
 
 // Le personnage est touché : neutralisation et animation Dying.
 function _neutralizePlayerByDroneN() {
+  return;   // Violence retirée : plus de neutralisation ni d'animation Dying (code d'origine : archive-violence/)
   _playerDying = true;
   _aimMouseRight = false; _resetAim();
   _playerDieT = 0;
