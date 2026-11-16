@@ -7,25 +7,25 @@ const OPACITY = 0.32;
 const saved = new Map();            // mesh → matériau(x) d'origine
 let on = false;
 
-/* Une teinte par partie : on distingue au premier coup d'œil les murs, minarets, piliers, portes, etc. */
-const COLORS = [
-  [/^Mosquee_Base/i, 0x35c8ff],      // corps de la mosquée : bleu
-  [/^Mosquee_Cloture/i, 0x2de2b8],   // enceinte : turquoise
-  [/^Minarets/i, 0xffb347],          // minarets : orange
-  [/^Torons/i, 0xff7a59],            // torons (poutres) : corail
-  [/^Piliers/i, 0xb388ff],           // piliers : violet
-  [/^Poteaux/i, 0xe27bff],           // poteaux : rose
-  [/^Porte/i, 0xffe14d],             // portes : jaune
-  [/^Tombeaux/i, 0xff5d8f],          // tombeaux : rouge rosé
-  [/^Canaris/i, 0x7dff6a],           // canaris : vert
-  [/^Tapis/i, 0xffffff],             // tapis : blanc
-  [/^Oeufs|^Supports_Oeufs/i, 0xfff2a8],
+/* Une seule couleur (bleu hologramme), mais des nuances différentes selon la partie : [motif, clarté 0..1, opacité] */
+const SHADES = [
+  [/^Mosquee_Base/i, 0.50, 0.26],    // corps : bleu moyen
+  [/^Mosquee_Cloture/i, 0.34, 0.30],  // enceinte : bleu profond
+  [/^Minarets/i, 0.74, 0.40],        // minarets : bleu clair
+  [/^Torons/i, 0.88, 0.60],          // torons : presque blanc
+  [/^Piliers|^Poteaux/i, 0.80, 0.50],
+  [/^Porte/i, 0.92, 0.55],           // portes : très lumineuses
+  [/^Tombeaux/i, 0.66, 0.45],
+  [/^Canaris/i, 0.85, 0.55],
+  [/^Tapis/i, 0.60, 0.45],
+  [/^Oeufs|^Supports_Oeufs/i, 0.9, 0.6],
 ];
 
 function holoMaterial(name) {
-  const hit = COLORS.find(([re]) => re.test(name));
+  const hit = SHADES.find(([re]) => re.test(name));
+  const [, light, op] = hit || [null, 0.5, OPACITY];
   const m = new THREE.MeshBasicMaterial({
-    color: hit ? hit[1] : 0x35c8ff, transparent: true, opacity: OPACITY, depthWrite: false,
+    color: new THREE.Color().setHSL(0.55, 0.95, light), transparent: true, opacity: op, depthWrite: false,
     blending: THREE.NormalBlending, side: THREE.DoubleSide,
   });
   m.fog = false;
