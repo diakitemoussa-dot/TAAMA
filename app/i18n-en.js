@@ -552,7 +552,7 @@ export const EN = {
   'JOYSTICK GAUCHE · DÉCOLLE': 'LEFT JOYSTICK · TAKE OFF',
   'Tournez votre téléphone': 'Turn your phone',
   'en mode paysage': 'to landscape mode',
-  'ZQSD · Maj courir · X/○ sauter · ✕ valider · clic/F tir · V tir latéral · glisser pour la caméra': 'WASD · Shift run · X/○ jump · ✕ confirm · click/F fire · V side shot · drag for the camera',
+  'ZQSD · Maj courir · X/○ sauter · ✕ valider · glisser pour la caméra': 'WASD · Shift run · X/○ jump · ✕ confirm · drag for the camera',
   'DRONE HOSTILE': 'HOSTILE DRONE',
   '🚪 Extérieur': '🚪 Outside',
   '🕌 Intérieur': '🕌 Inside',
