@@ -16,7 +16,7 @@
    ========================================================== */
 import * as THREE from 'three';
 import { PLACES, createRouter, formatDistance, etaMinutes } from './city-routes.js?v=2';
-import { createRouteArrow, projectOnRoute } from './route-arrow.js?v=8';
+import { createRouteArrow, projectOnRoute } from './route-arrow.js?v=9';
 
 const M = window.MosqueScene;
 const MAP_URL = 'assets/images/carte-djenne.jpg?v=2';
@@ -104,7 +104,7 @@ function init() {
   // gadget -> base NÉANTIS ; dispositif 2 -> labo ; labo 2 fait -> aucune
   const lsv = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const storyTarget = () => (lsv('taama.lab2') === 'done' || lsv('taama.chapitre1') === 'done') ? null
-    : ls('taama.dispositif2') ? 'deuxieme' : ls('taama.gadget') ? 'neantis' : lsv('taama.lab1') === 'done' ? null : ls('taama.dispositif1') ? 'deuxieme' : null;
+    : ls('taama.dispositif2') ? 'deuxieme' : ls('taama.gadget') ? 'neantis' : lsv('taama.lab1') === 'done' ? (ls('taama.vol') ? null : 'mosquee') : ls('taama.dispositif1') ? 'deuxieme' : null;   // labo 1 fait : retour à la mosquée (S7)
   const sel = { id: null, route: null, from: null };               // lieu choisi + itinéraire calculé depuis `from`
   let hits = [];                                                   // pastilles cliquables à l'écran : { id, x, y, r } (px canvas)
   const places = () => {
@@ -184,7 +184,7 @@ function init() {
   // La carte s'ouvre d'elle-même aux moments clés de l'histoire (app/dispositif1.js : S2, S8, S11) via CityMap.openTo(id) ;
   // les itinéraires s'effacent à la fin du labo 1 (S6), à la fin du chapitre (S14) et à la remise à zéro.
   const dropRoute = () => { if (sel.id) clearRoute(); };
-  window.addEventListener('dispositif1:piste', dropRoute);
+  window.addEventListener('dispositif1:piste', () => { dropRoute(); autoShown = false; });   // la flèche guide ensuite vers la mosquée (storyTarget)
   window.addEventListener('taama:chapitre1-fin', dropRoute);
   window.addEventListener('taama:reset', () => { autoShown = false; dropRoute(); });
   barEl.querySelector('.cm-route-x').addEventListener('click', (e) => { e.stopPropagation(); clearRoute(); });
@@ -331,6 +331,7 @@ function init() {
     else if (c === 'Equal' || c === 'NumpadAdd' || e.key === '+') zoomAt(0.75);
     else if (c === 'Minus' || c === 'NumpadSubtract' || e.key === '-') zoomAt(1 / 0.75);
     else if (PAN_KEYS[c]) held.add(c);
+    try { window.dispatchEvent(new CustomEvent('taama:mapkey', { detail: { key: e.key, code: c } })); } catch (_) {}   // le guide voit les touches de la carte (il est chargé après elle)
     e.preventDefault(); e.stopImmediatePropagation();              // le jeu ne reçoit plus les touches
   }, true);
   window.addEventListener('keyup', (e) => { held.delete(e.code); }, true);   // jamais bloqué : pas de touche « coincée » dans le jeu
@@ -594,6 +595,13 @@ function init() {
       markPlacesActive(); draw(true);
     },
     get selected() { return sel.id; },
+    /** Longueur (m) du meilleur itinéraire par les routes entre l'acteur (joueur ou voiture) et le lieu `id` ; null si le lieu ou les routes ne sont pas prêts (app/wrong-way.js) */
+    pathLength(id) {
+      const pl = placeOf(id); if (!pl) return null;
+      if (!router) { loadRouter(); return null; }
+      const me = actorReal();
+      return router.route(me.e, me.n, pl.e, pl.n).length;
+    },
     get guide() { return routeArrow.state; },                    // cap du trajet, distance restante, prochain virage (tableau de bord de la voiture)
     get route() { return sel.route ? { id: sel.id, length: sel.route.length, pts: sel.route.pts.length, roads: sel.route.roads } : null; },
   };

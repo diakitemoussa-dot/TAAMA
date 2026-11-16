@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import * as WL from './water-logic.js?v=8';
-import { createCarDashboard } from './car-dashboard.js?v=3';
+import { createCarDashboard } from './car-dashboard.js?v=5';
 import { createCargo } from './car-cargo.js?v=2';
 
 const M = window.MosqueScene;
@@ -926,14 +926,14 @@ const controller = {
       S._gt = 0; const g = findGround(pos.x, pos.z, S.parkHint != null && S.parkAt && Math.hypot(pos.x - S.parkAt.x, pos.z - S.parkAt.z) < 3 ? S.parkHint : pos.y);
       if (g !== null && Math.abs(g - pos.y) > 0.12) { pos.y = g; S.pendingGround = false; applyTransform(); }
     }
-    if (S.st === ST.DRIVE) { if (!_wasDrive) { _wasDrive = true; dash.refuel(); dash.showHint(drivingHint(), 9000); } drive(dt); }
-    else { if (_wasDrive) { _wasDrive = false; dash.hide(); } tickSequence(dt); }
+    if (S.st === ST.DRIVE) { if (!_wasDrive) { _wasDrive = true; document.body.classList.add('in-car'); dash.refuel(); dash.showHint(drivingHint(), 9000); } drive(dt); }
+    else { if (_wasDrive) { _wasDrive = false; document.body.classList.remove('in-car'); dash.hide(); } tickSequence(dt); }
   },
 };
 let _wasDrive = false;
 function reset() {
   if (car.cargo) { car.cargo.reset(); for (const it of car.cargo.items) { it.node.position.copy(it.node.userData.rest); it.node.rotation.set(0, 0, 0); } }
-  S.lightsMan = null; S.hazard = false; _wasDrive = false; dash.hide();
+  S.lightsMan = null; S.hazard = false; _wasDrive = false; document.body.classList.remove('in-car'); dash.hide();
   if (_fadeMats) fadeEnd();
   try { if (SM()) gadgetShow(true); } catch (_) {}
   if (S.acts && SM()) { try { SM().resetActions(); } catch (_) {} S.acts = null; }

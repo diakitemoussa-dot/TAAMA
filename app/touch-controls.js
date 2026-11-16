@@ -17,11 +17,11 @@
          .state() · .set(patch) · .refresh()
    ========================================================== */
 
-import * as L from './touch-layout.js?v=1';
+import * as L from './touch-layout.js?v=3';
 
 if (!document.getElementById('tcCss')) {
   const l = document.createElement('link');
-  l.id = 'tcCss'; l.rel = 'stylesheet'; l.href = 'styles/touch-controls.css?v=4';
+  l.id = 'tcCss'; l.rel = 'stylesheet'; l.href = 'styles/touch-controls.css?v=5';
   document.head.appendChild(l);
 }
 
@@ -63,6 +63,7 @@ const ICO = {
   fire: '<path d="M13.5 2L5 13.5h6L10 22l9-12h-6.5z" fill="currentColor"/>',
   fireSide: '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>',
   kneel: '<path d="M6 8l6 6 6-6M7 19h10"/>',
+  dash: '<path d="M3 8h6M3 12h9M3 16h6"/><path d="M14 6l7 6-7 6"/>',
   interact: '<path d="M9 11V6.5a1.8 1.8 0 013.6 0V11m0-1.2a1.8 1.8 0 013.6 0v2.2a6 6 0 01-6 6h-.8a5 5 0 01-4-2l-2-3a1.8 1.8 0 012.8-2.2L9 13"/>',
   drone: '<circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.5"/>',
   map: '<path d="M12 21s-7-5.7-7-11a7 7 0 0114 0c0 5.3-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
@@ -90,6 +91,8 @@ const urlParam = L.touchParam(location.search);
 const mq = window.matchMedia ? window.matchMedia('(pointer: coarse)') : { matches: false };
 const isDeviceTouch = () => L.isTouchDevice({ coarse: mq.matches, maxTouchPoints: navigator.maxTouchPoints || 0 });
 const enabled = () => L.shouldShow({ show: state.show, param: urlParam, coarse: mq.matches, maxTouchPoints: navigator.maxTouchPoints || 0 });
+/** Bouton « Tir latéral » : masqué par défaut, affiché si le joueur l'active dans le menu Pause (taama.touch.sidebtn = '1'). */
+const sideBtnOn = () => { try { return localStorage.getItem('taama.touch.sidebtn') === '1'; } catch (_) { return false; } };
 const gadgetOn = () => { try { return localStorage.getItem('taama.gadget') === '1'; } catch (_) { return false; } };
 const portrait = () => window.innerHeight > window.innerWidth * 1.05;
 const devScale = () => Math.max(1, Math.min(1.5, Math.min(window.innerWidth, window.innerHeight) / 390));
@@ -132,7 +135,7 @@ function findPrompt() {
 
 /* ---------- Actions ---------- */
 const KEYMAP = {
-  jump: ['x', 'KeyX'], kneel: ['k', 'KeyK'], fire: ['f', 'KeyF'], fireSide: ['v', 'KeyV'], run: ['Shift', 'ShiftLeft'],
+  jump: ['x', 'KeyX'], dash: [' ', 'Space'], kneel: ['k', 'KeyK'], fire: ['f', 'KeyF'], fireSide: ['v', 'KeyV'], run: ['Shift', 'ShiftLeft'],
   gas: ['w', 'KeyW'], brake: ['s', 'KeyS'], steerL: ['a', 'KeyA'], steerR: ['d', 'KeyD'], handbrake: [' ', 'Space'],
   lights: ['l', 'KeyL'], hazard: ['h', 'KeyH'], view: ['v', 'KeyV'], exitCar: ['f', 'KeyF'],
 };
@@ -149,7 +152,7 @@ function actionDown(id, ev) {
   }
   haptic(a.kind === 'tap' ? 14 : 10);
   switch (id) {
-    case 'aim': mouse('mousedown', 2); break;
+    case 'aim': try { SM() && SM().toggleSniper && SM().toggleSniper(); } catch (_) {} break;      // tireur d'élite : même bascule que T au clavier
     case 'interact': {
       const p = findPrompt();
       const k = p ? p.key : 'E';
@@ -165,7 +168,7 @@ function actionDown(id, ev) {
     case 'droneOn': try { SM() && SM().takeoffDrone && SM().takeoffDrone(); } catch (_) {} break;
     case 'backChar': try { if (DG() && DG().launched && DG().launched()) DG().returnToCharacter(); else click('dgQuit'); } catch (_) {} break;
     case 'quitDrone': click('dgQuit'); break;
-    case 'fire': case 'fireSide': case 'jump': case 'kneel': case 'lights': case 'hazard': case 'view': case 'exitCar':
+    case 'fire': case 'fireSide': case 'jump': case 'dash': case 'kneel': case 'lights': case 'hazard': case 'view': case 'exitCar':
     case 'run': case 'gas': case 'brake': case 'steerL': case 'steerR': case 'handbrake': {
       const m = KEYMAP[id];
       key('keydown', m[0], m[1]);
@@ -182,8 +185,7 @@ function actionUp(id, ev) {
   s.delete(ev);
   if (s.size) return;
   live.delete(id);
-  if (id === 'aim') mouse('mouseup', 2);
-  else if (KEYMAP[id]) key('keyup', KEYMAP[id][0], KEYMAP[id][1]);
+  if (KEYMAP[id]) key('keyup', KEYMAP[id][0], KEYMAP[id][1]);
 }
 function releaseAll() {
   for (const id of [...live.keys()]) { const s = live.get(id); for (const ev of [...s]) actionUp(id, ev); }
@@ -407,7 +409,9 @@ function syncDynamic(force) {
     let vis = true;
     if (a && a.contextual) vis = !!p;
     if (a && a.needs === 'gadget') vis = g;
+    if (c.action === 'fireSide') vis = vis && sideBtnOn();
     el.classList.toggle('is-off', !vis);
+    if (c.action === 'aim') el.classList.toggle('is-on', !!(SM() && SM().isSniper && SM().isSniper()));   // tireur d'élite actif : le bouton reste allumé
     if (c.action === 'video') el.classList.toggle('is-on', !!document.querySelector('#snVideo.is-active, #dgVideo.is-active'));   // enregistrement en cours
     if (a && a.contextual && p) { const l = $('.tc-lbl', el); if (l && l.textContent !== p.label) l.textContent = p.label; el.classList.add('is-ctx'); }
   }
@@ -708,6 +712,7 @@ window.TouchControls = {
   state: () => JSON.parse(L.serialize(state)),
   set: (patch) => commit({ ...state, ...patch }),
   refresh: () => { tick(); render(); },
+  sideBtn: () => sideBtnOn(),
   isDevice: isDeviceTouch,
   why: () => ({ on: enabled(), mode: currentMode(), blocked: blockReason(), shown: shownMode, rendered: renderedMode, portrait: portrait(), editor: editorOn }),
   layout: L,

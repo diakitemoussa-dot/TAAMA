@@ -24,7 +24,7 @@ const M_WOOD = [[-8.4, 97, 13], [165.4, 97, 13], [-8.9, 147, 13], [165.9, 147, 1
 const M_EGGS = [[27, 9, 5.5, 7], [143, 9, 5.5, 7]];
 
 const DEFS = `<defs>
-<linearGradient id="mudG" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="262"><stop offset="0" stop-color="#f7cf98"></stop><stop offset=".3" stop-color="#e3a061"></stop><stop offset=".7" stop-color="#c67640"></stop><stop offset="1" stop-color="#94471f"></stop></linearGradient>
+<linearGradient id="mudG" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="262"><stop offset="0" stop-color="#FCEBC0"></stop><stop offset=".3" stop-color="#F9D58B"></stop><stop offset=".7" stop-color="#D9A95A"></stop><stop offset="1" stop-color="#9C6E32"></stop></linearGradient>
 <linearGradient id="woodG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5a35"></stop><stop offset="1" stop-color="#3f2414"></stop></linearGradient>
 <radialGradient id="eggG" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"></stop><stop offset=".6" stop-color="#f6ead2"></stop><stop offset="1" stop-color="#d6c09c"></stop></radialGradient>
 <filter id="mud" filterUnits="userSpaceOnUse" x="-50" y="-20" width="280" height="300" color-interpolation-filters="sRGB">

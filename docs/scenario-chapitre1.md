@@ -170,20 +170,18 @@ radio { mood:'inquiete', text:'{nom}… un groupe est passé juste avant toi. Il
 ### S8 — Dossier NÉANTIS (écran de PC) + gadget + carte
 - Interface `Dossier.open({onDone})` : fenêtre façon écran d'ordinateur (barre de titre « TAPAMA > RECHERCHES > NÉANTIS.pdf », fenêtres/onglets). Contenu : photo du PDG (« Adrian Voss, 48 ans »), logo (§3.3), devise, **3 intentions** (§3.6), texte court sur les robots. Séq. **8** démarre.
 ```
-{ who:'tapama', mood:'attentive', text:'Je te transfère tout ce que j’ai sur eux. Ça s’appelle NÉANTIS. Voilà leur logo… et leur patron, Adrian Voss.' }
-{ who:'tapama', mood:'neutre',    text:'Leur devise : « Tout voir. Tout garder. Rien rendre. » Ils veulent surtout contrôler ce que ces objets montrent, pas les vendre.' }
-{ who:'tapama', mood:'inquiete',  text:'Leurs robots patrouillent partout. Mais je ne t’envoie pas sans rien : il y a un gadget dans la voiture. Avec lui, tu pourras te défendre.' }
-{ who:'tapama', mood:'attentive', text:'Je t’affiche l’itinéraire de leur base. Regarde bien, et reviens-moi en un seul morceau.' }
+{ who:'tapama', mood:'attentive', text:'Je te transfère mon dossier sur NÉANTIS. Voilà leur logo… et leur patron, Adrian Voss.' }
+{ who:'tapama', mood:'neutre',    text:'Leur devise : « Tout voir. Tout garder. Rien rendre. »' }
+{ who:'tapama', mood:'inquiete',  text:'Leurs robots patrouillent. Prends le gadget dans la voiture pour te défendre.' }
+{ who:'tapama', mood:'attentive', text:'Je t’affiche l’itinéraire de leur base. Reviens-moi en un seul morceau.' }
 ```
 - Avant fermeture : `CityMap.open()` avec l'itinéraire vers la base (`selectPlace('neantis')`, id à confirmer). Le joueur ferme la carte. Le gadget est « débloqué » (état `taama.gadget='1'`, activé dans la voiture).
 - Événements : `dossier:open`, `dossier:done`, `taama:carte-base`. Sauvegarde : `taama.dossier='1'`, `taama.gadget='1'`.
 
 ### S9 — Route vers la base (séq. 8, poursuite)
 - Joueur en voiture suit l'itinéraire.
-```
-radio { mood:'inquiete', text:'Ralentis avant le portail, {nom}. Gare-toi et continue à pied. Leurs drones balaient la zone.' }
-```
-- Séq. **8** complétée à l'arrivée (~portail, `Anchor_Portail` [CODE]).
+- Aucun message de Tapama ici : la radio « Ralentis avant le portail… » a été supprimée après la séance de test (nov. 2026).
+- Séq. **8** complétée en silence à l'arrivée (~portail, `Anchor_Portail` [CODE]).
 
 ### S10 — Dans la base (séq. 9 puis 10)
 - Entrée à pied par le portail, drones N (sentinelles) à neutraliser avec le gadget (clic droit viser, clic neutraliser [CODE]), couloirs, portes `Neantis_Porte_*` [CODE], chambre forte (`Anchor_Dispositif`).

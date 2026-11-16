@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAAMA — Rapport des séances de test</title>
+<style>
+  :root{--bg:#f6f0e6;--card:#fffaf2;--ink:#2a1f16;--muted:#7a6a58;--line:#e4d7c4;--gold:#c8892e;--gold2:#f2d8a8;--red:#b54232;--amber:#c98a1b;--blue:#3d6f8f;--green:#4c7d4a}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#2a1f16;color:#f8f3ea;padding:18px 28px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  header h1{margin:0;font-size:20px;letter-spacing:.02em}
+  header h1 span{color:#f9d58b}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button,.btn,select{font:600 14px system-ui,sans-serif;border:0;border-radius:8px;padding:9px 14px;cursor:pointer;background:#4a3826;color:#f8f3ea}
+  button.main{background:var(--gold);color:#1b130c}
+  select{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  main{max-width:1280px;margin:0 auto;padding:22px 24px 60px}
+  .drop{border:2px dashed var(--line);border-radius:14px;padding:34px;text-align:center;color:var(--muted);background:var(--card)}
+  .drop.over{border-color:var(--gold);background:#fff4df}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:0 0 18px}
+  section h2{margin:0 0 4px;font-size:17px}
+  section p.sub{margin:0 0 14px;color:var(--muted);font-size:13px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .kpi b{display:block;font-size:24px;line-height:1.2}
+  .kpi span{color:var(--muted);font-size:12.5px}
+  ul.ins{list-style:none;margin:0;padding:0}
+  ul.ins li{padding:9px 12px 9px 14px;border-left:4px solid var(--blue);background:#fff;border-radius:6px;margin:0 0 7px}
+  ul.ins li.blocage{border-color:var(--red)}
+  ul.ins li.attention{border-color:var(--amber)}
+  ul.ins li em{font-style:normal;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-right:8px}
+  ul.ins li.blocage em{color:var(--red)} ul.ins li.attention em{color:var(--amber)} ul.ins li.info em{color:var(--blue)}
+  .tablewrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff}
+  th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{background:#efe4d3;font-weight:650;cursor:pointer;user-select:none;position:sticky;top:0}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr:hover td{background:#fff6e8}
+  tr.sel td{background:#fde9c4}
+  .bar{display:grid;grid-template-columns:230px 1fr 130px;gap:10px;align-items:center;margin:5px 0;font-size:13.5px}
+  .bar .track{height:20px;background:#efe4d3;border-radius:5px;overflow:hidden}
+  .bar .fill{height:100%;background:var(--gold);border-radius:5px}
+  .bar .val{color:var(--muted);font-variant-numeric:tabular-nums}
+  .score{display:inline-block;min-width:38px;text-align:center;padding:2px 6px;border-radius:6px;font-weight:700;background:var(--gold2)}
+  .tl{max-height:520px;overflow:auto;font-size:13px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .tl div{display:grid;grid-template-columns:70px 130px 1fr;gap:10px;padding:4px 10px;border-bottom:1px solid #f1e8da}
+  .tl .t{color:var(--muted);font-variant-numeric:tabular-nums}
+  .tl .k{font-weight:600}
+  .tl .milestone{background:#fff1d6}
+  .tl .bad{background:#fbe5e1}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:900px){.row2{grid-template-columns:1fr}.bar{grid-template-columns:150px 1fr 90px}}
+  .note{font-size:12.5px;color:var(--muted)}
+  .notesbox{background:#fff4df;border:1px solid var(--gold2);border-radius:10px;padding:10px 14px;margin:0 0 12px;white-space:pre-wrap}
+  .notesbox:empty{display:none}
+  .notesbox b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+  .hidden{display:none}
+  .msg{color:#f9d58b;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>TAAMA</span> · Rapport des séances de test</h1>
+  <div class="tools">
+    <button class="main" id="bServer">Charger depuis le PC</button>
+    <label class="btn" for="files">Ouvrir des fichiers .json</label>
+    <input type="file" id="files" accept=".json,application/json" multiple hidden>
+    <select id="day" class="hidden"></select>
+    <button id="bCsv" class="hidden">Exporter CSV (Notion)</button>
+    <button id="bMd" class="hidden">Copier le résumé (Notion)</button>
+    <span class="msg" id="msg"></span>
+  </div>
+</header>
+<main>
+  <div class="drop" id="drop">
+    <p><b>Glisse ici les fichiers de session (.json)</b> ou clique « Charger depuis le PC ».</p>
+    <p class="note">Les sessions envoyées pendant la séance sont dans le dossier <code>playtests/</code> du jeu.
+      Les fichiers téléchargés sur les tablettes ou téléphones (si le PC n’était pas joignable) peuvent aussi être déposés ici.</p>
+  </div>
+  <div id="report" class="hidden">
+    <section>
+      <h2>Vue d’ensemble</h2>
+      <p class="sub" id="overSub"></p>
+      <div class="kpis" id="kpis"></div>
+    </section>
+    <section>
+      <h2>Constats automatiques</h2>
+      <p class="sub">Détectés à partir des actions des joueurs. À confirmer avec ce que tu as observé et ce que les joueurs ont dit.</p>
+      <ul class="ins" id="ins"></ul>
+    </section>
+    <section>
+      <h2>Classement des joueurs</h2>
+      <p class="sub">Clique sur un titre de colonne pour trier, sur une ligne pour voir le parcours du joueur.
+        <b>Indice de jeu</b> (sur 100) = 70 pts de progression (étapes atteintes) + 30 pts d’autonomie (−3 par mauvaise réponse, −4 par indice demandé, −3 par aide de Tapama, −2 par clic d’agacement).</p>
+      <div class="tablewrap"><table id="players"></table></div>
+    </section>
+    <div class="row2">
+      <section>
+        <h2>Étapes du chapitre 1</h2>
+        <p class="sub">Part des joueurs qui ont atteint chaque étape · temps médian pour y arriver.</p>
+        <div id="funnel"></div>
+      </section>
+      <section>
+        <h2>Où passent-ils leur temps ?</h2>
+        <p class="sub">Temps médian par écran ou mode de jeu.</p>
+        <div id="places"></div>
+      </section>
+    </div>
+    <section>
+      <h2>Ordinateur, tablette, téléphone</h2>
+      <p class="sub">Valeurs médianes par type d’appareil.</p>
+      <div class="tablewrap"><table id="devices"></table></div>
+    </section>
+    <section id="detail">
+      <h2>Parcours détaillé : <span id="dName">—</span></h2>
+      <p class="sub" id="dSub"></p>
+      <div class="kpis" id="dKpis" style="margin-bottom:12px"></div>
+      <div class="notesbox" id="dNotes"></div>
+      <div class="tl" id="timeline"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+  // ouverte par double-clic (file://) : le navigateur bloque les modules -> on explique comment l'ouvrir
+  if (location.protocol === 'file:') document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('drop').innerHTML = '<p><b>Cette page doit être ouverte via le serveur du jeu.</b></p><p>Dans le dossier du jeu : <code>npm run serve</code>, puis ouvre <code>http://localhost:8123/tools/playtest-rapport.html</code></p>';
+  });
+</script>
+<script type="module">
+import * as T from '../app/playtest-core.js?v=3';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const min = (ms) => (Number.isFinite(ms) ? T.fmtDuration(ms) : '—');
+const dayOf = (s) => String(s.startedAt).slice(0, 10);
+
+let all = [];          // toutes les sessions chargées
+let view = [];         // sessions du jour choisi
+let sums = [], labels = [];
+let sortKey = 'score', sortDir = -1, selected = 0;
+
+function msg(t) { $('msg').textContent = t || ''; }
+
+function addSessions(list) {
+  const byId = new Map(all.map((s) => [s.id, s]));
+  let added = 0;
+  for (const s of list) {
+    if (!T.isSession(s)) continue;
+    const prev = byId.get(s.id);
+    if (!prev || s.events.length >= prev.events.length) { byId.set(s.id, s); added++; }   // on garde la version la plus complète
+  }
+  all = [...byId.values()].sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt)));
+  const days = [...new Set(all.map(dayOf))].sort().reverse();
+  const sel = $('day');
+  const keep = sel.value;
+  sel.innerHTML = `<option value="*">Toutes les séances (${all.length} joueurs)</option>` + days.map((d) => `<option value="${d}">Séance du ${new Date(d + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} (${all.filter((s) => dayOf(s) === d).length})</option>`).join('');
+  sel.value = days.includes(keep) || keep === '*' ? keep : (days[0] || '*');
+  ['day', 'bCsv', 'bMd'].forEach((id) => $(id).classList.remove('hidden'));
+  render();
+  return added;
+}
+
+async function loadServer() {
+  if (location.protocol === 'file:') { msg('Ouvre cette page via le serveur du jeu (npm run serve → http://localhost:8123/tools/playtest-rapport.html).'); return; }
+  try {
+    const r = await fetch('../api/playtest', { cache: 'no-store' });
+    const j = await r.json();
+    if (!j.ok) { msg(j.error === 'local_only' ? 'Lecture possible uniquement depuis le PC du serveur.' : 'Serveur : erreur.'); return; }
+    const n = addSessions(j.sessions || []);
+    msg(`${n} session(s) chargée(s) depuis le PC`);
+  } catch (_) { msg('Serveur du jeu injoignable (lance « npm run serve »).'); }
+}
+
+async function loadFiles(files) {
+  const list = [];
+  for (const f of files) {
+    try { const j = JSON.parse(await f.text()); (Array.isArray(j) ? j : [j]).forEach((x) => list.push(x)); } catch (_) {}
+  }
+  const n = addSessions(list);
+  msg(`${n} session(s) ajoutée(s)`);
+}
+
+/* ---------------- Rendu ---------------- */
+
+const COLS = [
+  ['label', 'Joueur'], ['age', 'Âge', 1], ['device', 'Appareil'], ['score', 'Indice', 1], ['milestonesReached', 'Étapes', 1], ['lastMilestone', 'Dernière étape'],
+  ['durationMs', 'Durée', 1], ['activeMs', 'Temps actif', 1], ['labWrong', 'Mauvaises rép.', 1], ['labHints', 'Indices', 1], ['helpRequests', 'Aides Tapama', 1],
+  ['dialoguesSkipped', 'Dialogues passés', 1], ['rageClicks', 'Agacement', 1], ['idleMs', 'Inactif', 1], ['errors', 'Erreurs', 1], ['fps', 'FPS', 1],
+];
+
+function cell(s, k) {
+  switch (k) {
+    case 'score': return `<span class="score">${s.score}</span>`;
+    case 'milestonesReached': return `${s.milestonesReached}/${T.MILESTONES.length}`;
+    case 'durationMs': case 'activeMs': case 'idleMs': return min(s[k]);
+    case 'dialoguesSkipped': return `${s.dialoguesSkipped}/${s.dialogues}`;
+    case 'fps': return s.fps.median ?? '—';
+    case 'age': return s.age ?? '—';
+    case 'lastMilestone': return esc(s.lastMilestone || '—');
+    default: return esc(s[k]);
+  }
+}
+
+function sortVal(s, k) { return k === 'fps' ? (s.fps.median ?? -1) : (s[k] ?? ''); }
+
+function render() {
+  const d = $('day').value || '*';
+  view = all.filter((s) => d === '*' || dayOf(s) === d);
+  $('drop').classList.toggle('hidden', all.length > 0);
+  $('report').classList.toggle('hidden', !view.length);
+  if (!view.length) return;
+  sums = view.map(T.summarize);
+  labels = T.uniqueLabels(view);
+  sums.forEach((s, i) => { s.label = labels[i]; });
+
+  // vue d'ensemble
+  const med = (a) => { const v = a.filter(Number.isFinite).sort((x, y) => x - y); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
+  const devs = {};
+  sums.forEach((s) => { devs[s.device] = (devs[s.device] || 0) + 1; });
+  $('overSub').textContent = `${view.length} joueur(s) · ${Object.entries(devs).map(([k, v]) => `${v} ${k.toLowerCase()}${v > 1 ? 's' : ''}`).join(', ')}`;
+  const fin = sums.filter((s) => 'fin' in s.milestones).length;
+  $('kpis').innerHTML = [
+    [view.length, 'joueurs'],
+    [min(med(sums.map((s) => s.durationMs))), 'durée médiane de jeu'],
+    [`${med(sums.map((s) => s.milestonesReached))}/${T.MILESTONES.length}`, 'étapes atteintes (médiane)'],
+    [`${fin}`, 'ont terminé le chapitre 1'],
+    [med(sums.map((s) => s.score)), 'indice de jeu médian'],
+    [sums.reduce((a, s) => a + s.labWrong, 0), 'mauvaises réponses (total)'],
+    [sums.reduce((a, s) => a + s.helpRequests + s.labHints, 0), 'aides et indices demandés'],
+    [sums.reduce((a, s) => a + s.errors, 0), 'erreurs techniques'],
+  ].map(([v, l]) => `<div class="kpi"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
+
+  // constats
+  $('ins').innerHTML = T.insights(view, sums, labels).map((x) => `<li class="${x.level}"><em>${x.level === 'blocage' ? 'Point bloquant' : x.level === 'attention' ? 'À surveiller' : 'Info'}</em>${esc(x.text)}</li>`).join('') || '<li class="info">Pas assez de données pour un constat.</li>';
+
+  renderTable();
+
+  // étapes
+  $('funnel').innerHTML = T.funnel(sums).map((f) => `<div class="bar"><span>${esc(f.label)}</span><div class="track"><div class="fill" style="width:${f.pct}%"></div></div><span class="val">${f.pct} % · ${f.count ? min(f.medianMs) : '—'}</span></div>`).join('');
+
+  // temps par endroit
+  const pl = T.placeTimes(sums).filter((p) => p.medianMs > 1000).slice(0, 12);
+  const maxP = Math.max(1, ...pl.map((p) => p.medianMs));
+  $('places').innerHTML = pl.map((p) => `<div class="bar"><span>${esc(p.place)}</span><div class="track"><div class="fill" style="width:${(p.medianMs / maxP) * 100}%;background:var(--blue)"></div></div><span class="val">${min(p.medianMs)}</span></div>`).join('');
+
+  // appareils
+  const dv = T.byDevice(sums);
+  $('devices').innerHTML = `<tr><th>Appareil</th><th class="num">Joueurs</th><th class="num">Indice</th><th class="num">Étapes</th><th class="num">Durée</th><th class="num">Mauvaises rép.</th><th class="num">Aides + indices</th><th class="num">Agacement</th><th class="num">Inactif</th><th class="num">FPS</th><th class="num">Erreurs</th></tr>`
+    + dv.map((x) => `<tr><td>${esc(x.device)}</td><td class="num">${x.players}</td><td class="num"><span class="score">${x.score ?? '—'}</span></td><td class="num">${x.steps ?? '—'}</td><td class="num">${min(x.durationMs)}</td><td class="num">${x.labWrong ?? '—'}</td><td class="num">${x.helps ?? '—'}</td><td class="num">${x.rageClicks ?? '—'}</td><td class="num">${min(x.idleMs)}</td><td class="num">${x.fps ?? '—'}</td><td class="num">${x.errors}</td></tr>`).join('');
+
+  if (selected >= view.length) selected = 0;
+  renderDetail(selected);
+}
+
+function renderTable() {
+  const idx = sums.map((_, i) => i).sort((a, b) => {
+    const x = sortVal(sums[a], sortKey), y = sortVal(sums[b], sortKey);
+    return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
+  });
+  $('players').innerHTML = `<tr>${COLS.map(([k, l, n]) => `<th data-k="${k}" class="${n ? 'num' : ''}">${l}${sortKey === k ? (sortDir < 0 ? ' ▼' : ' ▲') : ''}</th>`).join('')}</tr>`
+    + idx.map((i) => `<tr data-i="${i}" class="${i === selected ? 'sel' : ''}">${COLS.map(([k, , n]) => `<td class="${n ? 'num' : ''}">${cell(sums[i], k)}</td>`).join('')}</tr>`).join('');
+}
+
+/* Phrase lisible pour chaque événement */
+const ACTIONS = { start: 'Appuie sur « Commencer »', new: 'Ouvre « Nouvelle partie »', begin: 'Lance la partie', continue: 'Continuer', resume: 'Reprendre', map: 'Ouvre la carte',
+  explore: 'Exploration libre', credits: 'Crédits', journal: 'Ouvre le journal', 'profile-save': 'Valide son profil', 'profile-edit': 'Modifie son profil', 'cine-skip': 'Passe la cinématique',
+  'resume-game': 'Reprend la partie', 'to-main': 'Retour au menu principal', guide: 'Ouvre « Comment jouer ? »', back: 'Retour', sound: 'Coupe / remet le son', 'delete-save': 'Supprimer la sauvegarde' };
+const EVTS = { 'taama:ouverture-fin': 'Appel de Tapama terminé', 'dispositif1:spotted': 'Repère le dispositif 1 au drone', 'dispositif1:active': 'Active le dispositif 1', 'dispositif1:taken': 'Récupère le dispositif 1',
+  'lab:open': 'Entre dans le laboratoire', 'lab:enigme-resolue': 'Résout une énigme', 'lab:enigme-erreur': 'Mauvaise réponse à une énigme', 'lab:indice': 'Demande un indice', 'lab:done': 'Termine le laboratoire',
+  'dossier:open': 'Ouvre le dossier', 'dossier:done': 'Termine le dossier', 'neantis:dispositif': 'Trouve le dispositif 2 (base Néantis)', 'explore:start': 'Démarre l’exploration libre', 'explore:stop': 'Quitte l’exploration libre',
+  'sanctuary:exit': 'Quitte le sanctuaire', 'player:swim': 'Nage', 'mosque:loaded': 'Maquette 3D chargée', 'tapama:journal': 'Ajoute un indice au journal', 'taama:carte-labo': 'Reçoit la carte du labo', 'taama:reset': 'Remise à zéro', 'taama:chapitre1-fin': 'Termine le chapitre 1' };
+
+function describe(e) {
+  const d = e.d || {};
+  switch (e.k) {
+    case 'debut': return ['Début', 'Session démarrée'];
+    case 'rechargement': return ['Rechargement', 'La page a été rechargée', 'bad'];
+    case 'fin': return ['Fin', `Session terminée (${d.lieu || ''})`];
+    case 'ecran': return ['Écran', d.id];
+    case 'action': return ['Bouton', ACTIONS[d.name] || d.name];
+    case 'profil': return ['Profil', `Prénom « ${d.name} », ${d.age} ans${d.edit ? ' (modifié)' : ''}`, 'milestone'];
+    case 'nouvelle-partie': return ['Partie', 'Nouvelle partie lancée', 'milestone'];
+    case 'jeu': return ['Partie', 'Entre dans le jeu'];
+    case 'pause': return ['Pause', 'Ouvre la pause'];
+    case 'reprise': return ['Pause', 'Reprend la partie'];
+    case 'sequence': return ['Séquence', `Séquence ${d.n} terminée`, 'milestone'];
+    case 'decouverte': return ['Découverte', d.id, 'milestone'];
+    case 'dialogue': return ['Tapama', d.phase === 'debut' ? `Dialogue « ${d.id} » commence` : `Dialogue « ${d.id} » ${d.skipped ? 'passé' : 'lu jusqu’au bout'}`];
+    case 'radio': return ['Tapama (radio)', d.txt];
+    case 'analyse': return ['Tapama', `Analyse « ${d.id} »`];
+    case 'aide': return ['Aide', `Demande l’aide de Tapama (${d.id})`, 'bad'];
+    case 'guide': return ['Aide', 'Ouvre « Comment jouer ? »'];
+    case 'astuce': return ['Astuce affichée', d.txt];
+    case 'evt': {
+      const m = T.MILESTONES.some((x) => x.match(e));
+      const bad = d.n === 'lab:enigme-erreur' || d.n === 'lab:indice';
+      const extra = d.stage != null ? ` (labo ${d.stage}${d.index != null ? `, énigme ${d.index + 1}` : ''}${d.auto ? ', proposé par Tapama' : ''})` : '';
+      return ['Jeu', (EVTS[d.n] || d.n) + extra, m ? 'milestone' : bad ? 'bad' : ''];
+    }
+    case 'reglage': return ['Réglage', `${d.key} → ${d.value}`];
+    case 'clic': return ['Clic', `${d.c || '?'} (${Math.round((d.x || 0) * 100)} %, ${Math.round((d.y || 0) * 100)} %)${d.p === 'touch' ? ' · doigt' : ''}`];
+    case 'touches': return ['Clavier', `${d.n} touche(s) : ${Object.entries(d.k || {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k.replace(/^Key|^Digit/, '')}×${v}`).join(' ')}`];
+    case 'manette': return ['Manette', 'Utilise la manette'];
+    case 'inactif': return ['Inactif', `${min(d.ms)} sans action (${d.lieu || '?'})`, 'bad'];
+    case 'cache': return ['Appareil', 'Quitte le jeu (autre appli / écran éteint)', 'bad'];
+    case 'visible': return ['Appareil', 'Revient dans le jeu'];
+    case 'orientation': return ['Appareil', `Écran ${d.w}×${d.h}${d.portrait ? ' (portrait)' : ''}`];
+    case 'erreur': return ['Erreur', `${d.msg}${d.src ? ` — ${d.src}:${d.l}` : ''}`, 'bad'];
+    case 'fps': return ['FPS', `${d.v} images/s (${d.lieu || ''})`, d.v < 25 ? 'bad' : ''];
+    default: return [e.k, JSON.stringify(d)];
+  }
+}
+
+function renderDetail(i) {
+  selected = i;
+  const s = sums[i], ses = view[i];
+  if (!s) return;
+  $('dName').textContent = s.label;
+  const dev = ses.device || {};
+  $('dSub').textContent = `${s.age ? s.age + ' ans · ' : ''}${dev.type || '?'} · ${dev.os || ''} · ${dev.browser || ''} · écran ${dev.screen || '?'} · début ${new Date(s.startedAt).toLocaleString('fr-FR')}${s.finished ? '' : ' · session non terminée'}`;
+  $('dKpis').innerHTML = [
+    [s.score, 'indice de jeu'], [`${s.milestonesReached}/${T.MILESTONES.length}`, s.lastMilestone || 'aucune étape'], [min(s.durationMs), 'durée totale'], [min(s.activeMs), 'temps actif'],
+    [`${s.labWrong} / ${s.labHints}`, 'mauvaises réponses / indices'], [s.helpRequests + s.guideOpens, 'demandes d’aide'], [`${s.dialoguesSkipped}/${s.dialogues}`, 'dialogues passés'],
+    [s.dialogueReadMedianMs != null ? min(s.dialogueReadMedianMs) : '—', 'lecture médiane d’un dialogue'],
+  ].map(([v, l]) => `<div class="kpi"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
+  $('dNotes').innerHTML = s.notes ? `<b>Notes de l’animateur</b>${esc(s.notes)}` : '';
+  const showNoise = false;
+  $('timeline').innerHTML = ses.events
+    .filter((e) => showNoise || (e.k !== 'fps' || (e.d && e.d.v < 25)))
+    .map((e) => { const [k, txt, cls] = describe(e); return `<div class="${cls || ''}"><span class="t">${fmtT(e.t)}</span><span class="k">${esc(k)}</span><span>${esc(txt)}</span></div>`; }).join('');
+  document.querySelectorAll('#players tr[data-i]').forEach((tr) => tr.classList.toggle('sel', Number(tr.dataset.i) === i));
+}
+
+const fmtT = (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+/* ---------------- Exports ---------------- */
+
+function exportCsv() {
+  const csv = '﻿' + T.toCSV(sums, labels);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `taama-joueurs-${$('day').value === '*' ? 'toutes-seances' : $('day').value}.csv`;
+  a.click();
+  msg('CSV prêt : dans Notion, « Importer » → CSV pour créer une base des joueurs.');
+}
+
+function markdown() {
+  const lines = [];
+  const d = $('day').value;
+  lines.push(`## Séance de test TAAMA — ${d === '*' ? 'toutes les séances' : new Date(d + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`, '');
+  lines.push(`**Joueurs :** ${view.length} · ${$('overSub').textContent.split('·')[1] || ''}`, '');
+  lines.push('### Constats automatiques', ...T.insights(view, sums, labels).map((x) => `- ${x.level === 'blocage' ? '🔴' : x.level === 'attention' ? '🟠' : '🔵'} ${x.text}`), '');
+  lines.push('### Classement', '| Joueur | Appareil | Indice | Étapes | Dernière étape | Durée | Mauvaises rép. | Indices | Aides |', '|---|---|---|---|---|---|---|---|---|');
+  [...sums].sort((a, b) => b.score - a.score).forEach((s) => lines.push(`| ${s.label} | ${s.device} | ${s.score} | ${s.milestonesReached}/${T.MILESTONES.length} | ${s.lastMilestone || '—'} | ${min(s.durationMs)} | ${s.labWrong} | ${s.labHints} | ${s.helpRequests} |`));
+  const withNotes = sums.filter((s) => s.notes);
+  if (withNotes.length) lines.push('', '### Notes de l’animateur', ...withNotes.map((s) => `- **${s.label}** : ${s.notes.replace(/\s*\n\s*/g, ' · ')}`));
+  lines.push('', '### Étapes du chapitre 1', ...T.funnel(sums).map((f) => `- ${f.label} : ${f.pct} % (${f.count}/${view.length})${f.count ? ` — médiane ${min(f.medianMs)}` : ''}`));
+  return lines.join('\n');
+}
+
+$('bServer').onclick = loadServer;
+$('files').onchange = (e) => loadFiles(e.target.files);
+$('day').onchange = () => { selected = 0; render(); };
+$('bCsv').onclick = exportCsv;
+$('bMd').onclick = async () => { try { await navigator.clipboard.writeText(markdown()); msg('Résumé copié : colle-le dans ta page Notion.'); } catch (_) { msg('Copie impossible dans ce navigateur.'); } };
+$('players').addEventListener('click', (e) => {
+  const th = e.target.closest('th');
+  if (th) { const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : (k === 'label' || k === 'device' ? 1 : -1); sortKey = k; renderTable(); return; }
+  const tr = e.target.closest('tr[data-i]');
+  if (tr) { renderDetail(Number(tr.dataset.i)); $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+});
+const drop = $('drop');
+['dragover', 'dragenter'].forEach((n) => document.addEventListener(n, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((n) => document.addEventListener(n, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+document.addEventListener('drop', (e) => loadFiles(e.dataTransfer.files));
+
+if (location.protocol !== 'file:') loadServer();
+window.PlaytestReport = { addSessions, markdown };
+</script>
+</body>
+</html>

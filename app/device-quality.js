@@ -29,7 +29,9 @@ export const QUALITY_PRESETS = {
           headlights: false, baseLights: 1, tileLoad: 180, tileUnload: 230, tileConcurrent: 3, mobileMedia: true },
   mid:  { tilesDir: 'tiles-mobile', maxPixelRatio: 1.5, minPixelRatio: 0.75, shadows: true,  shadowSize: 2048, shadowType: 'pcf',
           headlights: true,  baseLights: 3, tileLoad: 220, tileUnload: 280, tileConcurrent: 4, mobileMedia: true },
-  high: { tilesDir: 'tiles',        maxPixelRatio: 2,   minPixelRatio: 0,    shadows: true,  shadowSize: 4096, shadowType: 'pcfsoft',
+  // high : résolution dynamique activée aussi (plancher 1) — séance de test : sur un PC à écran zoomé ×3, le jeu rendait en ×2
+  // en permanence et tombait à 17–29 images/s ; il redescend maintenant vers ×1 quand les images/s passent sous 40.
+  high: { tilesDir: 'tiles',        maxPixelRatio: 2,   minPixelRatio: 1,    shadows: true,  shadowSize: 4096, shadowType: 'pcfsoft',
           headlights: true,  baseLights: 3, tileLoad: 260, tileUnload: 320, tileConcurrent: 6, mobileMedia: false },
 };
 

@@ -4,14 +4,14 @@
    Mêmes tracés que les boutons de touch-controls.js.
    ========================================================== */
 
-import * as TL from './touch-layout.js?v=1';
+import * as TL from './touch-layout.js?v=3';
 import { t } from './i18n.js?v=1';
 
 /* ---------- Pictogrammes : mêmes tracés que les boutons de touch-controls.js ---------- */
 export const ICO = {
   jump: '<path d="M6 13l6-6 6 6M6 19l6-6 6 6"/>', run: '<path d="M5 6l6 6-6 6M12 6l6 6-6 6"/>',
   aim: '<circle cx="12" cy="12" r="6.5"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
-  fire: '<path d="M13.5 2L5 13.5h6L10 22l9-12h-6.5z" fill="currentColor"/>', kneel: '<path d="M6 8l6 6 6-6M7 19h10"/>',
+  fire: '<path d="M13.5 2L5 13.5h6L10 22l9-12h-6.5z" fill="currentColor"/>', kneel: '<path d="M6 8l6 6 6-6M7 19h10"/>', dash: '<path d="M3 8h6M3 12h9M3 16h6"/><path d="M14 6l7 6-7 6"/>',
   interact: '<path d="M9 11V6.5a1.8 1.8 0 013.6 0V11m0-1.2a1.8 1.8 0 013.6 0v2.2a6 6 0 01-6 6h-.8a5 5 0 01-4-2l-2-3a1.8 1.8 0 012.8-2.2L9 13"/>',
   drone: '<circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.5"/>',
   map: '<path d="M12 21s-7-5.7-7-11a7 7 0 0114 0c0 5.3-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',

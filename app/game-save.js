@@ -213,7 +213,7 @@ const OBJECTIVES = {
   4: 'Examiner l’emplacement près de la mosquée et utiliser le drone pour observer un détail éloigné.',
   5: 'Trouver le premier dispositif et l’activer.',
   6: 'Suivre l’indice de Tapama jusqu’au deuxième emplacement.',
-  7: 'Ne pas perdre de vue les agents de NÉANTIS.',
+  7: 'Retourner à la Grande Mosquée avec le pick-up : Tapama a un mauvais pressentiment.',   // séance de test : l'ancien texte (« agents de NÉANTIS ») faisait chercher une poursuite qui n'existe pas encore
   8: 'Poursuivre les agents dans les ruelles.',
   9: 'Repérer l’installation avec le drone et trouver un chemin.',
   10: 'Récupérer le deuxième dispositif et quitter la base.',

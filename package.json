@@ -25,6 +25,7 @@
     "test:map-logic": "node tests/destinations-map.test.mjs",
     "build:map": "node tools/build-map-data.mjs",
     "test:server-logic": "node tests/players-handler.test.mjs",
+    "test:playtest-logic": "node --test tests/playtest-core.test.mjs tests/playtest-handler.test.mjs",
     "build:ui": "node tools/build-game-ui.mjs",
     "test:ui": "node tools/game-ui-check.mjs",
     "audit": "node tools/audit.mjs",

@@ -56,15 +56,44 @@ function handlePlayers(req, res) {
   });
 }
 
+/* /api/playtest : sessions des séances de test (mode ?test=1) → dossier playtests/ (jamais servi par le web)
+   POST depuis n'importe quel appareil du réseau (tablettes, téléphones) ; GET (lecture des prénoms) depuis ce PC uniquement. */
+const PLAYTEST_DIR = path.join(root, 'playtests');
+function handlePlaytest(req, res) {
+  const json = (status, obj) => {
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(obj));
+  };
+  const load = () => import('./server/playtest-handler.mjs');
+  if (req.method === 'GET') {
+    return load().then((m) => {
+      if (!m.isLocal(req.socket.remoteAddress)) return json(403, { ok: false, error: 'local_only' });
+      return m.listSessions({ dir: PLAYTEST_DIR }).then((list) => json(200, { ok: true, sessions: list }));
+    }).catch(() => json(500, { ok: false, error: 'server_error' }));
+  }
+  if (req.method !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
+  const chunks = [];
+  let size = 0, tooBig = false;
+  req.on('data', (c) => { size += c.length; if (size > 3 * 1024 * 1024) { tooBig = true; json(413, { ok: false, error: 'too_large' }); req.destroy(); } else chunks.push(c); });
+  req.on('end', () => {
+    if (tooBig) return;
+    load()
+      .then((m) => m.saveSession(Buffer.concat(chunks).toString('utf8'), { dir: PLAYTEST_DIR }))
+      .then((r) => json(r.status, r.json))
+      .catch(() => json(500, { ok: false, error: 'server_error' }));
+  });
+}
+
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/api/players') { handlePlayers(req, res); return; }
+  if (p === '/api/playtest') { handlePlaytest(req, res); return; }
   if (p === '/') p = '/index.html';
   const fp = path.join(root, p);
 
   if (!fp.startsWith(root)) { res.writeHead(403); res.end('403'); return; }
   // Jamais de fichiers cachés (.env, .git…) ni de code serveur par le web
-  if (p.split('/').some((seg) => seg.startsWith('.')) || p.startsWith('/server/')) { res.writeHead(404); res.end('404'); return; }
+  if (p.split('/').some((seg) => seg.startsWith('.')) || p.startsWith('/server/') || p.startsWith('/playtests/')) { res.writeHead(404); res.end('404'); return; }
 
   fs.stat(fp, (err, st) => {
     if (err || !st.isFile()) { res.writeHead(404); res.end('404'); return; }
@@ -99,4 +128,9 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
-server.listen(8123, () => console.log('up — http://localhost:8123'));
+server.listen(8123, () => {
+  console.log('up — http://localhost:8123');
+  // adresses à taper sur les tablettes et téléphones (même Wi-Fi) pour une séance de test
+  const ips = Object.values(require('os').networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => i.address);
+  if (ips.length) console.log('séance de test (autres appareils du Wi-Fi) : ' + ips.map((ip) => `http://${ip}:8123/?test=1`).join('  ou  '));
+});

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1200">
+<title>TAAMA — flyer</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--violet:#55415D;--violet-d:#3A2D42;--or:#F9D58B;--creme:#F8F3EA}
+*{box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:var(--violet-d)}
+.flyer{position:relative;width:1920px;height:1080px;overflow:hidden;color:var(--creme);font-family:'Open Sans',system-ui,sans-serif}
+.bg{position:absolute;inset:0;background:url('../images/taama-flyer-bg-1080p.png') center/cover}
+.veil{position:absolute;inset:0;background:
+  linear-gradient(90deg,rgba(58,45,66,.92) 0%,rgba(58,45,66,.7) 38%,rgba(58,45,66,0) 62%),
+  radial-gradient(ellipse at 80% 40%,rgba(249,213,139,.18),rgba(0,0,0,0) 60%)}
+.copy{position:absolute;left:110px;top:0;bottom:0;width:820px;display:flex;flex-direction:column;justify-content:center}
+.kicker{font-family:'Rubik',sans-serif;font-weight:700;font-size:22px;letter-spacing:.24em;text-transform:uppercase;color:var(--or)}
+#logo{margin:30px 0 10px;width:700px}
+#logo svg{width:700px!important;height:auto!important;display:block;overflow:visible}
+#logo *{animation:none!important}
+#logo .tl-l{opacity:1!important}
+.tag{font-size:34px;line-height:1.35;font-weight:600;margin:10px 0 34px;max-width:760px}
+.facts{display:flex;gap:36px;font-size:24px;color:var(--creme);opacity:.92;margin-bottom:34px}
+.facts span{display:flex;align-items:center;gap:9px}
+.facts i{width:10px;height:10px;border-radius:50%;background:var(--or);display:inline-block}
+.cta{display:inline-flex;align-items:center;gap:14px;align-self:flex-start;background:var(--or);color:var(--violet-d);font-family:'Open Sans',sans-serif;font-weight:800;font-size:32px;padding:24px 42px;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.cta svg{width:28px;height:28px}
+.foot{position:absolute;left:110px;bottom:40px;font-size:20px;letter-spacing:.04em;opacity:.8}
+.compass{position:absolute;right:110px;top:70px;width:120px;height:120px;border-radius:50%;border:2px solid var(--or);display:flex;align-items:center;justify-content:center;background:rgba(58,45,66,.55)}
+</style>
+</head>
+<body>
+<div class="flyer" id="flyer">
+  <div class="bg"></div>
+  <div class="veil"></div>
+
+  <div class="copy">
+    <div class="kicker">Une aventure en Afrique de l’Ouest</div>
+    <div id="logo" aria-label="TAAMA"></div>
+    <div class="tag">Un jeu d’aventure et de trésors cachés, au cœur de la Grande Mosquée de Djenné.</div>
+    <div class="facts">
+      <span><i></i>Explore la ville</span>
+      <span><i></i>Trouve les indices</span>
+      <span><i></i>Découvre l’histoire</span>
+    </div>
+  </div>
+
+  <div class="compass" aria-hidden="true">
+    <svg width="62" height="62" viewBox="0 0 46 46"><path d="M23 4 L30 23 L23 42 L16 23 Z" fill="none" stroke="#F9D58B" stroke-width="2.4" stroke-linejoin="round"/><circle cx="23" cy="23" r="3" fill="#F9D58B"/></svg>
+  </div>
+
+  <div class="foot">Un projet Kabakoo · Grande Mosquée de Djenné, Mali</div>
+</div>
+
+<script type="module">
+  // Le logo TAAMA du jeu (même dessin que dans l'interface)
+  import { taamaLogo } from '../../app/taama-logo.js?v=3';
+  document.getElementById('logo').innerHTML = taamaLogo('flyer');
+</script>
+</body>
+</html>

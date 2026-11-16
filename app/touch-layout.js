@@ -17,14 +17,14 @@ export const SCHEMA = 1;
 export const MODES = ['foot', 'aim', 'car', 'drone'];
 export const MODE_NAMES = {
   foot:  { fr: 'À pied', en: 'On foot' },
-  aim:   { fr: 'Visée du gadget', en: 'Gadget aiming' },
+  aim:   { fr: 'Tireur d’élite', en: 'Sniper' },
   car:   { fr: 'Voiture', en: 'Car' },
   drone: { fr: 'Drone', en: 'Drone' },
 };
 
 export const MODE_SHORT = {
   foot:  { fr: 'À pied', en: 'On foot' },
-  aim:   { fr: 'Visée', en: 'Aim' },
+  aim:   { fr: 'Tireur d’élite', en: 'Sniper' },
   car:   { fr: 'Voiture', en: 'Car' },
   drone: { fr: 'Drone', en: 'Drone' },
 };
@@ -50,10 +50,11 @@ const ICONS_NOTE = 'les icônes SVG sont dans touch-controls.js (clé = icon)';
 export const ACTIONS = {
   jump:     { icon: 'jump',     kind: 'tap',   modes: ['foot', 'aim'], fr: 'Sauter',       en: 'Jump' },
   run:      { icon: 'run',      kind: 'latch', modes: ['foot'],        fr: 'Courir',       en: 'Run' },
-  aim:      { icon: 'aim',      kind: 'latch', modes: ['foot', 'aim'], fr: 'Viser',        en: 'Aim' },
+  aim:      { icon: 'aim',      kind: 'toggle', modes: ['foot', 'aim'], fr: 'Tireur d’élite', en: 'Sniper', needs: 'gadget' },   // bascule comme T au clavier : un appui active, un autre désactive
   fire:     { icon: 'fire',     kind: 'tap',   modes: ['foot', 'aim'], fr: 'Tirer',        en: 'Fire', needs: 'gadget' },
   fireSide: { icon: 'fireSide', kind: 'tap',   modes: ['foot', 'aim'], fr: 'Tir latéral',  en: 'Side shot', needs: 'gadget' },
   kneel:    { icon: 'kneel',    kind: 'tap',   modes: ['foot', 'aim'], fr: 'S’agenouiller', en: 'Kneel' },
+  dash:     { icon: 'dash',     kind: 'tap',   modes: ['foot'],        fr: 'Propulsion',   en: 'Dash' },
   interact: { icon: 'interact', kind: 'tap',   modes: ['foot', 'aim', 'drone'], fr: 'Interagir', en: 'Interact', contextual: true },
   droneOn:  { icon: 'drone',    kind: 'tap',   modes: ['foot'],        fr: 'Drone',        en: 'Drone' },
   map:      { icon: 'map',      kind: 'tap',   modes: ['foot', 'aim', 'car', 'drone'], fr: 'Carte', en: 'Map' },
@@ -99,6 +100,7 @@ const FOOT = () => [
   S('fire',  'fire',  0.88, 0.38, 1.05),
   S('run',   'run',   0.77, 0.83, 0.95),
   S('kneel', 'kneel', 0.66, 0.84, 0.8),
+  S('dash',  'dash',  0.92, 0.87, 0.95),
   S('interact', 'interact', 0.64, 0.58, 1.25, { contextual: true }),
   S('side',  'fireSide', 0.67, 0.40, 0.8),
   S('drone', 'droneOn', 0.37, 0.88, 0.75),

@@ -103,8 +103,12 @@ const EXTRA = {
     ['<div style="width:62%;height:100%', '<div data-bind-width="loadPct" style="width:62%;height:100%'],
   ],
   cinematique: [
-    ['<div style="position:absolute;left:0;top:0;width:1440px;height:92px;background:#55415D"></div>', '<div style="position:absolute;left:-3000px;top:0;width:7440px;height:92px;background:#55415D"></div>'],
-    ['<div style="position:absolute;left:0;top:718px;width:1440px;height:92px;background:#55415D"></div>', '<div style="position:absolute;left:-3000px;top:718px;width:7440px;height:92px;background:#55415D"></div>'],
+    // Cinématique plein cadre (vidéo en boucle) : plus de barres violettes ni de contrôles de lecture. Restent la vidéo, les sous-titres (descendus en bas) et le bouton « Passer la cinématique ».
+    ['<div style="position:absolute;left:0;top:0;width:1440px;height:92px;background:#55415D"></div>', ''],                 // barre du haut
+    ['<div style="position:absolute;left:0;top:718px;width:1440px;height:92px;background:#55415D"></div>', ''],               // barre du bas
+    ['<div style="position:absolute;left:64px;top:26px;display:flex;align-items:center;gap:14px">', '<div style="position:absolute;left:64px;top:26px;display:none;align-items:center;gap:14px">'],                 // « Séquence 2 · titre »
+    ['<div style="position:absolute;left:64px;right:64px;top:742px;display:flex;align-items:center;gap:20px">', '<div style="position:absolute;left:64px;right:64px;top:742px;display:none;align-items:center;gap:20px">'], // pause · temps · progression · bouton sous-titres
+    ['<div style="position:absolute;left:220px;right:220px;top:600px;display:flex;justify-content:center">', '<div style="position:absolute;left:220px;right:220px;bottom:52px;display:flex;justify-content:center">'],     // sous-titres : au bas de l'écran, à la place de la barre
     ['<img src="assets/images/menu-djenne-couchant.jpg" alt="Plan large', '<img data-cine-bg src="assets/images/menu-djenne-couchant.jpg" alt="Plan large'],
     ['Djenné. Un lieu où la terre garde la mémoire.', '<span data-bind="caption">Djenné. Un lieu où la terre garde la mémoire.</span>'],
     ['<span style="font-size:15px;font-weight:600;width:50px">0:08</span>', '<span data-bind="cineTime" style="font-size:15px;font-weight:600;width:50px">0:08</span>'],
@@ -125,6 +129,8 @@ const EXTRA = {
   ],
   profil: [],
   nouvelle: [
+    // « Voir la cinématique d’introduction » retirée : la cinématique se joue à chaque entrée dans le jeu
+    ['<div style="display:flex;align-items:center;gap:14px"><span style="flex:1;font-size:16px;font-weight:600">Voir la cinématique d’introduction</span><span class="sw"><i></i></span></div>', ''],
     ['font-size:28px;line-height:1">À définir</div>', 'font-size:28px;line-height:1"><span data-bind="playerName">À définir</span></div>'],
     ['<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:18px;background:rgba(249,213,139,.2);border:1px solid #F9D58B">',
       '<div data-warn style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:18px;background:rgba(249,213,139,.2);border:1px solid #F9D58B">'],

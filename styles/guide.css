@@ -88,6 +88,10 @@
 
 /* démos : la manette dessinée occupe toute la hauteur de la zone de dessin */
 .gc-demo .gd-pad { height: 100%; width: auto; max-width: 100%; flex: 0 1 auto; }
+/* manette dans la bulle du tuto : plus grande, pour bien voir la touche à prendre */
+.gc-demo:has(.gd-pd) { height: clamp(150px, 40vh, 280px); }
+.gc-demo:has(.gd-pd) .gd-pd { height: 100%; }
+@media (max-height: 480px) { .gc-demo:has(.gd-pd) { height: clamp(110px, 42vh, 160px); } }
 
 /* diagnostic (?guidedebug=1) */
 .gc-dbg { position: fixed; left: 6px; bottom: 6px; max-width: 70vw; padding: 4px 8px; border-radius: 8px; background: rgba(0, 0, 0, .78); color: #9ff; font: 12px/1.3 monospace; pointer-events: none; z-index: 9160; }

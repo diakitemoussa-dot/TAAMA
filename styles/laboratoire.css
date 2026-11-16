@@ -108,6 +108,8 @@
 }
 .lab-btn:hover{ filter: brightness(1.14); }
 .lab-btn:focus-visible, .lab-key:focus-visible, .lab-answer input:focus-visible{ outline: 3px solid var(--lab-cream); outline-offset: 3px; }
+/* sélection à la manette : contour blanc épais sur la touche ou le bouton visé (classe posée par padFocus dans laboratoire.js) */
+.lab-pad-sel:focus{ outline: 4px solid #fff; outline-offset: 3px; position: relative; z-index: 2; box-shadow: 0 3px 0 #0d1118, 0 0 0 2px rgba(0,0,0,.55), 0 0 18px rgba(255,255,255,.65); }
 .lab-btn kbd, .lab-btn .lbl{ font: inherit; }
 .lab-btn kbd{
   font-size: .76rem; padding: 1px 8px; border-radius: 7px;

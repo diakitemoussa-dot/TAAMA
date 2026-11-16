@@ -22,13 +22,14 @@ const URL = 'assets/models/neantis-base.glb?v=9';
 const DRACO = 'assets/vendor/three/examples/jsm/libs/draco/';
 const BLUE_HALO = 0x4aa8ff;
 
-const state = { loaded: false, root: null, center: new THREE.Vector3(), anchors: {}, requested: false };
+const state = { loaded: false, root: null, center: new THREE.Vector3(), anchors: {}, requested: false, camFails: 0 };
 let emissive = [];             // { mat, day, night }
 let halos = [], lights = [], level = -1, haloMats = [];
 const OPEN_R = 4.4, CLOSE_R = 5.6, DOOR_TIME = 0.7;      // m (unités du jeu) : ouverture, refermeture (hystérésis), durée de la course
 const DOOR_R = { Portail: 11, Service: 5.5 };               // portées propres aux grandes portes (ouverture ; fermeture = +1,2)
 const TAKE_R = 3.2;                                       // portée de ramassage du dispositif
 const doors = {};                                         // id -> { anchor, leaves:[{node, base, delta}], amt, open }
+let probe = null;                                         // point (THREE.Vector3) qui remplace le joueur pour ouvrir les portes : la caméra du plan d'arrivée (voir setProbe)
 let device = null, deviceBase = 0, deviceHalo = null, promptEl = null;
 
 function nightLevel() {
@@ -139,14 +140,57 @@ window.addEventListener('keydown', (e) => {
 
 /* S9/S10 : approche de la base (une fois le gadget débloqué, avant le dispositif 2) ; séquences 8 puis 9 */
 const story = { s9: false, s10: false };
+/** Distance (m, plan horizontal) du point au complexe : quadrilatère formé par les quatre tours de garde (0 à l'intérieur). */
+function distToCompound(x, z) {
+  const ids = ['SO', 'SE', 'NE', 'NO'], P = ids.map((k) => state.anchors['Anchor_Patrouille_' + k]);
+  if (P.some((p) => !p)) return Infinity;
+  let pos = 0, neg = 0, best = Infinity;
+  for (let i = 0; i < 4; i++) {
+    const a = P[i], b = P[(i + 1) % 4], ex = b.x - a.x, ez = b.z - a.z, el2 = (ex * ex + ez * ez) || 1;
+    const cross = ex * (z - a.z) - ez * (x - a.x);                                   // côté du point par rapport à l'arête : tous du même signe = à l'intérieur (quadrilatère convexe)
+    if (cross >= 0) pos++; else neg++;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * ex + (z - a.z) * ez) / el2));
+    best = Math.min(best, Math.hypot(x - (a.x + ex * t), z - (a.z + ez * t)));
+  }
+  return (pos === 4 || neg === 4) ? 0 : best;
+}
+let camRetryAt = 0;
+const BASE_CAM_R = 200;                                                                  // le plan se lance quand le joueur (à pied, en voiture ou en drone) est à moins de 200 m du dispositif 2
+function dist2Device(pp) {
+  const dev = state.anchors.Anchor_Dispositif; if (!dev) return Infinity;
+  let x = pp.x, z = pp.z;
+  const dg = window.DroneGame;
+  if (dg && dg.isActive && dg.isActive() && dg.launched && dg.launched()) { const pl = dg.debugPilot && dg.debugPilot(); if (pl && pl.pos) { x = pl.pos[0]; z = pl.pos[2]; } }   // en pilotage, c'est le drone qui compte
+  return Math.hypot(x - dev.x, z - dev.z);
+}
+function tickBaseCamera(pp) {
+  if (state.camRunning || performance.now() < camRetryAt) return;
+  try { if (localStorage.getItem('taama.base.cam') === '1') return; } catch (_) {}
+  const sm = window.SanctuaryMode;
+  if (!(sm && sm.showBaseIntro) || window.__storyFreeze || (window.CityMap && window.CityMap.isOpen) || (window.Tapama && window.Tapama.isBusy && window.Tapama.isBusy())) return;
+  if (!state.camPending && dist2Device(pp) > BASE_CAM_R) return;                       // rayon de 200 m autour du dispositif 2
+  const dg = window.DroneGame;
+  if (dg && dg.isActive && dg.isActive()) {                                             // drone en vol : on le rappelle (le plan part dès qu'il est revenu au personnage)
+    state.camPending = true; camRetryAt = performance.now() + 1500;
+    if (dg.launched && dg.launched() && dg.recall) { try { dg.recall(); } catch (_) {} }
+    return;
+  }
+  state.camRunning = true;
+  const r = sm.showBaseIntro({ onDone: () => { try { localStorage.setItem('taama.base.cam', '1'); } catch (_) {} state.camRunning = false; state.camPending = false; } });
+  if (r === true) return;
+  state.camRunning = false;
+  if (r === 'skip') { camRetryAt = performance.now() + 6000; if (++state.camFails >= 4) { state.camPending = false; try { localStorage.setItem('taama.base.cam', '1'); } catch (_) {} } }   // trajet non sûr (jamais de caméra dans un mur) : on réessaie d'un autre point, puis on renonce après 4 essais
+  else camRetryAt = performance.now() + 2500;                                          // conditions pas réunies : on réessaie dans quelques secondes
+}
+
 function tickApproach(pp) {
   if (!pp || state.deviceTaken) return;
   let gad = false, d2 = false; try { gad = localStorage.getItem('taama.gadget') === '1'; d2 = localStorage.getItem('taama.dispositif2') === '1'; } catch (_) {}
+  if (!d2) tickBaseCamera(pp);                                  // plan de caméra : sans condition de gadget
   if (!gad || d2) return;
   const por = state.anchors.Anchor_Portail, ent = state.anchors.Anchor_Porte_Entree;
   if (!story.s9 && por && Math.hypot(pp.x - por.x, pp.z - por.z) < 70) {
-    story.s9 = true;
-    window.Tapama?.radio?.({ text: 'Ralentis avant le portail, {nom}. Gare-toi et continue à pied. Leurs drones balaient la zone.', mood: 'inquiete', duration: 8 });
+    story.s9 = true;   // séance de test : le message « Ralentis avant le portail » est supprimé ; la séquence 8 se termine en silence
     try { window.GameUI?.completeSequence?.(8); } catch (_) {}
   }
   if (!story.s10 && ent && Math.hypot(pp.x - ent.x, pp.z - ent.z) < 9) {
@@ -280,7 +324,7 @@ M?.addFrameHook((dt) => {
   }
   if (!state.loaded) return;
   const pp = playerPos();
-  updateDoors(dt, pp);
+  updateDoors(dt, probe || pp);                                 // pendant le plan de caméra d'arrivée, les portes réagissent à la CAMÉRA (setProbe), pas au joueur
   updateDevice(dt, pp);
   updateGuide(dt, pp);
   tickApproach(pp);
@@ -313,10 +357,12 @@ window.NeantisBase = {
   get anchors() { return state.anchors; },
   anchor(name) { return state.anchors[name] || null; },
   get deviceTaken() { return !!state.deviceTaken; },
+  setProbe(v) { probe = v || null; },                          // le plan de caméra d'arrivée (sanctuary-mode.js) donne sa position : les portes s'ouvrent devant la caméra ; null = retour au joueur
+  distToCompound,                                              // distance (m) d'un point (x, z) au complexe
   goTo,
   resetDevice() {                                              // remise à zéro de l'histoire côté base (clés taama.* du chapitre 1)
     state.deviceTaken = false; GUIDE.stage = 0; GUIDE.said = {}; story.s9 = story.s10 = false; if (device) device.visible = true;
-    ['taama.acte', 'taama.d1.spotted', 'taama.dispositif1', 'taama.piste', 'taama.lab1', 'taama.lab1.q', 'taama.vol', 'taama.dossier', 'taama.gadget', 'taama.dispositif2', 'taama.lab2', 'taama.lab2.q', 'taama.revelation', 'taama.chapitre1', 'taama.next']
+    ['taama.acte', 'taama.d1.spotted', 'taama.dispositif1', 'taama.piste', 'taama.lab1', 'taama.lab1.q', 'taama.vol', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.dispositif2', 'taama.lab2', 'taama.lab2.q', 'taama.revelation', 'taama.chapitre1', 'taama.next']
       .forEach((k) => { try { localStorage.removeItem(k); } catch (_) {} });
   },
   get doors() { const o = {}; for (const id in doors) o[id] = { open: doors[id].open, amt: +doors[id].amt.toFixed(2) }; return o; },

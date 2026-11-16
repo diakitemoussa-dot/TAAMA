@@ -9,11 +9,11 @@
    (« animations réduites »), la même image est figée sur la pose utile.
    ========================================================== */
 
-import * as TL from './touch-layout.js?v=1';
-import { UI_LABELS } from './guide-content.js?v=35';
+import * as TL from './touch-layout.js?v=3';
+import { UI_LABELS } from './guide-content.js?v=48';
 import { t } from './i18n.js?v=1';
 
-import { ICO, icon, PAD_COL, PAD_PS, PAD_NAME, padBtn, lang } from './guide-icons.js?v=35';
+import { ICO, icon, PAD_COL, PAD_PS, PAD_NAME, padBtn, lang } from './guide-icons.js?v=48';
 export { icon, padBtn };
 const keys = (k) => (Array.isArray(k) ? k : k[lang()] || k.fr);
 
@@ -106,7 +106,12 @@ function padDevice(g) {
     sh('LT', 37) + sh('RT', 160) + sh('LB', 37) + sh('RB', 160) +
     '<rect x="102" y="30" width="36" height="22" rx="3" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/>' +
     stick('L', 84, 81, L ? 'L' : '', lit.has('L3')) + stick('R', 150, 81, R ? 'R' : '') +
-    `<g class="pbtn${lit.has('LEFT') || lit.has('DPAD') ? ' hit' : ''}" style="--i:0"><path d="M53 49h6v6h6v6h-6v6h-6v-6h-6v-6h6z" transform="translate(0 0)" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/></g>` +
+    // croix directionnelle : une branche par direction, pour n'allumer que celle qui est demandée (LEFT) ou toute la croix (DPAD)
+    `<g class="pbtn${lit.has('UP') || lit.has('DPAD') ? ' hit' : ''}" style="--i:0"><path d="M53 49h6v6h-6z" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/></g>` +
+    `<g class="pbtn${lit.has('RIGHT') || lit.has('DPAD') ? ' hit' : ''}" style="--i:0"><path d="M59 55h6v6h-6z" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/></g>` +
+    `<g class="pbtn${lit.has('DOWN') || lit.has('DPAD') ? ' hit' : ''}" style="--i:0"><path d="M53 61h6v6h-6z" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/></g>` +
+    `<g class="pbtn${lit.has('LEFT') || lit.has('DPAD') ? ' hit' : ''}" style="--i:0"><path d="M47 55h6v6h-6z" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/></g>` +
+    '<path d="M53 55h6v6h-6z" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/>' +
     bt('Y', 186, 39, 8) + bt('X', 168, 55, 8) + bt('B', 198, 55, 8) + bt('A', 183, 71, 8) +
     `<rect class="pbtn${lit.has('START') ? ' hit' : ''}" style="--i:0" x="161" y="30" width="14" height="8" rx="4" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/><rect class="pbtn${lit.has('BACK') ? ' hit' : ''}" style="--i:0" x="66" y="30" width="14" height="8" rx="4" fill="#4a3a30" stroke="#2a1d15" stroke-width="1.5"/></svg>`;
   let leg = '';

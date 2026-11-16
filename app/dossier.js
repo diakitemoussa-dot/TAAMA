@@ -31,15 +31,15 @@ const PAGES = [
 /* Chaque étape : une page + les bulles de Tapama (texte de la bible, scène S8) */
 const STEPS = [
   { page: 0, msgs: [
-    { mood: 'attentive', text: 'Je te transfère tout ce que j’ai sur eux. Ça s’appelle NÉANTIS. Voilà leur logo…' } ] },
+    { mood: 'attentive', text: 'Je te transfère mon dossier sur NÉANTIS. Voilà leur logo…' } ] },
   { page: 1, msgs: [
     { mood: 'attentive', text: '… et leur patron, Adrian Voss.' } ] },
   { page: 2, msgs: [
-    { mood: 'neutre', text: 'Leur devise : « Tout voir. Tout garder. Rien rendre. » Ils veulent surtout contrôler ce que ces objets montrent, pas les vendre.' } ] },
+    { mood: 'neutre', text: 'Leur devise : « Tout voir. Tout garder. Rien rendre. »' } ] },
   { page: 3, msgs: [
-    { mood: 'inquiete', text: 'Leurs robots patrouillent partout. Mais je ne t’envoie pas sans rien : il y a un gadget dans la voiture. Avec lui, tu pourras te défendre.' } ] },
+    { mood: 'inquiete', text: 'Leurs robots patrouillent. Prends le gadget dans la voiture pour te défendre.' } ] },
   { page: 3, last: true, msgs: [
-    { mood: 'attentive', text: 'Je t’affiche l’itinéraire de leur base. Regarde bien, et reviens-moi en un seul morceau.' } ] },
+    { mood: 'attentive', text: 'Je t’affiche l’itinéraire de leur base. Reviens-moi en un seul morceau.' } ] },
 ];
 
 /* ---------- État ---------- */

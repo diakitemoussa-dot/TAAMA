@@ -21,14 +21,16 @@
    API : window.GameUI = { show, isOpen, openPause, settings, save, … }
    ========================================================== */
 
-import { SCREENS } from './game-screens.js?v=10';
-import { applyTaamaLogo } from './taama-logo.js?v=2';
+import { SCREENS } from './game-screens.js?v=12';
+import { applyTaamaLogo } from './taama-logo.js?v=3';
 import * as G from './game-save.js?v=1';
-import { detectQuality, mediaUrl } from './device-quality.js?v=6';
+import { detectQuality } from './device-quality.js?v=6';
+import { CINE, cinematicUrl, preloadCinematic, introPre } from './intro-video.js?v=1';
+import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLACK_MS } from './screen-fx.js?v=2';
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=2';
+import { EN } from './i18n-en.js?v=3';
 import { sendProfile } from './player-sync.js?v=1';
 import { SEQUENCES } from './tapama-core.js?v=2';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=11';
@@ -37,10 +39,10 @@ const NEW_UI = window.__NEW_UI !== false;
 const STAGE_W = 1440;
 const STAGE_H = 810;
 const INPUT_LOCK_MS = 250;
-const CINE_CUT = 10;                    // la vidéo d'intro est coupée à 10 s (comme l'ancienne intro)
-const CINE_VIDEO = 'assets/videos/intro-drone format pc.mp4';   // toujours 16:9 : l'écran est en 16:9
 const LOAD_MIN_MS = 2400;               // temps minimal d'affichage du chargement (le temps de lire une astuce)
 const LOAD_TIMEOUT_MS = 90000;
+const VIDEO_WAIT_MS = 20000;            // la maquette est prête mais la vidéo d'intro pas encore : on attend au plus 20 s de plus, puis on la lit en streaming
+const VIDEO_PCT_SHARE = 0.1;            // part de la barre de chargement réservée à la vidéo d'intro (le reste : la maquette 3D)
 const PLAYCLOCK_MS = 15000;
 const QUALITY_KEY = 'taama.quality';
 const INTRO_KEY = 'taama.seenIntro';
@@ -67,6 +69,12 @@ const $ = (root, sel) => root.querySelector(sel);
 const $$ = (root, sel) => Array.from(root.querySelectorAll(sel));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/** Mode test (?test=1) : signale un repère du jeu à l'enregistreur (app/playtest.js). Sans le mode test, personne n'écoute. */
+function track(k, d) {
+  if (!window.__TAAMA_TEST) return;
+  try { window.dispatchEvent(new CustomEvent('taama:track', { detail: { k, d } })); } catch (_) {}
+}
 
 function toast(msg) {
   const k = window.GamepadKit;
@@ -148,7 +156,7 @@ let open = false;
 let inGame = false;                      // une partie est en cours (pause possible)
 let lockUntil = 0;
 let kbIndex = -1;
-let ng = { cine: true, tuto: true };     // options de « Nouvelle partie »
+let ng = { tuto: true };                  // options de « Nouvelle partie » (la cinématique se joue à chaque entrée dans le jeu, plus d'option)
 let newGameConfirmed = false;
 let cineThen = null;                     // que faire quand la cinématique se termine
 
@@ -197,13 +205,32 @@ function mount(id) {
   return { id, el, root, bgEl, bgRoot, cleanup: null };
 }
 
-function show(id, { push = false } = {}) {
+/* Entrée dans un menu : écran noir de 2 s (app/screen-fx.js). Les autres écrans (titre, chargement, cinématique, pause) s'affichent tout de suite. */
+let transitioning = false;
+function show(id, opts = {}) {
+  if (!NEW_UI) return;
+  if (transitioning) return;                                   // un changement d'écran est déjà en cours : les entrées sont bloquées
+  if (current && isMenuScreen(id)) {
+    transitioning = true;
+    lockUntil = performance.now() + BLACK_MS;
+    const push = !!opts.push;
+    blackTransition(() => {
+      if (push && current) stack.push(current.id);
+      showNow(id, { push: false });
+    }).then(() => { transitioning = false; });
+    return;
+  }
+  showNow(id, opts);
+}
+
+function showNow(id, { push = false } = {}) {
   if (!NEW_UI) return;
   if (current && push) stack.push(current.id);
   const prev = current;
   if (prev && prev.cleanup) { try { prev.cleanup(); } catch (_) {} }
   const scr = mount(id);
   current = scr;
+  track('ecran', { id });
   open = true;
   host.hidden = false;
   host.classList.toggle('is-pause', id === 'pause');
@@ -224,7 +251,13 @@ function show(id, { push = false } = {}) {
 function back() {
   const id = stack.pop();
   if (id) show(id);
-  else if (current && current.id !== 'main') { if (inGame) openPause(); else show('main'); }
+  else if (current && current.id !== 'main') {
+    if (!inGame) show('main');
+    else if (current.id === 'pause') closePause();
+    // un écran ouvert pendant la partie sans écran précédent (ex. la carte de fin de chapitre) : on va à la pause.
+    // openPause() refuse quand un écran est déjà affiché (open) : c'était le bouton « Retour » sans effet.
+    else { open = false; openPause(); }
+  }
 }
 
 function hideUI() {
@@ -431,7 +464,7 @@ const SWITCH_KEYS = {
   'Contraste renforcé des textes': 'highContrast',
   'Vibrations de la manette': 'rumble',
 };
-const NG_KEYS = { 'Voir la cinématique d’introduction': 'cine', 'Tutoriel des commandes avec Tapama': 'tuto' };
+const NG_KEYS = { 'Tutoriel des commandes avec Tapama': 'tuto' };
 const SEG_KEYS = { 'Vitesse du temps (jour et nuit)': 'timeSpeed', 'Taille du texte': 'textSize' };
 const QUALITY_ORDER = ['auto', 'low', 'mid', 'high'];
 const QUALITY_NAMES = { low: 'Économie', mid: 'Équilibrée', high: 'Élevée' };
@@ -675,6 +708,7 @@ function testSound() {
 
 function act(name) {
   if (!name) return;
+  track('action', { name, ecran: current ? current.id : null });
   if (name.startsWith('options:')) return show('options-' + name.slice(8), { push: true });
   if (name.startsWith('lang:')) return setLang(name.slice(5));
   switch (name) {
@@ -698,6 +732,7 @@ function act(name) {
     case 'resume-game': return closePause();
     case 'to-main': return toMain();
     case 'test-sound': return testSound();
+    case 'side-btn': return toggleSideBtn();
     case 'guide': return window.Guide && (current && current.id === 'main' ? window.Guide.start() : window.Guide.open('auto'));   // « Comment jouer ? » (app/guide.js)
     case 'touch-settings': return window.TouchControls && window.TouchControls.openSettings();   // Options › Commandes : panneau des commandes tactiles (app/touch-controls.js)
     case 'reset-settings':
@@ -849,22 +884,34 @@ function startLoading() {
   };
   const slideTimer = slides.length > 1 ? setInterval(() => { slide = (slide + 1) % slides.length; paintSlides(); }, 4200) : 0;
 
-  const onPct = (e) => { pct = Math.max(pct, e.detail.pct); };
+  // La vidéo d'intro n'est téléchargée que si le joueur va la voir (première partie) : pour lui, la lecture ne doit jamais attendre le réseau
+  const needIntro = true;                 // la cinématique se joue à chaque entrée : toujours préchargée pendant le chargement
+  let scenePct = 0, videoPct = 0, sceneReadyAt = null;
+  const syncPct = () => {
+    const p = needIntro ? scenePct * (1 - VIDEO_PCT_SHARE) + videoPct * VIDEO_PCT_SHARE : scenePct;
+    pct = Math.max(pct, Math.min(100, p));
+  };
+  const onPct = (e) => { scenePct = Math.max(scenePct, e.detail.pct); syncPct(); };
   window.addEventListener('mosque:loading', onPct);
 
   scr.cleanup = () => { finished = true; clearInterval(tipTimer); clearInterval(slideTimer); window.removeEventListener('mosque:loading', onPct); };
 
   // Démarre la maquette 3D (derrière l'interface) : même appel que l'ancienne intro
   try { window.startMosqueScene?.(); } catch (e) { console.error(e); }
+  if (needIntro) preloadCinematic((p) => { videoPct = Math.max(videoPct, p); syncPct(); });
   paint();
 
   (async function loop() {
     while (!finished) {
-      const elapsed = performance.now() - t0;
+      const now = performance.now();
+      const elapsed = now - t0;
       const ready = window.MosqueScene && window.MosqueScene.loaded;
-      if (ready) pct = Math.max(pct, 100);
+      if (ready) { scenePct = 100; if (sceneReadyAt === null) sceneReadyAt = now; }
+      // vidéo d'intro : prête (ou en échec : lecture en streaming), ou délai dépassé
+      const videoOk = !needIntro || introPre.state !== 'loading' || (sceneReadyAt !== null && now - sceneReadyAt > VIDEO_WAIT_MS);
+      syncPct();
       paint();
-      if (ready && elapsed >= LOAD_MIN_MS) break;
+      if (ready && videoOk && elapsed >= LOAD_MIN_MS) break;
       if (elapsed > LOAD_TIMEOUT_MS) { toast('Le chargement est long : on continue.'); break; }
       await wait(160);
     }
@@ -877,11 +924,9 @@ function startLoading() {
 }
 
 function afterLoading() {
-  const seen = store && store.getItem(INTRO_KEY) === '1';
-  // Première partie : le joueur donne son nom avant d'arriver au menu (Tapama l'appellera par son prénom)
+  // La cinématique se joue à chaque entrée dans le jeu. Première partie : le joueur donne son nom avant d'arriver au menu (Tapama l'appellera par son prénom)
   const next = () => (profile ? showMainMenu() : showProfile({ first: true }));
-  if (!seen) playCinematic(() => { try { store && store.setItem(INTRO_KEY, '1'); } catch (_) {} next(); });
-  else next();
+  playCinematic(() => { try { store && store.setItem(INTRO_KEY, '1'); } catch (_) {} next(); });
 }
 
 function showMainMenu() {
@@ -907,13 +952,17 @@ function fmtTime(s) {
 function playCinematic(then) {
   cineThen = then || null;
   show('cinematique');
+  window.MosqueScene?.pauseLoop?.();             // la vidéo cache la maquette 3D : on la met en pause pour que la lecture ne saccade pas (relancée à la fin, voir finishCinematic)
   const scr = current;
   const r = scr.root;
   const bg = $(scr.bgRoot || r, '[data-cine-bg]');
   const v = document.createElement('video');
   v.playsInline = true;
   v.preload = 'auto';
-  v.src = mediaUrl('introVideo');   // mobile / réseau lent : version 960 px (2,3 Mo au lieu de 18,8 Mo)
+  // Vidéo déjà en mémoire (téléchargée pendant la barre de chargement) : lecture immédiate, sans réseau. Sinon : streaming du bon fichier (AV1 / mobile / H.264).
+  v.src = introPre.state === 'ready' ? introPre.blobUrl : cinematicUrl();
+  // En boucle tant que le joueur peut la passer (bouton PASSER). S'il a désactivé « Cinématiques passables », elle se joue une seule fois puis la partie continue : jamais de joueur bloqué.
+  v.loop = false;                  // lue une seule fois, puis le flyer s'affiche (voir showEndFlyer)
   v.style.cssText = bg ? bg.getAttribute('style') : 'position:absolute;left:0;top:0;width:1440px;height:810px;object-fit:cover';
   v.volume = clamp((settings.muteAll ? 0 : settings.volume / 100), 0, 1);
   if (bg) bg.replaceWith(v); else r.firstElementChild.prepend(v);
@@ -923,7 +972,7 @@ function playCinematic(then) {
   if (skipBtn && !settings.skippableCutscenes) skipBtn.style.display = 'none';      // Options › Cinématiques passables
   cine = { v, scr, r, ended: false };
 
-  const total = () => Math.min(CINE_CUT, v.duration || CINE_CUT);
+  const total = () => (Number.isFinite(v.duration) && v.duration > 0 ? v.duration : 30);
   const paint = () => {
     const cur = Math.min(v.currentTime, total());
     const p = (cur / total()) * 100;
@@ -931,11 +980,16 @@ function playCinematic(then) {
     for (const c of CAPTIONS) if (cur >= c.t) cap = c.text;
     bindAll(r, { cineTime: fmtTime(cur), cineTotal: fmtTime(total()), cinePct: `${p}%`, caption: t(cap) });
     if (capBox) capBox.style.display = settings.subtitles ? '' : 'none';
-    if (cur >= CINE_CUT && !cine.ended) finishCinematic();
   };
   v.addEventListener('timeupdate', paint);
-  v.addEventListener('ended', () => finishCinematic());
-  v.addEventListener('error', () => finishCinematic());
+  v.addEventListener('ended', () => showEndFlyer());
+  let fallbackTried = false;
+  v.addEventListener('error', () => {
+    // décodage impossible (ex. AV1 annoncé mais refusé) : on retente une fois avec le H.264 avant de renoncer à la cinématique
+    if (!fallbackTried && !String(v.currentSrc || v.src).includes('h264')) {
+      fallbackTried = true; v.src = CINE.h264; v.load(); v.play().catch(() => finishCinematic());
+    } else finishCinematic();
+  });
   paint();
   scr.cleanup = () => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch (_) {} if (cine && cine.scr === scr) cine = null; };
   v.play().catch(() => { v.muted = true; v.play().catch(() => finishCinematic()); });
@@ -946,11 +1000,32 @@ function skipCinematic() {
   finishCinematic();
 }
 
+/* Fin de la cinématique : le flyer reste FLYER_HOLD_MS, puis fondu au noir (app/screen-fx.js), sans bouton */
+function showEndFlyer() {
+  if (!cine || cine.ended || document.getElementById('endFlyer')) return;
+  const box = document.createElement('div');
+  box.id = 'endFlyer';
+  box.setAttribute('role', 'img');
+  box.setAttribute('aria-label', 'TAAMA');
+  box.style.cssText = 'position:fixed;inset:0;z-index:9000;overflow:hidden;background:#3A2D42;';
+  const img = document.createElement('img');
+  img.src = 'assets/images/taama-flyer.png';
+  img.alt = 'TAAMA : un jeu d’aventure au cœur de la Grande Mosquée de Djenné';
+  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center';
+  box.appendChild(img);
+  document.body.appendChild(box);
+  const go = () => fadeToBlack(FADE_MS).then(() => { box.remove(); finishCinematic(); });
+  const hold = () => setTimeout(go, FLYER_HOLD_MS);
+  if (img.decode) img.decode().then(hold, hold); else hold();
+}
+
 function finishCinematic() {
+  document.getElementById('endFlyer')?.remove();
   if (!cine || cine.ended) return;
   cine.ended = true;
   const then = cineThen;
   cineThen = null;
+  window.MosqueScene?.resumeLoop?.();            // la maquette repart comme avant (le menu principal la remet en pause lui-même)
   if (then) then(); else showMainMenu();
 }
 
@@ -972,7 +1047,7 @@ function toggleSubtitles() {
 
 /* Nouvelle partie : clés de progression de l'histoire à effacer (hors profil joueur taama.player.v1) */
 const NEW_GAME_KEYS = ['taama.dispositif1', 'taama.dispositif2', 'taama.vol', 'taama.piste', 'taama.revelation', 'taama.acte', 'taama.d1.spotted',
-  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.chapitre1', 'taama.next'];
+  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.chapitre1', 'taama.next'];
 
 let playClock = 0;
 let remindClock = 0;
@@ -997,6 +1072,7 @@ function startPlayClock() {
 
 function enterGame(opts = {}) {
   inGame = true;
+  track('jeu', { reprise: !opts.takeoff });
   hideUI();
   // Partie (Nouvelle partie / Continuer) : on entre directement dans le sanctuaire ; la vue d'ensemble (boutons GAME / SANCTUAIRE / MENU)
   // n'existe plus qu'en « Exploration libre ». Quitter le sanctuaire ouvre la pause.
@@ -1005,7 +1081,7 @@ function enterGame(opts = {}) {
     if (!inGame) return;
     if (window.MosqueScene && window.MosqueScene.loaded && window.SanctuaryMode) {
       document.querySelector('[data-action="interior"]')?.click();
-      if (opts.takeoff) hintDroneLaunch();
+      if (opts.takeoff) hintDroneLaunch(); else watchDroneOnFoot();
     }
     else setTimeout(goSanctuary, 400);
   };
@@ -1022,9 +1098,30 @@ function enterGame(opts = {}) {
 function hintDroneLaunch(tries = 0) {
   if (!inGame || window.__storyFreeze) return;
   const sm = window.SanctuaryMode, d = sm && sm.debug ? sm.debug() : null;
-  if (d && d.active && d.ready && d.state === 3 && !window.Tapama?.isBusy?.()) { window.GamepadKit?.toast?.('🚁 Lance ton drone : touche R · L1 à la manette · bouton Drone sur mobile'); return; }
+  if (d && d.active && d.ready && d.state === 3 && !window.Tapama?.isBusy?.()) { window.GamepadKit?.toast?.('🚁 Lance ton drone : touche R · L1 à la manette · bouton Drone sur mobile'); watchDroneOnFoot(); return; }
   if (tries < 120) setTimeout(() => hintDroneLaunch(tries + 1), 500);
 }
+/* Séance de test : une joueuse a posé le drone et cherché le 1er dispositif à pied pendant 6 min.
+   Tant que le dispositif n'est ni repéré ni récupéré, si le joueur reste à pied plus de 75 s, on lui rappelle (3 fois au plus)
+   que le dispositif se repère d'en haut, avec le drone. */
+let footHintTimer = 0;
+function watchDroneOnFoot() {
+  clearInterval(footHintTimer);
+  let onFootSince = performance.now(), shown = 0, lastShown = 0;
+  footHintTimer = setInterval(() => {
+    let spotted = false, taken = false;
+    try { spotted = localStorage.getItem('taama.d1.spotted') === '1'; taken = localStorage.getItem('taama.dispositif1') === '1'; } catch (_) {}
+    if (!inGame || spotted || taken || shown >= 3) { if (!inGame || spotted || taken) clearInterval(footHintTimer); return; }
+    const flying = !!window.DroneGame?.isActive?.();
+    const now = performance.now();
+    if (flying || open || window.__storyFreeze || window.Tapama?.isBusy?.()) { onFootSince = now; return; }
+    if (now - onFootSince > 75000 && now - lastShown > 90000) {
+      shown++; lastShown = now;
+      window.GamepadKit?.toast?.(t('🚁 Le dispositif se repère d’en haut : relance ton drone (R · L1 à la manette · bouton Drone sur mobile)'));
+    }
+  }, 5000);
+}
+
 function takeoffWhenReady(tries = 0) {
   if (!inGame || window.__storyFreeze || window.Dispositif1?.busy) return;
   try { const ac = localStorage.getItem('taama.acte'); if (ac && ac !== '0:done') return; } catch (_) {}
@@ -1050,6 +1147,7 @@ function playOpening() {
     setTimeout(() => veil.remove(), 600);
     save = G.completeSequence(save, 3, iso());
     persistSave();
+    track('sequence', { n: 3 });
     try { localStorage.setItem('taama.acte', '0:done'); } catch (_) {}
     window.dispatchEvent(new CustomEvent('taama:ouverture-fin'));
     enterGame({ takeoff: true });               // le jeu commence : le drone décolle (objectif et radio : drone-game.js)
@@ -1067,11 +1165,11 @@ function beginGame() {
   }
   save = G.newSave(iso());
   persistSave();
+  track('nouvelle-partie', {});
   // Nouvelle partie : on repart de zéro — ni voiture ni gadget (débloqués au premier dispositif), dispositifs à retrouver, questions de Tapama remises à zéro
   try { window.Dispositif1?.reset?.(); window.NeantisBase?.resetDevice?.(); } catch (_) {}
   try { NEW_GAME_KEYS.forEach((k) => localStorage.removeItem(k)); } catch (_) {}
-  const launch = () => playOpening();
-  if (ng.cine) playCinematic(launch); else launch();
+  playOpening();                              // pas de deuxième vidéo : la cinématique a déjà été jouée après « Appuie pour commencer »
 }
 
 function resumeGame() {
@@ -1129,6 +1227,7 @@ function openPause() {
   clockWasRunning = !!(window.DayCycle && window.DayCycle.running);
   window.DayCycle?.pause?.();
   stack.length = 0;
+  track('pause');
   show('pause');
 }
 
@@ -1139,6 +1238,7 @@ function resumeClock() {
 
 function closePause() {
   if (!inGame) return;
+  track('reprise');
   hideUI();
   resumeClock();
 }
@@ -1250,6 +1350,7 @@ function setupScreen(scr) {
   if (id.startsWith('options-')) { initControls(root); if (id === 'options-affichage') setupDisplay(root); }
 
   injectGuideButton(root, id);
+  injectSideButton(root, id);
   if (scr.bgRoot) translateTree(scr.bgRoot);
   translateTree(root);                    // dernier : les repérages par texte français ci-dessus sont déjà faits
 
@@ -1286,12 +1387,40 @@ function injectGuideButton(root, id) {
   }
 }
 
+/* Pause › « Bouton tir latéral » (écran tactile) : affiche ou masque le bouton ↔ de l'écran de jeu. Cloné d'un bouton voisin, comme « Comment jouer ? ». */
+const sideOn = () => { try { return localStorage.getItem('taama.touch.sidebtn') === '1'; } catch (_) { return false; } };
+const sideLabel = () => t('Bouton tir latéral') + ' : ' + (sideOn() ? t('Affiché') : t('Masqué'));
+EN['Bouton tir latéral'] = EN['Bouton tir latéral'] || 'Side-shot button'; EN['Affiché'] = EN['Affiché'] || 'Shown'; EN['Masqué'] = EN['Masqué'] || 'Hidden';
+function injectSideButton(root, id) {
+  if (id !== 'pause' || $(root, '[data-act="side-btn"]')) return;
+  if (!(window.TouchControls && window.TouchControls.enabled && window.TouchControls.enabled())) return;      // seulement avec les commandes tactiles
+  const src = $(root, '[data-act="options:commandes"]'); if (!src) return;
+  const b = src.cloneNode(true); b.dataset.act = 'side-btn';
+  const ic = $(b, 'svg'); if (ic) ic.innerHTML = '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>';
+  const lab = $(b, 'span'); (lab || b).textContent = sideLabel();
+  src.insertAdjacentElement('afterend', b);
+}
+function toggleSideBtn() {
+  try { localStorage.setItem('taama.touch.sidebtn', sideOn() ? '0' : '1'); } catch (_) {}
+  const b = document.querySelector('.gu-screen.on') && document.querySelector('.gu-screen.on').shadowRoot && document.querySelector('.gu-screen.on').shadowRoot.querySelector('[data-act="side-btn"] span');
+  if (b) b.textContent = sideLabel();
+  try { window.TouchControls && window.TouchControls.refresh && window.TouchControls.refresh(); } catch (_) {}
+}
+
 function setupMain(root) {
   const cont = $(root, '[data-act="continue"]');
   if (cont && !save) {
     cont.setAttribute('aria-disabled', 'true');
     const sub = $(cont, '[data-bind="seqLabel"]');
     if (sub) sub.textContent = t('Aucune sauvegarde');
+  }
+  { // petit écran : « Séquence 11 · La synchronisation » tient sur UNE ligne (avec « … ») au lieu de passer sur 2 lignes et de déborder sur le bouton voisin
+    const sub = cont && $(cont, '[data-bind="seqLabel"]');
+    if (sub && sub.parentElement) {
+      const small = sub.parentElement, col = small.parentElement;
+      if (col) { col.style.minWidth = '0'; col.style.overflow = 'hidden'; }
+      Object.assign(small.style, { display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' });
+    }
   }
   // carte « Ton équipe » : affiche le personnage jouable
   const line = $$(root, 'div').find((d) => d.firstElementChild && d.firstElementChild.tagName === 'SPAN' && d.firstElementChild.textContent.trim() === 'Personnage');
@@ -1300,7 +1429,7 @@ function setupMain(root) {
 
 function setupNewGame(root) {
   newGameConfirmed = false;
-  ng = { cine: true, tuto: true };
+  ng = { tuto: true };
   initControls(root);
   const warn = $(root, '[data-warn]');
   if (warn && !save) warn.style.display = 'none';
@@ -1352,7 +1481,21 @@ function setupMap(root, scr) {
   if (!holder || !aside || !primary) return;
 
   const primaryLabel = Array.from(primary.childNodes).find((n) => n.nodeType === 3 && n.textContent.trim());
-  const openLabel = save ? primaryLabel.textContent : 'Commencer le chapitre';
+  // Fin du chapitre 1 : la carte devient l'écran « et maintenant ? » (bravo, suite à venir, continuer ou menu)
+  let ch1Done = false;
+  try { ch1Done = !!store && store.getItem('taama.chapitre1') === 'done'; } catch (_) {}
+  const openLabel = ch1Done ? 'Continuer à explorer Djenné' : (save ? primaryLabel.textContent : 'Commencer le chapitre');
+  if (ch1Done) {
+    const banner = document.createElement('div');
+    banner.setAttribute('role', 'status');
+    banner.style.cssText = 'padding:14px 16px;border-radius:16px;background:#F9D58B;color:#55415D;font-size:calc(15px * var(--ts,1));line-height:1.4;font-weight:600;margin-bottom:14px';
+    banner.innerHTML = '<b style="display:block;font-size:calc(19px * var(--ts,1));margin-bottom:2px">Chapitre 1 terminé, bravo !</b>Tu as retrouvé les deux dispositifs de Djenné. Le chapitre 2, à Bandiagara, arrive bientôt.';
+    queueMicrotask(() => aside.prepend(banner));   // après la lecture de la structure du panneau (aside.children[0] = en-tête)
+    if (secondary) {                                 // « Revoir la cinématique » n'a plus de sens ici : on propose le menu principal
+      secondary.dataset.act = 'to-main';
+      secondary.textContent = 'Menu principal';
+    }
+  }
 
   // Panneau de droite
   const head = aside.children[0];
@@ -1388,7 +1531,7 @@ function setupMap(root, scr) {
     badge.setAttribute('style', open ? badgeStyle : 'font-size:13px;font-weight:700;padding:4px 14px;border-radius:999px;border:1px solid rgba(248,243,234,.7);color:#F8F3EA');
     progWrap.style.display = open ? '' : 'none';
     hint.style.display = open ? 'none' : '';
-    hint.textContent = info.hint || '';
+    hint.textContent = (ch1Done && id === 'bandiagara') ? 'Le chapitre 2 est en préparation : il arrive bientôt.' : (info.hint || '');
     rows.forEach((r, i) => {
       const on = r.dataset.dest === id;
       r.style.border = on ? '2px solid #F9D58B' : rowBase[i].border;
@@ -1397,7 +1540,7 @@ function setupMap(root, scr) {
     // actions : le chapitre ne se lance que sur une destination ouverte
     primaryLabel.textContent = open ? openLabel : `Verrouillée · ${info.chapter}`;
     primary.setAttribute('aria-disabled', open ? 'false' : 'true');
-    if (secondary) secondary.setAttribute('aria-disabled', open ? 'false' : 'true');
+    if (secondary && !ch1Done) secondary.setAttribute('aria-disabled', open ? 'false' : 'true');
     translateTree(aside);                           // la fiche vient d'être réécrite en français : on la traduit
     if (geo) geo.select(id, { fly });
   }
@@ -1546,8 +1689,10 @@ function saveProfileFromScreen() {
     lang: settings.lang,
     nowIso: iso(),
   };
+  const editing = !!profile;
   profile = profile ? P.updateProfile({ ...profile, device: ctx.device, lang: ctx.lang }, v, ctx.nowIso) : P.createProfile(v, ctx);
   persistProfile();
+  track('profil', { name: profile.name, age: profile.age, edit: editing });
   syncProfile();
   toast(t('Bienvenue, {nom} !', { nom: profile.name }));
   if (profileFirst) { profileFirst = false; showMainMenu(); } else back();
@@ -1611,11 +1756,13 @@ window.GameUI = {
     if (!save) return;
     save = G.completeSequence(save, n, iso());
     persistSave();
+    track('sequence', { n });
   },
   addDiscovery(id) {
     if (!save) return;
     save = G.addDiscovery(save, id);
     persistSave();
+    track('decouverte', { id });
   },
   screens: Object.keys(SCREENS),
   map: () => (mapApi && mapApi.geo ? mapApi.geo() : null),             // la carte Leaflet affichée (tests, débogage)

@@ -9,7 +9,7 @@ const body = ui.slice(ui.indexOf('function act(name)'), ui.indexOf('function set
 const handled = new Set([...body.matchAll(/case '([^']+)'/g)].map((m) => m[1]));
 const used = new Set();
 for (const s of Object.values(SCREENS)) for (const m of s.html.matchAll(/data-act="([^"]+)"/g)) used.add(m[1]);
-const INJECTED = new Set(['guide']);        // bouton « Comment jouer ? » ajouté par game-ui.js (injectGuideButton), absent des écrans générés
+const INJECTED = new Set(['guide', 'side-btn']);        // boutons ajoutés par game-ui.js (injectGuideButton : « Comment jouer ? » ; injectSideButton : « Bouton tir latéral » du menu Pause), absents des écrans générés
 const isPrefix = (a) => a.startsWith('options:') || a.startsWith('lang:');
 
 test('toute action d’écran a un case dans act()', () => {

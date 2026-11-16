@@ -3,20 +3,20 @@
    Chargé à l'ouverture seulement (import dynamique depuis guide-ui.js).
    ========================================================== */
 
-import { PAGES, UI } from './guide-content.js?v=35';
-import * as A from './guide-art.js?v=35';
+import { PAGES, UI } from './guide-content.js?v=48';
+import * as A from './guide-art.js?v=48';
 import { t, getLang, onLangChange } from './i18n.js?v=1';
-import { core as K } from './guide-ui.js?v=35';
+import { core as K } from './guide-ui.js?v=48';
 
 if (!document.getElementById('gdCss2')) {
   const l = document.createElement('link');
-  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=35';
+  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=48';
   document.head.appendChild(l);
   await new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 }
 const { $, esc, emit, look, saveS, flags, hideHint, closeHelp, reset, padOn, still, isTouchUi, paintHelpBtn, coachRoot } = K;
 let root = null, isOpen = false, idx = 0, pop = null, speakOn = false, padRun = false, padNav = false, viewMode = null;
-import * as LG from './guide-logic.js?v=35';
+import * as LG from './guide-logic.js?v=48';
 
 /* ==========================================================
    ÉCRAN « COMMENT JOUER »
@@ -135,6 +135,8 @@ function closePop() {
 }
 
 function onClick(e) {
+  // page « Choisir dans un menu » : cliquer sur un bouton du dessin ferme le tuto
+  if (PAGES[idx] && PAGES[idx].id === 'nav' && e.target.closest && e.target.closest('.gd-dv') && !e.target.closest('button')) { close(); return; }
   const b = e.target.closest('button'); if (!b || b.disabled) return;
   const m = b.dataset.m;
   if (m) { viewMode = m; render(); return; }

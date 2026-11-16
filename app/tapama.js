@@ -135,7 +135,6 @@ function play(seqOrId, opts = {}) {
 
   const face = portrait('neutre', 'tp-d-portrait');
   const shadow = h('div', 'tp-d-shadow');
-  const glow = h('div', 'tp-d-glow');                       // lueur de lumière derrière Tapama (respire doucement, s'intensifie quand elle parle)
 
   const stack = h('div', 'tp-d-stack');
   const tab = h('div', 'tp-d-tab');
@@ -163,7 +162,7 @@ function play(seqOrId, opts = {}) {
     '<span><kbd class="tp-k">Touche</kbd>Écran tactile</span>' +
     '<span><kbd class="tp-k">Échap</kbd>Passer</span>';
 
-  el.append(head, skip, shadow, glow, face, stack, hints);
+  el.append(head, skip, shadow, face, stack, hints);
   ensureRoot().appendChild(el);
   requestAnimationFrame(() => el.classList.add('on'));
 

@@ -155,6 +155,7 @@ export const RADIO = {
   // Scène 1 : vol d'inspection (bible de scénario, chapitre 1)
   inspection: { mood: 'curieuse', text: 'Commence par le toit, {nom}. Les secrets aiment les hauteurs. Prends des photos si quelque chose te semble bizarre.' },
   inspectionIndice: { mood: 'attentive', text: 'Cherche un objet qui ne ressemble pas à de la terre ou à du bois. Quelque chose de lisse, avec des motifs.' },
+  inspectionIndice2: { mood: 'attentive', text: 'Suis les indications sous l’écran, {nom} : quand ça chauffe, descends et tourne-toi doucement. Il est sur le toit.' },
   inspectionRepere: { mood: 'surprise', text: 'Attends… zoome encore ! Là, à moitié enfoui. C’est ça, {nom} ! Atterris et va le chercher.' },
 };
 

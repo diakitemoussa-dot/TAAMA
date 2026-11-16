@@ -45,3 +45,9 @@ stderr.txt
 .claude/settings.local.json
 *.tmp
 _tmp/
+
+# Séances de test : sessions des joueurs (contiennent des prénoms — ne jamais publier)
+playtests/
+
+# Rendus Blender de la cinématique (lourds, gardés en local)
+cinematique/

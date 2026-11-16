@@ -11,16 +11,16 @@
    Chargé à la demande par app/guide.js.
    ========================================================== */
 
-import * as LG from './guide-logic.js?v=35';
-import { PAGES, OBJECTIVES, UI } from './guide-content.js?v=35';
-import * as A from './guide-icons.js?v=35';
+import * as LG from './guide-logic.js?v=48';
+import { PAGES, OBJECTIVES, UI } from './guide-content.js?v=48';
+import * as A from './guide-icons.js?v=48';
 import { t, getLang, onLangChange } from './i18n.js?v=1';
 import { fillName } from './player-profile.js?v=1';
 
 /* ---------- feuille de style (chargée avec le module) ---------- */
 if (!document.getElementById('gdCss')) {
   const l = document.createElement('link');
-  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=35';
+  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=48';
   document.head.appendChild(l);
   await new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 }
@@ -94,7 +94,7 @@ detect();
    ÉCRAN « COMMENT JOUER » : module séparé (guide-screen.js), chargé seulement à l'ouverture
    ========================================================== */
 let scr = null;
-const loadScreen = () => scr || (scr = import('./guide-screen.js?v=35').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
+const loadScreen = () => scr || (scr = import('./guide-screen.js?v=48').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
 const setOpen = (b) => { isOpen = b; };
 const open = (topic) => loadScreen().then((s) => s.open(topic));
 const start = () => loadScreen().then((s) => s.start());
@@ -119,7 +119,7 @@ let artMod = null, artP = null;
 const screenCss = () => {
   if (document.getElementById('gdCss2')) return Promise.resolve();
   const l = document.createElement('link');
-  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=35';
+  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=48';
   document.head.appendChild(l);
   return new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 };
@@ -131,7 +131,7 @@ const lowData = () => {
     return !!(g.saveData || c.saveData || /^(slow-)?2g$/.test(c.effectiveType || '') || ls('taama.saveData') === '1');
   } catch (_) { return false; }
 };
-const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=35'), screenCss()]).then(([m]) => (artMod = m)));
+const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=48'), screenCss()]).then(([m]) => (artMod = m)));
 
 const coachRoot = () => {
   if (cRoot) return cRoot;
@@ -196,14 +196,25 @@ const mark = (a) => { acts.add(a); if (a === 'move') moved = true; else if (a ==
 const MOVE_KEYS = /^(z|q|s|d|w|a|arrowup|arrowdown|arrowleft|arrowright)$/i;
 window.addEventListener('keydown', (e) => {
   if (isOpen) return;
-  if (MOVE_KEYS.test(e.key)) { mark('move'); acts.add('L'); }
+  const flying = !!(window.DroneGame && window.DroneGame.isActive && window.DroneGame.isActive());   // en vol : les flèches = joystick droit, P = photo (comme les boutons montrés)
+  const arrow = /^arrow(up|down|left|right)$/i.test(e.key);
+  if (MOVE_KEYS.test(e.key) && !(flying && arrow)) { mark('move'); acts.add('L'); }   // en vol, les flèches = joystick droit seulement
+  if (flying && arrow) acts.add('R');
+  if (flying && /^p$/i.test(e.key)) acts.add('photo');
   if (e.key === 'Enter' || e.key === ' ') acts.add('next');         // dialogue : phrase suivante
+  if (e.code === 'Space') acts.add('dash');                         // propulsion (clavier)
   if (e.key === 'Escape') acts.add('skip');                         // dialogue : passer
   if (/^r$/i.test(e.key)) droneAt = Date.now();               // essai de décollage : « utilisé » seulement quand le drone vole VRAIMENT (R ne fait rien tant que le drone du sac n'est pas chargé)
   if (e.key === '+' || e.key === '-' || e.key === '−') acts.add('R');
   if (/^(l|h)$/i.test(e.key)) acts.add('lights');
 }, true);
 window.addEventListener('wheel', () => acts.add('R'), { passive: true, capture: true });
+// touches de la carte (city-map.js les avale avant le guide) : flèches / WASD / ZQSD = déplacer (L), + / − = zoom (R)
+window.addEventListener('taama:mapkey', (e) => {
+  const c = (e.detail && e.detail.code) || '';
+  if (/^(Arrow(Up|Down|Left|Right)|KeyW|KeyZ|KeyA|KeyQ|KeyS|KeyD)$/.test(c)) acts.add('L');
+  if (/^(Equal|Minus|NumpadAdd|NumpadSubtract)$/.test(c)) acts.add('R');
+});
 let lastDown = null;
 window.addEventListener('pointerdown', (e) => {
   if (!(cRoot && cRoot.contains(e.target))) lastDown = { el: e.target, t: performance.now() };   // dernier appui du joueur (hors bulle) : sert à ranger la bulle quand il agit dessus
@@ -216,6 +227,7 @@ window.addEventListener('pointerdown', (e) => {
   if (c('[data-key="left"], #dgStickL')) acts.add('L');
   if (c('[data-key="right"], #dgStickR')) acts.add('R');
   if (c('[data-key="photo"], #dgPhoto')) acts.add('photo');
+  if (c('[data-key="dash"]')) acts.add('dash');
   if (c('[data-key="back"], #dgQuit')) acts.add('back');
 }, true);
 window.addEventListener('mousemove', (e) => { if (e.buttons && !isOpen && (Math.abs(e.movementX) + Math.abs(e.movementY) > 3)) { mark('look'); acts.add('L'); } }, true);
@@ -271,14 +283,14 @@ const HINTS = [
   { id: 'dossier', ctx: 'dossier', place: 'right', when: (w) => w.ctx === 'dossier', steps: [st('dossier', () => q('.ds-btn:not(.ds-back)')), st('dosprev', () => q('.ds-back'))] },
   { id: 'interact', when: (w) => w.prompt && !w.prompt.car && !w.car, steps: [st('interact', (w, m) => (m === 'touch' ? tcEl('interact') : w.prompt && w.prompt.el))] },
   { id: 'carin', when: (w) => w.prompt && w.prompt.car, steps: [st('carin', (w, m) => (m === 'touch' ? tcEl('interact') : w.prompt && w.prompt.el), null, (w) => w.car || !!(window.Vehicle && window.Vehicle.state && window.Vehicle.state !== 'parked'))] },
-  { id: 'fly', essential: 1, when: (w) => w.drone, steps: [
+  { id: 'fly', essential: 1, place: 'right', when: (w) => w.drone, steps: [
     st('dclimb', (w, m) => (m === 'touch' ? tcEl('left') : q('#dgStickL')), 'L'), st('dturn', (w, m) => (m === 'touch' ? tcEl('left') : q('#dgStickL')), 'L'),
     st('dmove', (w, m) => (m === 'touch' ? tcEl('right') : q('#dgStickR')), 'R'), st('dside', (w, m) => (m === 'touch' ? tcEl('right') : q('#dgStickR')), 'R'),
     st('photo', (w, m) => (m === 'touch' ? tcEl('photo') : q('#dgPhoto')), 'photo'), st('dback', (w, m) => (m === 'touch' ? tcEl('back') : q('#dgQuit')), 'back')] },
   { id: 'car', when: (w) => w.car, steps: [st('car', (w, m) => (m === 'touch' ? tcEl('gas') : null), null, () => acts.has('move')), st('caraux', (w, m) => (m === 'touch' ? tcEl('lights') : null), null, () => acts.has('lights'))] },
   { id: 'swim', when: (w) => w.swim, steps: [st('swim', null, null, () => acts.has('move'))] },
-  { id: 'circle', when: (w) => w.foot && ls('taama.dispositif1') === '1' && ls('taama.lab1') !== 'done' && near(w.pos, -175, -220, 70), steps: [st('circle', null, null, (w) => w.ctx === 'lab' || !!window.__storyFreeze || near(w.pos, -175.012, -219.890, 2.8) || !!(window.Vehicle && window.Vehicle.state === 'drive' && near(w.pos, -175.012, -219.890, 4)))] },
   { id: 'gadget', when: (w) => w.foot && ls('taama.gadget') === '1', steps: [st('gadget', (w, m) => (m === 'touch' ? tcEl('aim') : null), null, (w) => w.aiming)] },
+  { id: 'dash', when: (w) => w.foot && has('walk') && !takingOff(), steps: [st('dash', (w, m) => (m === 'touch' ? tcEl('dash') : null), null, () => acts.has('dash'))] },
   { id: 'drone', essential: 1, fast: 1, when: (w) => w.foot && ls('taama.dispositif1') !== '1' && !droneUsed && !takingOff(), steps: [st('drone', (w, m) => (m === 'touch' ? tcEl('drone') : null))] },
   { id: 'walk', essential: 1, when: (w) => w.foot && (has('drone') || droneUsed) && !takingOff(), steps: [st('move', (w, m) => (m === 'touch' ? tcEl('move') : null), 'move'), st('look', (w, m) => (m === 'touch' ? q('#tcRoot .tc-look') : null), 'look')] },
   { id: 'map', when: (w) => w.foot && has('walk') && !takingOff() && $('#cityMap.is-on'), steps: [st('map', () => $('#cityMap'), null, (w) => w.ctx === 'map')] },
@@ -393,6 +405,8 @@ function tick() {
     w.radioMs = radioSince ? now - radioSince : 0; }
   { const di = debugInfo(), rs = cur ? 'affichée:' + curId : di.waiting ? di.waiting + ' → ' + di.reason : ''; if (rs !== lastReason) { lastReason = rs; if (rs) console.info('[guide]', rs); } if (DBG) { let e = $('.gc-dbg', c); if (!e) { e = document.createElement('div'); e.className = 'gc-dbg'; c.appendChild(e); } e.textContent = `build ${di.build} · appareil ${di.device}${di.pad ? ' (manette branchée)' : ''} · vus : ${di.seen.join(',') || '—'} · ${di.reason}`; } }
   placeHelpBtn(w);
+  // une interface plein écran (carte, labo, dossier, pause…) passe avant un conseil du monde : sinon le conseil « marche » reste bloqué (ex. « regarder avec la souris ») et celui de la carte n'apparaît jamais
+  if (cur && !cur.h.ctx && w.ctx && w.ctx !== 'guide' && HINTS.some((x) => x.ctx === w.ctx && LG.canHint(S, x.id) && eligible(x, w))) hideHint();
   if (cur) {
     const h = cur.h, s = h.steps[cur.i];
     { // règle générale : le joueur agit sur la cible (clic/toucher) ou valide dans l'écran affiché (Entrée, ✕, clic) → la bulle disparaît tout de suite
@@ -447,8 +461,15 @@ function placeHelpBtn(w) {
   b.classList.toggle('on', show || (helpOpen && w.inGame && !isOpen));
   if (!show && helpOpen && (w.blocked)) closeHelp();
   if (gear && mode === 'touch' && gear.offsetParent !== null) {
-    const r = gear.getBoundingClientRect();
-    b.style.cssText = `left:${Math.round(r.left + r.width / 2 - 24)}px;top:${Math.round(r.bottom + 8)}px;right:auto;bottom:auto`;
+    // alignée HORIZONTALEMENT avec la rangée du haut (photo, pause, réglages) : juste à gauche du premier bouton de la rangée, même hauteur (plus de superposition)
+    const row = [...document.querySelectorAll('#tcRoot [data-key="photo"], #tcRoot [data-key="pause"], #tcRoot .tc-gear')]
+      .filter((e) => e.offsetParent !== null).map((e) => e.getBoundingClientRect()).filter((r) => r.top < innerHeight * 0.3);
+    const rs = row.length ? row : [gear.getBoundingClientRect()];
+    const first = rs.reduce((m, r) => (r.left < m.left ? r : m), rs[0]);
+    const cy = first.top + first.height / 2;
+    let left = first.left - 48 - 8;
+    if (left < 8) { const last = rs.reduce((m, r) => (r.right > m.right ? r : m), rs[0]); left = Math.min(innerWidth - 56, last.right + 8); }
+    b.style.cssText = `left:${Math.round(left)}px;top:${Math.round(cy - 24)}px;right:auto;bottom:auto`;
     c.classList.add('tc');
   } else { b.style.cssText = ''; c.classList.remove('tc'); }
   paintHelpBtn();
@@ -488,7 +509,7 @@ function padHelp() {
   const s = R.state(), b = padBase || s;
   if (Math.hypot(s.lx - b.lx, s.ly - b.ly) > 0.5) { mark('move'); acts.add('L'); }
   if (Math.hypot(s.rx - b.rx, s.ry - b.ry) > 0.5) { mark('look'); acts.add('R'); }
-  if (R.justPressed('A')) { acts.add('photo'); acts.add('next'); }
+  if (R.justPressed('A')) { acts.add('photo'); acts.add('next'); acts.add('dash'); }   // ✕ : photo (drone), valider, propulsion (à pied)
   if (R.justPressed('RB')) acts.add('lights');
   if (R.justPressed('B')) acts.add('skip');
   if (R.down('LB')) { acts.add('back'); droneAt = Date.now(); }

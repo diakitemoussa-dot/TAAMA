@@ -4,7 +4,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { guideTone, speedKmh, speedNeedleAngle, gearOf, blinkerState, fuelAfter, scaleFor, guideText, SPEED_MAX_KMH, FUEL_FLOOR, PANEL_W } from '../app/car-dashboard.js';
+import { guideTone, speedKmh, speedNeedleAngle, gearOf, blinkerState, fuelAfter, scaleFor, bottomFor, heightScale, guideText, SPEED_MAX_KMH, FUEL_FLOOR, PANEL_W, MIN_HEIGHT_SCALE } from '../app/car-dashboard.js';
 import { gaugeAngle, isUTurn, relativeDeg } from '../app/route-arrow.js';
 
 test('speedKmh : m/s -> km/h, valeur absolue', () => { assert.equal(speedKmh(10), 36); assert.equal(speedKmh(-5), 18); });
@@ -60,6 +60,30 @@ test('scaleFor : 1 sur grand écran, réduit sur petit écran, jamais sous 0,4',
   assert.ok(Math.abs(scaleFor(PANEL_W + 16) - 1) < 1e-9);
   assert.ok(scaleFor(400) < 1 && scaleFor(400) > 0.4);
   assert.equal(scaleFor(100), 0.4);
+});
+
+test('scaleFor : la hauteur compte (téléphone en paysage : large mais peu haut)', () => {
+  assert.equal(scaleFor(1920, PANEL_W, 1080), 1);                       // grand écran : inchangé
+  assert.equal(scaleFor(1920, PANEL_W, 700), 1);                        // dès 700 px de haut : taille pleine
+  assert.ok(scaleFor(1270, PANEL_W, 577) < 0.75);                       // fenêtre peu haute : nettement réduit
+  assert.ok(scaleFor(850, PANEL_W, 385) < 0.45);                        // paysage de téléphone : très réduit
+  assert.ok(scaleFor(900, PANEL_W, 400) < scaleFor(900, PANEL_W, 577)); // plus bas = plus petit
+  assert.equal(scaleFor(2000, PANEL_W, 100), MIN_HEIGHT_SCALE);         // plancher dû à la hauteur
+  assert.equal(scaleFor(500, PANEL_W, Infinity), scaleFor(500));        // sans hauteur : comportement d'avant
+});
+
+test('heightScale : continue et croissante, 1 à partir de 700 px', () => {
+  assert.equal(heightScale(), 1);
+  assert.equal(heightScale(700), 1);
+  let prev = 0;
+  for (let vh = 300; vh <= 700; vh += 20) { const s = heightScale(vh); assert.ok(s >= prev - 1e-9 && s <= 1 && s >= MIN_HEIGHT_SCALE - 1e-9, `vh=${vh}`); prev = s; }
+});
+
+test('bottomFor : 92 px sur grand écran, jusqu\'à 10 px sur écran peu haut', () => {
+  assert.equal(bottomFor(), 92);
+  assert.equal(bottomFor(1080), 92);
+  assert.ok(bottomFor(577) < 92 && bottomFor(577) > 10);
+  assert.equal(bottomFor(400), 10);
 });
 
 test('guideText : sans itinéraire, hors route, demi-tour, tout droit, virage', () => {

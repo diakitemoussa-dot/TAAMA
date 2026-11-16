@@ -550,7 +550,7 @@ class Annule extends Error {}
 function ensureCss() {
   if (cssPromise) return cssPromise;
   cssPromise = new Promise((resolve) => {
-    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=7';
+    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=8';
     let link = [...document.querySelectorAll('link[rel="stylesheet"]')].find((l) => /laboratoire\.css/.test(l.getAttribute('href') || ''));
     if (link) { resolve(); return; }
     link = document.createElement('link');
@@ -913,6 +913,7 @@ function giveHint(auto) {
   if (c.hints < 2) {
     const text = e.indices[c.hints];
     c.hints++; S.hintsUsed++;
+    try { window.dispatchEvent(new CustomEvent('lab:indice', { detail: { stage: S.stage, index: e.index, auto: !!auto } })); } catch (_) {}
     updateHelpButton();
     say(c.hints === 1 ? 'curieuse' : 'attentive', text);
     if (auto) { /* le message d'encouragement est déjà passé */ }
@@ -947,6 +948,7 @@ function submit() {
   if (res.statut === 'ok') { c.busy = true; c.resolve(); return; }
   // mauvaise réponse
   c.wrong++;
+  try { window.dispatchEvent(new CustomEvent('lab:enigme-erreur', { detail: { stage: S.stage, index: e.index, statut: res.statut } })); } catch (_) {}
   c.status.textContent = t('Ce n’est pas ça. Essaie encore !');
   c.status.className = 'lab-status is-bad';
   ui.panel.classList.remove('shake'); void ui.panel.offsetWidth; ui.panel.classList.add('shake');
@@ -958,6 +960,17 @@ function submit() {
   if (c.wrong % 2 === 0 && c.hints < 2) {
     // après 2 erreurs, Tapama propose d'elle-même l'indice suivant
     setTimeout(() => { if (S && S.cur === c && !c.busy) { say(MSG.autoIndice.mood, MSG.autoIndice.text); setTimeout(() => { if (S && S.cur === c && !c.busy) giveHint(true); }, 1400); } }, 2200);
+  }
+  // séance de test : 7 réponses tapées au hasard en 30 s -> après 3 erreurs rapides, une courte pause pour relire l'énigme
+  const now = performance.now();
+  c.fast = (c.fast || []).filter((x) => now - x < 30000);
+  c.fast.push(now);
+  if (c.fast.length >= 3 && !(c.wrong % 2 === 0 && c.hints < 2)) {
+    c.fast = [];
+    c.input.disabled = true;
+    say('attentive', 'Doucement, {nom}. Relis l’énigme tranquillement : chaque mot compte.');
+    setTimeout(() => { if (S && S.cur === c && !c.busy) { c.input.disabled = false; c.input.focus({ preventScroll: true }); c.input.select(); } }, 5000);
+    return;
   }
   c.input.select();
 }
@@ -1266,7 +1279,7 @@ function padNav(dir) {
   }
   if (!cands.length) return;
   const cur = document.activeElement && cands.includes(document.activeElement) ? document.activeElement : null;
-  if (!cur) { (cands.find((n) => n.classList.contains('lab-key')) || cands[0]).focus(); return; }
+  if (!cur) { padFocus(cands.find((n) => n.classList.contains('lab-key')) || cands[0]); return; }
   const a = cur.getBoundingClientRect();
   const ax = a.left + a.width / 2, ay = a.top + a.height / 2;
   let best = null, bestScore = Infinity;
@@ -1280,7 +1293,15 @@ function padNav(dir) {
     const score = along + across * 2.2;
     if (score < bestScore) { bestScore = score; best = n; }
   }
-  if (best) best.focus();
+  if (best) padFocus(best);
+}
+
+/** Sélection à la manette : on met le focus ET une classe qui dessine le contour blanc (:focus-visible ne s'affiche pas toujours quand le focus est posé par script,
+ *  et le joueur ne savait pas sur quelle touche du pavé il se trouvait). */
+function padFocus(el) {
+  document.querySelectorAll('.lab-pad-sel').forEach((n) => n.classList.remove('lab-pad-sel'));
+  el.classList.add('lab-pad-sel');
+  el.focus();
 }
 
 let stickDir = null, stickT = 0;

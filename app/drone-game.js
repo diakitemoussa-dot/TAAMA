@@ -243,7 +243,10 @@ function initScan(){
   M.scene.add(laserLine);
 }
 
+const SCAN_OEUFS_ACTIF = false;   // scan radar des œufs d'autruche : désactivé (mettre true pour le réactiver)
+
 function tickScan(dt){
+  if(!SCAN_OEUFS_ACTIF) return;
   if(!oeufsMesh && !oeufSearched && M?.scene){
     oeufSearched = true;
     M.scene.traverse((o) => {
@@ -378,6 +381,33 @@ let _gpHintShown  = false;   // aide manette déjà affichée ? (une fois par se
 // input = fusion joysticks tactiles + manette (recalculé à chaque frame par applyGamepad())
 const input      = { lx:0, ly:0, rx:0, ry:0 };
 const touchInput = { lx:0, ly:0, rx:0, ry:0 };   // joysticks à l'écran uniquement
+
+/* ---------- Clavier (PC) pendant le vol ----------
+   Codes physiques (e.code) : marche avec un clavier AZERTY comme QWERTY.
+   Joystick gauche (altitude + rotation) : Z monter · S descendre · Q tourner à gauche · D tourner à droite
+   Joystick droit (déplacement) : ↑ avancer · ↓ reculer · ← glisser à gauche · → glisser à droite
+   P : photo      V : vidéo (démarrer / arrêter)                                         */
+const KB_FLY = { KeyW:1, KeyS:1, KeyA:1, KeyD:1, ArrowUp:1, ArrowDown:1, ArrowLeft:1, ArrowRight:1 };
+const kbHeld = new Set();
+window.addEventListener('keydown', (e) => {
+  if (!active) return;                                                       // hors vol : le clavier reste aux autres menus
+  if (KB_FLY[e.code]) { kbHeld.add(e.code); e.preventDefault(); return; }
+  if (e.repeat) return;
+  if (e.code === 'KeyP') { e.preventDefault(); takePhoto(); }
+  else if (e.code === 'KeyV') { e.preventDefault(); toggleRecord(); }
+});
+window.addEventListener('keyup', (e) => { kbHeld.delete(e.code); });
+window.addEventListener('blur', () => kbHeld.clear());
+function keyboardAxes(){
+  if (!active || !kbHeld.size) return { lx:0, ly:0, rx:0, ry:0 };
+  const h = (c) => (kbHeld.has(c) ? 1 : 0);
+  return {
+    lx: h('KeyD') - h('KeyA'),                                               // joystick gauche : tourner (Q gauche, D droite)
+    ly: h('KeyS') - h('KeyW'),                                               // joystick gauche : ly<0 = monter (Z)
+    rx: h('ArrowRight') - h('ArrowLeft'),                                    // joystick droit : glisser droite / gauche
+    ry: h('ArrowDown') - h('ArrowUp'),                                       // joystick droit : ry<0 = avancer (↑)
+  };
+}
 
 // Vitesses (amorties) en unités/s
 const vel = { fwd:0, side:0, up:0, yaw:0 };
@@ -957,10 +987,11 @@ function applyGamepad(dt){
   }
 
   // Fusion tactile + manette (bornée à -1..1)
-  input.lx = touchInput.lx + (g ? g.lx : 0);
-  input.ly = touchInput.ly + (g ? g.ly : 0);
-  input.rx = touchInput.rx + (g && !orbitCam ? g.rx : 0);
-  input.ry = touchInput.ry + (g && !orbitCam ? g.ry : 0);
+  const kb = keyboardAxes();
+  input.lx = touchInput.lx + (g ? g.lx : 0) + kb.lx;
+  input.ly = touchInput.ly + (g ? g.ly : 0) + kb.ly;
+  input.rx = touchInput.rx + (g && !orbitCam ? g.rx : 0) + kb.rx;
+  input.ry = touchInput.ry + (g && !orbitCam ? g.ry : 0) + kb.ry;
   for (const k of ['lx','ly','rx','ry']){
     if (input[k] >  1) input[k] =  1;
     if (input[k] < -1) input[k] = -1;
@@ -1249,7 +1280,7 @@ function update(dt){
   if (_fovTrue !== null) { M.camera.fov = _fovTrue; M.camera.updateProjectionMatrix(); }
 }
 
-btnQuit?.addEventListener('click', exit);
+btnQuit?.addEventListener('click', () => { if (launchActive && returnToCharacter()) return; exit(); });   // ✕ : drone lancé → il revient au sac ; sinon on quitte le vol
 document.getElementById('dgMapPill')?.addEventListener('click', () => { try { window.CityMap?.toggle?.(); } catch (_) {} });
 
 /* ---------- Joysticks (tactile + souris) ---------- */
@@ -1630,6 +1661,27 @@ const _lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { retu
 const _lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
 const _radio = (key) => { try { const r = window.Tapama?.RADIO?.[key]; if (r) window.Tapama.radio({ text: r.text, mood: r.mood }); } catch (_) {} };
 
+/* Tapama ne parle qu'une fois le tuto du début vu (drone, vol, marche, carte) ou désactivé : sinon sa radio recouvre les bulles du guide. */
+const GUIDE_TUTO_IDS = ['drone', 'fly', 'walk', 'map'];
+function _guideTutoDone(){
+  try {
+    const st = JSON.parse(localStorage.getItem('taama.guide.v1') || '{}');
+    if (st.prefs && st.prefs.off) return true;                       // conseils désactivés : rien à attendre
+    if (!GUIDE_TUTO_IDS.every((id) => !!(st.seen && st.seen[id]))) return false;
+    // « vu » est noté au début d'un conseil : on attend aussi que sa bulle soit fermée (fin du tuto de la carte)
+    if (window.Guide && window.Guide.isOpen) return false;
+    return !document.querySelector('.gc-bub.on');
+  } catch (_) { return true; }
+}
+function _radioAfterGuideTuto(key){
+  const tick = () => {
+    if (!active || !_insp.on) return;
+    if (_guideTutoDone() && !window.Tapama?.isBusy?.()) { _radio(key); return; }
+    setTimeout(tick, 1000);
+  };
+  setTimeout(tick, 1800);
+}
+
 function inspectionWanted(){
   if (_lsGet('taama.dispositif1') === '1') return false;
   const a = _lsGet('taama.acte');
@@ -1646,11 +1698,11 @@ function _inspEl(id, css, html){
 function inspectionEnter(){
   _insp.on = inspectionWanted();
   _insp.spotted = _lsGet('taama.d1.spotted') === '1';
-  _insp.activated = false; _insp.pickup = false; _insp.taking = false; _insp.t = 0; _insp.hinted = false;
+  _insp.activated = false; _insp.pickup = false; _insp.taking = false; _insp.t = 0; _insp.hinted = false; _insp.hinted2 = false;
   if (!_insp.on) return;
   if (_lsGet('taama.acte') === '0:done') {
     _lsSet('taama.acte', '1:vol');
-    setTimeout(() => { if (active && _insp.on) _radio('inspection'); }, 1800);
+    _radioAfterGuideTuto('inspection');
   }
   if (!_inspUi) {
     _inspUi = _inspEl('dgInspect',
@@ -1696,6 +1748,8 @@ function inspectionTick(dt){
   if (D && D.taken) { _insp.pickup = false; return; }
   _insp.t += dt;
   if (!_insp.spotted && !_insp.hinted && _insp.t > INSP_HINT_S && !window.Tapama?.isBusy?.()) { _insp.hinted = true; _radio('inspectionIndice'); }
+  // séance de test : des joueurs cherchaient 6 à 8 min sans trouver -> 2e indice, et le bandeau indique « chaud / froid » (voir plus bas)
+  if (!_insp.spotted && _insp.hinted && !_insp.hinted2 && _insp.t > INSP_HINT_S * 2 && !window.Tapama?.isBusy?.()) { _insp.hinted2 = true; _radio('inspectionIndice2'); }
   if (!D || !D.built || _insp.taking) { _insp.pickup = false; return; }
 
   _inspV.copy(D.position); _inspV.y += 0.5;
@@ -1715,7 +1769,7 @@ function inspectionTick(dt){
     _insp.ph = 0;
     const show = hud.classList.contains('is-on');
     if (_inspUi) {
-      _inspUi.querySelector('[data-t]').textContent = _t(_insp.spotted ? 'Rapproche-toi du dispositif' : 'Inspecte la mosquée en commençant par le haut');
+      _inspUi.querySelector('[data-t]').textContent = _t(_insp.spotted ? 'Rapproche-toi du dispositif' : inspectionWarmth(dist));
       _inspUi.style.display = show ? '' : 'none';
     }
     if (_inspTakeUi) {
@@ -1723,6 +1777,15 @@ function inspectionTick(dt){
       _inspTakeUi.style.display = (show && _insp.pickup) ? '' : 'none';
     }
   }
+}
+
+/* Bandeau d'inspection : après le 1er indice de Tapama (60 s), il dit si le drone « chauffe » (distance au dispositif). */
+function inspectionWarmth(dist){
+  if (!_insp.hinted) return 'Inspecte la mosquée en commençant par le haut';
+  if (dist <= INSP_SPOT_R) return 'Il est tout près ! Tourne la caméra et regarde vers le bas';
+  if (dist <= INSP_SPOT_R * 2.5) return 'Tu chauffes… descends un peu et regarde autour de toi';
+  if (dist <= INSP_SPOT_R * 5) return 'Tu te rapproches du dispositif';
+  return 'Froid : explore une autre partie du toit';
 }
 
 function inspectionPickup(){
@@ -1755,6 +1818,7 @@ window.DroneGame = {
   // commandes tactiles (app/touch-controls.js) : sticks virtuels (-1..1, y écran vers le bas) et retour au personnage
   setTouchAxes: (lx, ly, rx, ry) => { touchInput.lx = lx; touchInput.ly = ly; touchInput.rx = rx * STICK_R_SENS; touchInput.ry = ry * STICK_R_SENS; },
   launched: () => launchActive,
+  recall: () => returnToCharacter(),                                    // rappelle le drone vers le personnage (plan de caméra de la base)
   preload: () => { ensureModel(activeModelId, attachActive); },          // charge le modèle du drone à l'avance : il apparaît aussitôt au premier vol
   modelReady: () => { const st = modelState[activeModelId]; return !!(st && st.loaded); },
   returnToCharacter: () => returnToCharacter(),

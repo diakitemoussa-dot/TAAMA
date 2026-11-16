@@ -138,12 +138,12 @@ export function relativeDeg(bearingRad, headingRad) { return wrapPi(bearingRad -
 
 const CSS = `
 #snRouteArrow { position: fixed; left: 14px; top: 196px; z-index: 56; pointer-events: none; display: none; align-items: center; gap: 9px;
-  padding: 6px 14px 6px 8px; border-radius: 16px; background: rgba(60,42,66,.74); color: #f8f3ea; border: 1px solid rgba(249,213,139,.45);
-  box-shadow: 0 3px 14px rgba(0,0,0,.25); backdrop-filter: blur(4px); max-width: calc(100vw - 28px);
-  font: 700 13px/1.2 'Rajdhani', 'Open Sans', system-ui, sans-serif; letter-spacing: .03em; white-space: nowrap; }
-#snRouteArrow .ra-ico { width: 26px; height: 26px; flex: none; display: block; }
+  padding: 3px 10px 3px 5px; border-radius: 12px; background: rgba(60,42,66,.42); color: rgba(248,243,234,.85); border: 1px solid rgba(249,213,139,.25); opacity: .85;
+  box-shadow: none; backdrop-filter: blur(3px); max-width: calc(100vw - 28px);
+  font: 700 11px/1.2 'Rajdhani', 'Open Sans', system-ui, sans-serif; letter-spacing: .03em; white-space: nowrap; }
+#snRouteArrow .ra-ico { width: 18px; height: 18px; flex: none; display: block; }
 #snRouteArrow .ra-line { overflow: hidden; text-overflow: ellipsis; }
-#snRouteArrow .ra-go { color: #f9d58b; font-weight: 900; font-size: 15px; margin-left: 2px; flex: none; }
+#snRouteArrow .ra-go { color: #f9d58b; font-weight: 900; font-size: 12px; margin-left: 2px; flex: none; }
 #snRouteArrow .ra-name { color: #f9d58b; text-transform: uppercase; letter-spacing: .06em; }
 #snRouteArrow .ra-sep { opacity: .55; margin: 0 5px; }
 #snRouteArrow.is-off { border-color: rgba(255,154,58,.8); }

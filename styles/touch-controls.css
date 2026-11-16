@@ -60,6 +60,11 @@ html.tc-live .tc-prompt{ visibility: hidden !important; }       /* l'invite « E
 .tc-btn.is-down{ transform: translate(-50%, -50%) scale(.92); background: radial-gradient(circle at 35% 28%, rgba(249, 213, 139, .9), rgba(201, 143, 74, .85)); color: #3a281e; border-color: #fff3c9; opacity: 1; }
 .tc-btn.is-latched, .tc-btn.is-on{ background: radial-gradient(circle at 35% 28%, rgba(249, 213, 139, .85), rgba(201, 143, 74, .8)); color: #3a281e; border-color: #fff3c9; opacity: 1; box-shadow: 0 0 14px rgba(249, 213, 139, .55), 0 3px 12px rgba(20, 12, 8, .45); }
 .tc-btn.is-off{ display: none; }
+/* propulsion : anneau de recharge (3 s) autour du bouton ; --cd = part restante (1 → 0), posée par sanctuary-mode.js */
+.tc-btn.is-cooling{ opacity: .65; }
+.tc-btn.is-cooling::after{ content: ''; position: absolute; inset: -4px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(rgba(249, 213, 139, .95) calc((1 - var(--cd, 0)) * 360deg), rgba(20, 12, 8, .55) 0);
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 62%); mask: radial-gradient(circle, transparent 60%, #000 62%); }
 .tc-arrow{ border-radius: 28%; }
 .tc-arrow .tc-ico{ width: 52%; height: 52%; }
 

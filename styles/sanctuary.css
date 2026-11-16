@@ -175,6 +175,10 @@
   justify-content: center;
   pointer-events: auto;
 }
+/* En voiture sur petit écran : on retire la rangée photo / menu / vidéo (le tableau de bord a besoin de la place ; ces actions restent au clavier et sur les commandes tactiles) */
+@media (max-width: 899px), (max-height: 619px) {
+  body.in-car .sn-toolbar { display: none !important; }
+}
 .sn-tool:hover    { background: rgba(249,213,139,.25); }
 .sn-tool.is-active { background: var(--dg-gold); color: var(--dg-accent); }
 
@@ -531,3 +535,9 @@
 
 /* point + cercle au centre de l'écran retirés (le viseur de tir « snAimReticle » reste visible quand on vise) */
 .sn-reticle, #snReticle{ display: none !important; }
+
+/* panneau « CIBLE / HORS PORTÉE » supprimé sur tous les écrans */
+.sn-target { display: none !important; }
+
+/* barre photo / menu / vidéo en bas : retirée sur grand écran */
+@media (min-width: 900px) { .sn-toolbar { display: none !important; } }

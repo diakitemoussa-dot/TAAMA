@@ -13,7 +13,7 @@
    Logique pure (speedKmh, speedNeedleAngle, gearOf, blinkerState, fuelAfter, scaleFor) : testée sous Node (tests/car-dashboard.test.mjs).
    Données : voir CarDashboard.update(dt, data). Le guidage vient de window.CityMap.guide (app/route-arrow.js).
    ========================================================== */
-import { gaugeAngle, isUTurn, relativeDeg, fmtDist, turnLabel } from './route-arrow.js?v=8';
+import { gaugeAngle, isUTurn, relativeDeg, fmtDist, turnLabel } from './route-arrow.js?v=9';
 
 export const SPEED_MAX_KMH = 80;              // fin de l'échelle du compteur (la voiture plafonne à 72 km/h)
 export const PANEL_W = 540;                   // largeur du bandeau (px) avant mise à l'échelle
@@ -55,8 +55,31 @@ export function blinkerState({ steer = 0, hazard = false, turn = null, phase = t
 /** Niveau d'essence après avoir roulé `meters` m (jauge décorative) : baisse lente, jamais sous FUEL_FLOOR. */
 export function fuelAfter(level, meters) { return Math.max(FUEL_FLOOR, Math.min(1, level - Math.abs(meters) * FUEL_PER_M)); }
 
-/** Échelle du bandeau pour une fenêtre de largeur vw : 1 si elle est assez large, sinon réduite (marge de 8 px de chaque côté). */
-export function scaleFor(vw, panelW = PANEL_W) { return Math.max(0.4, Math.min(1, (vw - 16) / panelW)); }
+export const PANEL_BOTTOM = 92;               // marge basse (px) sur grand écran
+export const FULL_HEIGHT = 700;               // à partir de cette hauteur de fenêtre (px), le bandeau garde sa taille pleine
+export const MIN_HEIGHT_SCALE = 0.3;          // plancher de l'échelle due à la hauteur (téléphone en paysage très bas)
+
+/** Échelle due à la hauteur vh de la fenêtre : 1 à partir de 700 px, puis chute franche (≈ 0,69 à 577 px, ≈ 0,36 à 385 px, 0,3 à 300 px). */
+export function heightScale(vh = Infinity) {
+  if (!Number.isFinite(vh) || vh >= FULL_HEIGHT) return 1;
+  const t = Math.max(0, (vh - 300) / (FULL_HEIGHT - 300));
+  return MIN_HEIGHT_SCALE + (1 - MIN_HEIGHT_SCALE) * Math.pow(t, 1.6);
+}
+
+/** Marge basse du bandeau : 92 px sur grand écran, jusqu'à 10 px sur écran peu haut (la rangée de boutons du bas est retirée en voiture). */
+export function bottomFor(vh = Infinity) {
+  if (!Number.isFinite(vh) || vh >= FULL_HEIGHT) return PANEL_BOTTOM;
+  const t = Math.min(1, Math.max(0, (vh - 480) / (FULL_HEIGHT - 480)));
+  return Math.round(10 + (PANEL_BOTTOM - 10) * t);
+}
+
+/** Échelle du bandeau pour une fenêtre de largeur vw (marge de 8 px de chaque côté, plancher 0,4) et, si fournie, de hauteur vh :
+ *  1 si la fenêtre est assez grande, sinon réduite. La hauteur compte : sur un téléphone en paysage, large mais peu haut,
+ *  un bandeau à l'échelle 1 recouvrirait le milieu de l'écran et le bandeau de guidage. */
+export function scaleFor(vw, panelW = PANEL_W, vh = Infinity) {
+  const byWidth = Math.max(0.4, (vw - 16) / panelW);
+  return Math.min(1, byWidth, heightScale(vh));
+}
 
 /** Texte du cadran de guidage : { dist, sub, uturn }. Sans itinéraire : tirets et invitation à choisir un lieu. */
 export function guideText(guide) {
@@ -194,8 +217,12 @@ export function createCarDashboard() {
       gbox: el.querySelector('.cd-gbox'), gears: [...el.querySelectorAll('.cd-gears span')], lights: el.querySelector('.cd-lights'), hazard: el.querySelector('.cd-hazard'),
       engine: el.querySelector('.cd-engine'), fneedle: el.querySelector('.cd-fneedle'), hint: el.querySelector('.cd-hint'),
     };
-    const fit = () => { scale = scaleFor(innerWidth); el.style.transform = `translateX(-50%) scale(${scale.toFixed(3)})`; };
-    fit(); window.addEventListener('resize', fit);
+    const fit = () => {
+      scale = scaleFor(innerWidth, PANEL_W, innerHeight);
+      el.style.bottom = `${bottomFor(innerHeight)}px`;
+      el.style.transform = `translateX(-50%) scale(${scale.toFixed(3)})`;
+    };
+    fit(); window.addEventListener('resize', fit); window.addEventListener('orientationchange', () => setTimeout(fit, 250));
     haveHeading = false; haveG = false;
   }
   const api = {
