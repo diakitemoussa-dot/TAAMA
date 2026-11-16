@@ -22,6 +22,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 import { heroUrl } from './hero.js?v=3';
+import { hideFirearms } from './weapon-hide.js?v=1';
 import { smoothValues, dampValues } from './clip-smooth.js?v=2';
 import { useMeshopt, loadModel } from './gltf-extras.js?v=1';
 const DRONE_URL = 'assets/models/drone.glb';
@@ -95,6 +96,7 @@ function loadModels() {
   loadedHero = heroUrl();
   loading = Promise.all([load(loadedHero), load(DRONE_URL)]).then(([player, drone]) => {
     const model = player.scene;
+    hideFirearms(model);                             // plus d'arme à feu dans l'aperçu
     model.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());

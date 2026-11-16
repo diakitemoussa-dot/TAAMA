@@ -29,6 +29,7 @@ _gltfDir.setDRACOLoader(_draco);
 
 /* ---------- Personnage joueur (GLB animé, 3e personne) ---------- */
 import { heroUrl } from './hero.js?v=3';
+import { hideFirearms } from './weapon-hide.js?v=1';
 import * as Sniper from './sniper-cam.js?v=1';
 import * as AimSolve from './aim-solve.js?v=1';
 import { HitIndicators } from './hit-indicator.js?v=1';
@@ -2444,6 +2445,7 @@ function _loadPlayerModel() {
     _playerRoot.add(_playerShadow);
 
     _playerModel = model;
+    hideFirearms(model);                            // plus d'arme à feu sur le personnage
     _headFade = installHeadFade(model);
     _gadgetNode = model.getObjectByName(GADGET_GLB_NODE)
                || model.getObjectByName(GADGET_GLB_NODE + '_Mesh')
@@ -5684,7 +5686,7 @@ function update(dt) {
   if (dt <= 0) return;
   if (_introCam) { _stopWalk(); _tickIntroCam(dt); return; }                   // plan de caméra d'ouverture : seule la caméra bouge (window.__storyFreeze est posé pour les autres modules)
   if (window.__storyFreeze) { _stopWalk(); _stopInsideSound(); return; }       // scène plein écran de l'histoire (labo, dossier : app/dispositif1.js : plus de pas ni d'ambiance de mosquée) : le monde 3D est gelé
-  if (_gadgetNode) _gadgetNode.visible = _gadgetUnlocked() && !_swimming && !_pilotHold && !(window.Vehicle && window.Vehicle.state === 'drive');   // pas de pistolet avant le dispositif 1 (ni au volant, ni à la nage, ni en pilotant le drone)
+  if (_gadgetNode) _gadgetNode.visible = false;   // plus d'arme à feu   // pas de pistolet avant le dispositif 1 (ni au volant, ni à la nage, ni en pilotant le drone)
 
   if (_gadgetCooldown > 0) _gadgetCooldown = Math.max(0, _gadgetCooldown - dt);
   _updateFireworkFx(dt);

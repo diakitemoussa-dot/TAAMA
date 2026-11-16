@@ -509,7 +509,7 @@ function fadeSet(alpha) {
   const root = SM().root(); if (root) root.visible = alpha > 0.01;
 }
 function fadeEnd() { fadeSet(1); _fadeMats = null; }
-function gadgetShow(on) { const g = SM().model()?.getObjectByName('Pistol'); if (g) g.visible = on; }
+function gadgetShow(on) { const g = SM().model()?.getObjectByName('Pistol'); if (g) g.visible = false; }   // plus d'arme à feu : on ne l'affiche jamais
 
 /* ---------- séquences monter / descendre ---------- */
 const ease = (x) => x * x * (3 - 2 * x);
