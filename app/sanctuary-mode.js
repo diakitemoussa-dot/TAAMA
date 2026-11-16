@@ -5728,7 +5728,7 @@ function update(dt) {
       document.querySelector('.sn-scan-result.visible .sn-scan-close')?.click();
     }
     // ○/B : saut hors menu. □/X : bascule genoux à terre. ✕/A : propulsion.
-    if (GP.justPressed('B') && !_sanctuaryMenuOpen() && state === S_FPS && !(window.CityMap && window.CityMap.busy)) {   // carte ouverte (ou fermée à l'instant par ○) : pas de saut
+    if (GP.justPressed('B') && !_sanctuaryMenuOpen() && state === S_FPS && !(window.CityMap && window.CityMap.busy) && !window.Bibliotheque?.promptVisible?.()) {   // ○ ouvre le livre quand le bouton est affiché : pas de saut   // carte ouverte (ou fermée à l'instant par ○) : pas de saut
       _tryJump();
     }
     // □ / X : genoux à terre (avant : le commentaire disait ✕, c'est bien □ sur une manette PlayStation).

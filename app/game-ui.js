@@ -30,7 +30,7 @@ import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLA
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=7';
+import { EN } from './i18n-en.js?v=8';
 import { sendProfile, deviceLabel } from './player-sync.js?v=4';
 import { SEQUENCES } from './tapama-core.js?v=2';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';

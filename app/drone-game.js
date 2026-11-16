@@ -1820,6 +1820,7 @@ window.DroneGame = {
   // on force la reconstruction de la liste des colliders au prochain tick.
   invalidateColliders: () => { colliders = null; },
   isActive: () => active,
+  getPosition: () => rig.position,                                     // position du drone (bibliotheque.js : livres à portée)
   debugPilot: () => ({ pv, pvFov, fov: M && M.camera.fov, vis: remote.visible, pos: rig.position.toArray(), aiming, launchActive, landed }),
   // commandes tactiles (app/touch-controls.js) : sticks virtuels (-1..1, y écran vers le bas) et retour au personnage
   setTouchAxes: (lx, ly, rx, ry) => { touchInput.lx = lx; touchInput.ly = ly; touchInput.rx = rx * STICK_R_SENS; touchInput.ry = ry * STICK_R_SENS; },
