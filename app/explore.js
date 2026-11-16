@@ -36,7 +36,7 @@ function placesList() {
   }
   const mt = window.MaisonTerre;
   if (mt && mt.loaded) l.push({ id: 'bibliotheque', name: 'Barey So', info: 'La bibliothèque de terre : les livres gardent les mots qui ouvrent le dispositif.', x: mt.position.x, z: mt.position.z, lift: 14, key: false });
-  if (localStorage.getItem('taama.tombe') !== '1') l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', info: 'Tapama t’a parlé d’un dispositif caché sur sa tombe.', x: -310.5, z: -476.4, lift: 10, key: false });
+  if (localStorage.getItem('taama.tombe') !== '1') l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', info: 'Tapama t’a parlé d’un dispositif caché à côté de la tombe de Djenépo.', x: -310.5, z: -476.4, lift: 10, key: false });
   return l;
 }
 

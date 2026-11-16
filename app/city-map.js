@@ -115,7 +115,7 @@ function init() {
     if (mt && mt.loaded) { const r = gameToReal(mt.position.x, mt.position.z); l.push({ id: 'bibliotheque', name: 'Barey So', short: 'Barey So', e: r.e, n: r.n, kind: 'biblio', info: 'La bibliothèque de terre : les livres gardent les mots qui ouvrent le dispositif.' }); }
     // cercle jaune = laboratoire de Tapama (visible dès que le dispositif 1 est récupéré)
     // tombe de Tapama Djenepo : lieu du dispositif 2 (visible après le dispositif 1, tant qu'il n'est pas récupéré)
-    if (!ls('taama.tombe')) { const r = gameToReal(-310.5, -476.4); l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', short: 'Tombe Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Tapama t’a parlé d’un dispositif caché sur sa tombe.' }); }
+    if (!ls('taama.tombe')) { const r = gameToReal(-310.5, -476.4); l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', short: 'Tombe Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Tapama t’a parlé d’un dispositif caché à côté de la tombe de Djenépo.' }); }
     if (ls('taama.dispositif1')) { const r = gameToReal(-175.012, -219.890); l.push({ id: 'deuxieme', name: 'Laboratoire de Tapama', short: 'Labo Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Le cercle jaune : Tapama t’y attend avec son établi et ses écrans.' }); }
     return l;
   };

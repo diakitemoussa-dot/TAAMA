@@ -3462,86 +3462,6 @@ function _retireMainDrone() {
   _droneNDead = true; _droneNNoRespawn = true; _droneNRespawnT = 0; _droneNHealth = 0;
 }
 
-function _loadSanctuaryDroneN() {
-  if (_sanctuaryDroneN || _sanctuaryDroneNLoading || !M) return;
-  _sanctuaryDroneNLoading = true;
-  loadModel(_gltfDrone, DRONE_N_GLB_URL, (gltf) => {
-    _sanctuaryDroneNLoading = false;
-    _droneNGltf = gltf;
-    const model = gltf.scene;
-    model.name = 'droneN_model';
-    model.rotation.set(0, 0, 0);
-    model.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    model.position.sub(center);                 // centre sur l'origine du groupe
-    const maxDim = Math.max(size.x, size.y, size.z) || 1;
-
-    const group = new THREE.Group();
-    group.name = 'droneN';
-    group.add(model);
-    group.position.copy(DRONE_N_POS);
-    group.scale.setScalar(DRONE_N_SIZE / maxDim);
-    group.visible = active;
-
-    const mixer = new THREE.AnimationMixer(model);
-    const actions = {};
-    for (const clip of gltf.animations) {
-      const action = mixer.clipAction(clip);
-      if (clip.name === 'Idle') {
-        action.setLoop(THREE.LoopRepeat, Infinity);
-        action.clampWhenFinished = false;
-      } else {
-        action.setLoop(THREE.LoopOnce, 1);
-        action.clampWhenFinished = true;
-      }
-      action.enabled = true;
-      actions[clip.name] = action;
-    }
-    // Filet de sécurité si le clip Idle a été renommé à l'export.
-    if (!actions.Idle && gltf.animations[0]) {
-      const fallback = mixer.clipAction(gltf.animations[0]);
-      fallback.setLoop(THREE.LoopRepeat, Infinity);
-      fallback.enabled = true;
-      actions.Idle = fallback;
-    }
-
-    M.scene.add(group);
-    // Le nez du drone N (+Z local) est orienté vers le point d'apparition extérieur.
-    group.lookAt(PLAYER_EXTERIOR.x, PLAYER_EXTERIOR.y - 0.25, PLAYER_EXTERIOR.z);
-    // Cylinder.001 est le canon lumineux situé sous le drone : c'est la bouche de tir.
-    // GLTFLoader peut assainir le nom en « Cylinder001 » (point retiré).
-    const emitter = model.getObjectByName('Cylinder.001')
-                 || model.getObjectByName('Cylinder001');
-    if (!emitter) console.warn('[Sanctuaire] Canon Cylinder.001 introuvable sur droneN.');
-    _sanctuaryDroneN = {
-      group, model, mixer, actions,
-      ai: DroneAI.createAI(DroneAI.makePatrolWaypoints(DRONE_N_POS), { center: DRONE_N_POS.clone(), radius: DRONE_N_ROAM_RADIUS }),
-      yaw: 0,            // lacet courant (le repos regarde vers +Z)
-      scanning: false,
-      scanBaseYaw: 0,
-      statusSprite: null,
-      initialTransforms: _captureDroneNTransforms(model),
-      baseQuat: group.quaternion.clone(),
-      emitter,
-      currentAction: null,
-      dodging: false,
-      dodgeDir: 0,
-      maxDim,
-    };
-    mixer.addEventListener('finished', _onDroneNAnimationFinished);
-    _resetDroneNModel(_sanctuaryDroneN, true);
-    _droneNHealth = DRONE_N_MAX_HP;
-    _droneNDead = false;
-    _droneNRespawnT = 0;
-    _retireMainDrone();
-    _updateGadgetHud();
-  }, undefined, (err) => {
-    _sanctuaryDroneNLoading = false;
-    console.warn('[Sanctuaire] Drone N indisponible :', err);
-  });
-}
 
 
 const DRONE_N_STATUS_COLORS = {
@@ -5452,7 +5372,7 @@ function enter() {
     _resetSentinels(true);
     _updateGadgetHud();
   } else {
-    _loadSanctuaryDroneN();
+    // drone N : retiré du jeu (violence supprimée)
   }
 
   if (_dockedDrone) _attachDockedDrone();

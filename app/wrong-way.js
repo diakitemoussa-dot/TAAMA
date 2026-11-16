@@ -28,7 +28,8 @@ const LABO = 'Tu fais fausse route, {nom}. Suis la ligne jaune de ta carte jusqu
 function currentStage() {
   if (val('taama.lab2') === 'done' || flag('taama.chapitre1')) return null;                                                // chapitre terminé
   if (flag('taama.dispositif2')) return { id: 'labo2', place: 'deuxieme', text: LABO };
-  if (val('taama.lab1') === 'done') return { id: 'retour', place: 'mosquee', text: 'Tu fais fausse route, {nom}. Retourne vers la mosquée, vite.' };
+  if (flag('taama.tombe')) return { id: 'biblio', place: 'bibliotheque', text: 'Tu t’éloignes de Barey So, {nom}. Suis l’itinéraire de ta carte.' };
+  if (val('taama.lab1') === 'done') return { id: 'tombe', place: 'tombe', text: 'Tu fais fausse route, {nom}. Suis l’itinéraire jusqu’à la tombe de Djenépo.' };
   if (flag('taama.dispositif1')) return { id: 'labo1', place: 'deuxieme', text: LABO };
   return { id: 'inspection', place: 'mosquee', text: 'Tu t’éloignes de la mosquée, {nom}. Reviens : le dispositif est sur le toit.' };
 }

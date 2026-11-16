@@ -237,7 +237,7 @@ function checkFini() {
   try { localStorage.setItem('taama.dispositif2', '1'); } catch (_) {}
   try { window.GameUI?.completeSequence?.(9); window.GameUI?.completeSequence?.(10); } catch (_) {}
   // Tapama : « Rejoins-moi » ; à la fin de la bulle, la carte s'ouvre sur le labo (le stade 2 du labo décortique les phrases)
-  const call = { text: 'Tu as tout lu, {nom} ! Rejoins-moi à mon laboratoire avec les phrases que tu as retenues : on va les décortiquer ensemble.', mood: 'souriante', duration: 9 };
+  const call = { text: 'Tu as récolté toutes les informations, {nom} ! Rejoins-moi à mon laboratoire avec les phrases que tu as retenues : on va déverrouiller le dispositif 2.', mood: 'souriante', duration: 9 };
   const go = () => { try { localStorage.setItem('taama.acte', '3:retour'); window.CityMap?.openTo?.('deuxieme'); } catch (_) {} };
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 10000); }
   window.dispatchEvent(new CustomEvent('bibliotheque:fini', { detail: { phrases: DroneBase.phrases().length } }));
@@ -258,10 +258,25 @@ function nearest() {
 }
 const wantOpen = () => { if (!state.near || state.open || state.lock > 0) return; openReader(state.near); };
 
+/* Entrée dans Barey So : le joueur entre dans l'emprise du bâtiment (28,5 × 20,5 m dans le repère de la maison) → Tapama lui parle une seule fois */
+const KEY_ENTREE = 'taama.biblio.entree';
+let entreeT = 0;
+function checkEntree(dt) {
+  entreeT += dt; if (entreeT < 0.3) return; entreeT = 0;
+  try { if (localStorage.getItem(KEY_ENTREE) === '1') return; } catch (_) {}
+  const mt = window.MaisonTerre, pp = window.SanctuaryMode?.playerPosition?.();
+  if (!mt || !mt.loaded || !mt.root || !pp || window.Tapama?.isBusy?.() || window.__storyFreeze) return;
+  const l = mt.root.worldToLocal(new THREE.Vector3(pp.x, pp.y, pp.z));
+  if (Math.abs(l.x) > 14.25 || Math.abs(l.z) > 10.25) return;
+  try { localStorage.setItem(KEY_ENTREE, '1'); } catch (_) {}
+  window.Tapama?.radio?.({ text: 'Te voilà à Barey So, {nom} ! Décolle ton drone pour repérer les 4 livres où tu sélectionnes des phrases. Elles vont beaucoup nous aider à déverrouiller le dispositif 2.', mood: 'attentive', duration: 11 });
+}
+
 M?.addFrameHook((dt) => {
   if (state.lock > 0) state.lock -= dt;
   if (!unlocked()) { if (state.prompt) state.prompt.style.display = 'none'; updateMarks(false); return; }
   if (!state.loaded && !collect()) return;
+  checkEntree(dt);
   const near = state.open ? null : nearest();
   if (near !== state.near) { state.near = near; setPrompt(near); }
   const droneOn = !!(window.DroneGame?.isActive?.());

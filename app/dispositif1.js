@@ -182,7 +182,7 @@ window.addEventListener('bibliotheque:fini', () => badge(2, 'Dispositif 2'));
    ========================================================== */
 const ACTE = 'taama.acte', LAB1 = 'taama.lab1', LAB2 = 'taama.lab2', DEV2 = 'taama.dispositif2', DOSSIER = 'taama.dossier', GADGET = 'taama.gadget';
 const VOL_KEY = 'taama.vol', REV_KEY = 'taama.revelation', GADGET_PENDING = 'taama.gadget.pending', INTRO_CAM = 'taama.intro.cam';
-const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.drone.phrases'];
+const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
 const CIRCLE = { x: -175.012, z: -219.890, r: 1.8, away: 6 };      // cercle jaune = labo de Tapama (même rayon que PORTAL_RADIUS) ; verrou levé à 6 m
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
@@ -256,14 +256,15 @@ function leaveLab(stage) {
     if (stage === 1) {
       lsSet(LAB1, 'done'); lsSet('taama.piste', '1'); lsSet(ACTE, '2:fin');
       seq(5, 6); emit('dispositif1:piste');
-      // séance de test : sans itinéraire, une joueuse a erré 8 min (2 passages dans le fleuve) puis abandonné -> on trace le retour vers la mosquée
-      // (la carte s'ouvre sur l'itinéraire « Grande Mosquée » pour aller récupérer le 2e dispositif ; on réessaie tant que Tapama parle, au lieu d'abandonner)
-      const showReturnRoute = (n = 0) => {
-        if (lsGet(VOL_KEY) === '1' || lsGet(LAB1) !== 'done') return;
-        if (window.Tapama?.isBusy?.() || window.__storyFreeze) { if (n < 40) setTimeout(() => showReturnRoute(n + 1), 750); return; }
-        openMapTo('mosquee');
+      // Tapama a dit au labo que le second dispositif est caché à côté de la tombe de Djenépo : la carte s'ouvre sur cet itinéraire
+      // (on réessaie tant que Tapama parle, au lieu d'abandonner)
+      lsSet(VOL_KEY, '1'); lsSet(ACTE, '3:tombe'); seq(7);
+      const showTombRoute = (n = 0) => {
+        if (lsGet(LAB1) !== 'done' || lsGet('taama.tombe') === '1') return;
+        if (window.Tapama?.isBusy?.() || window.__storyFreeze) { if (n < 40) setTimeout(() => showTombRoute(n + 1), 750); return; }
+        openMapTo('tombe');
       };
-      setTimeout(showReturnRoute, 1500);
+      setTimeout(showTombRoute, 1500);
     } else {
       lsSet(LAB2, 'done'); lsSet(REV_KEY, '1'); lsSet('taama.chapitre1', 'done'); lsSet('taama.next', 'bandiagara');
       seq(11, 12, 13); emit('taama:chapitre1-fin');   // la séquence 12 (« La menace demeure ») est facultative dans le scénario : on la clôt avec la fin du chapitre
@@ -285,14 +286,6 @@ M?.addFrameHook(() => {
   tryEnterLab();
 });
 
-/* S7 — après le labo 1 : Tapama envoie le joueur sur sa tombe, à Djenépo, où se trouve le second dispositif (app/tombe-tapama.js). */
-function doVol() {
-  if (lsGet(VOL_KEY) === '1' || S.volBusy) return;
-  S.volBusy = true; lsSet(VOL_KEY, '1'); lsSet(ACTE, '3:tombe');
-  window.GamepadKit?.rumble?.(160, 0.5);
-  seq(7);
-  setTimeout(() => radioThen({ text: 'Il manque une pièce, {nom} : le second dispositif est caché sur ma tombe, à Djenépo. Va le récupérer.', mood: 'attentive', duration: 10 }, () => { S.volBusy = false; openMapTo('tombe'); }), 1200);
-}
 /* Plan de caméra d'ouverture (sanctuary-mode.js : showDeviceIntro) : une fois les tutos du début faits (marche, carte), dès que la carte se referme, la caméra survole la mosquée
    et se pose sur le dispositif 1 (toit) ; le bouton « Commencer » la ramène à sa position normale. Une seule fois par partie (taama.intro.cam, posé à la fin du plan). */
 const INTRO_KEY = 'taama.intro.cam';
@@ -323,24 +316,6 @@ setInterval(() => {
   };
   go();
 }, 300);
-
-/* Zone du vol : tout le tour de la mosquée (enceinte « Mosquee_Cloture » + 15 m), à pied, en voiture ou en drone, à toute hauteur.
-   Repères : x de −57,4 à 31,4 ; z de −48,6 à 46,1 (mètres du jeu), élargis de 10 m. */
-const MOSQUE_ZONE = { x0: -57.4 - 10, x1: 31.4 + 10, z0: -48.6 - 10, z1: 46.1 + 10 };   // marge de 10 m (le point de départ, à 14 m au sud, reste hors zone)
-function _zoneWatcherPos() {
-  const dg = window.DroneGame;
-  if (dg && dg.isActive && dg.isActive()) { const pl = dg.debugPilot && dg.debugPilot(); if (pl && pl.pos) return { x: pl.pos[0], z: pl.pos[2] }; }
-  const sm = window.SanctuaryMode, pp = sm && sm.playerPosition && sm.playerPosition();   // à pied ou en voiture (la voiture déplace le personnage)
-  return pp ? { x: pp.x, z: pp.z } : null;
-}
-setInterval(() => {
-  if (lsGet(LAB1) !== 'done' || S.volBusy || S.labBusy || lsGet(DOSSIER) === '1') return;
-  const sm = window.SanctuaryMode;
-  if (!(sm && sm.isActive && sm.isActive()) || window.Tapama?.isBusy?.() || window.CityMap?.isOpen) return;
-  if (lsGet(VOL_KEY) === '1') return;                                            // reprise de partie
-  const p = _zoneWatcherPos();
-  if (p && p.x >= MOSQUE_ZONE.x0 && p.x <= MOSQUE_ZONE.x1 && p.z >= MOSQUE_ZONE.z0 && p.z <= MOSQUE_ZONE.z1) doVol();
-}, 700);
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyE' && !e.repeat && S.prompt && S.prompt.style.display === 'block' && S.lock <= 0 && S.act) { S.lock = 0.6; S.act(); e.stopImmediatePropagation(); }
@@ -388,7 +363,7 @@ M?.addFrameHook((dt) => {
 
 window.Dispositif1 = {
   get position() { return POS; }, get built() { return S.built; }, get active() { return S.active; },
-  activate, take, stealDevice2: doVol, radioThen,
+  activate, take, radioThen,
   debugLeaveLab: (stage = 1) => leaveLab(stage),            // diagnostic : joue la sortie du labo (S6) sans refaire les énigmes
   get taken() { return S.taken; },
   get busy() { return S.labBusy || S.volBusy; },

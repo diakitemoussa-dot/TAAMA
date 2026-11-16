@@ -3,20 +3,20 @@
    Chargé à l'ouverture seulement (import dynamique depuis guide-ui.js).
    ========================================================== */
 
-import { PAGES, UI } from './guide-content.js?v=51';
-import * as A from './guide-art.js?v=51';
+import { PAGES, UI } from './guide-content.js?v=52';
+import * as A from './guide-art.js?v=52';
 import { t, getLang, onLangChange } from './i18n.js?v=1';
-import { core as K } from './guide-ui.js?v=51';
+import { core as K } from './guide-ui.js?v=52';
 
 if (!document.getElementById('gdCss2')) {
   const l = document.createElement('link');
-  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=51';
+  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=52';
   document.head.appendChild(l);
   await new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 }
 const { $, esc, emit, look, saveS, flags, hideHint, closeHelp, reset, padOn, still, isTouchUi, paintHelpBtn, coachRoot } = K;
 let root = null, isOpen = false, idx = 0, pop = null, speakOn = false, padRun = false, padNav = false, viewMode = null;
-import * as LG from './guide-logic.js?v=51';
+import * as LG from './guide-logic.js?v=52';
 
 /* ==========================================================
    ÉCRAN « COMMENT JOUER »

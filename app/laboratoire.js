@@ -218,8 +218,8 @@ const LIGNES = {
     { who: 'tapama', mood: 'inquiete', text: 'Attends, attends… Je regarde ce qui s’est passé.' },
   ],
   fin1: [
-    { who: 'tapama', mood: 'attentive', text: 'Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché sur ma tombe, à Djenépo. C’est lui qu’il nous faut, {nom}.' },
-    { who: 'tapama', mood: 'inquiete', text: 'Va à ma tombe avec le pick-up, près du fleuve. Et fais vite, j’ai un mauvais pressentiment.' },
+    { who: 'tapama', mood: 'attentive', text: 'Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché à côté de la tombe de Djenépo. C’est lui qu’il nous faut, {nom}.' },
+    { who: 'tapama', mood: 'inquiete', text: 'Va à la tombe de Djenépo avec le pick-up, près du fleuve. Et fais vite, j’ai un mauvais pressentiment.' },
   ],
   proj2: { who: 'tapama', mood: 'surprise', text: 'Regarde cette carte, {nom}. Djenné n’est qu’un point parmi d’autres.' },
   coupure2: [

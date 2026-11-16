@@ -55,10 +55,10 @@ function take() {
   if (lock > 0) return; lock = 0.8;
   try { localStorage.setItem('taama.tombe', '1'); } catch (_) {}
   if (promptEl) promptEl.style.display = 'none';
-  window.GamepadKit?.toast?.(t('Dispositif 2 récupéré. Tapama t’attend à la bibliothèque.'));
+  window.GamepadKit?.toast?.(t('Dispositif 2 récupéré. Va à Barey So avec Tapama.'));
   try { window.GameUI?.completeSequence?.(8); } catch (_) {}
   // Tapama envoie le joueur à Barey So ; à la fin de la bulle, la carte s'ouvre avec l'itinéraire
-  const call = { text: 'Bien joué, {nom} ! Le dispositif est à toi. Va à Barey So, la bibliothèque : les livres gardent les mots qui l’ouvriront.', mood: 'souriante', duration: 9 };
+  const call = { text: 'Bien joué, {nom} ! Tu as le dispositif 2, mais il est verrouillé. Va à Barey So, la bibliothèque, récolter des informations sur lui. Ensuite on le déverrouille ensemble dans mon labo.', mood: 'souriante', duration: 9 };
   const go = () => { try { localStorage.setItem('taama.acte', '3:biblio'); window.CityMap?.openTo?.('bibliotheque'); } catch (_) {} };
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 10000); }
   window.dispatchEvent(new CustomEvent('tombe:dispositif', { detail: { position: [SPOT.x, state.position.y, SPOT.z] } }));
