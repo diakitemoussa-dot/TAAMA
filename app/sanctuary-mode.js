@@ -340,7 +340,7 @@ function _collectGadgetPickup() {
   try { localStorage.setItem('taama.gadget', '1'); localStorage.removeItem('taama.gadget.pending'); } catch (_) {}   // le gadget est attribué ICI, au contact, pas avant
   if (_gadgetPickup) { _gadgetPickup.root.scale.setScalar(1); _gadgetPickup.collecting = 0.0001; _gadgetPickup.from = _gadgetPickup.fl.position.clone(); }   // il disparaît en s'envolant vers le joueur (voir _tickGadgetPickup)
   window.GamepadKit?.rumble?.(120, 0.5);
-  window.GamepadKit?.toast?.('Gadget récupéré : clic droit pour viser, clic pour neutraliser');
+  window.GamepadKit?.toast?.('Objet récupéré');
   try { window.dispatchEvent(new CustomEvent('taama:gadget-pris')); } catch (_) {}
 }
 const GADGET_COLLECT_S = 0.6;                              // durée de l'animation de ramassage

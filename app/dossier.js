@@ -274,7 +274,6 @@ function pageRobots() {
       <div class="ds-rob-r ds-rv" ${rv(4)}>
         <img class="ds-base-img" src="${IMG('neantis-base.svg')}" alt="${t('Schéma de la base NÉANTIS au nord-ouest de Djenné')}" />
         <div class="ds-note"><b>Tapama</b> ${t('Leur base est au nord-ouest de la ville, à l’écart du quartier historique. Un portail, des drones N, une chambre forte au fond.')}</div>
-        <div class="ds-gadget"><span>🎒</span><div><b>${t('Gadget de neutralisation')}</b><small>${t('Dans la voiture. Vise un drone N, tire : il se met en veille quelques secondes.')}</small></div></div>
       </div>
     </div>`;
   return p;

@@ -21,7 +21,7 @@
    API : window.GameUI = { show, isOpen, openPause, settings, save, … }
    ========================================================== */
 
-import { SCREENS } from './game-screens.js?v=13';
+import { SCREENS } from './game-screens.js?v=14';
 import { applyTaamaLogo } from './taama-logo.js?v=3';
 import * as G from './game-save.js?v=1';
 import { detectQuality } from './device-quality.js?v=6';
@@ -30,7 +30,7 @@ import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLA
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=3';
+import { EN } from './i18n-en.js?v=4';
 import { sendProfile, deviceLabel } from './player-sync.js?v=4';
 import { SEQUENCES } from './tapama-core.js?v=2';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=11';
@@ -458,7 +458,6 @@ const SWITCH_KEYS = {
   'Afficher le compteur d’images par seconde': 'showFps',
   'Cinématiques passables': 'skippableCutscenes',
   'Rappel de l’objectif en cours': 'objectiveReminder',
-  'Aide à la visée du gadget': 'aimAssist',
   'Sous-titres': 'subtitles',
   'Réduire les secousses de la caméra': 'reduceShake',
   'Contraste renforcé des textes': 'highContrast',
@@ -806,7 +805,7 @@ function deleteSave() {
    ========================================================== */
 
 const TIPS = [
-  'Maintiens le clic droit pour viser avec précision, puis clique pour tirer avec ton gadget.',
+  'Appuie sur Échap pour ouvrir le menu pause et revoir les commandes.',
   'Appuie sur H à tout moment pour demander de l’aide à Tapama.',
   'Maj pour courir, X pour sauter, K pour t’agenouiller et te cacher.',
   'À la manette, ✕ prend une photo avec le drone et R1 filme.',
