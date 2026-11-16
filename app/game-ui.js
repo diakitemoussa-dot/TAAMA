@@ -33,7 +33,7 @@ import { t, translateTree } from './i18n.js?v=1';
 import { EN } from './i18n-en.js?v=4';
 import { sendProfile, deviceLabel } from './player-sync.js?v=4';
 import { SEQUENCES } from './tapama-core.js?v=2';
-import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=13';
+import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
 
 const NEW_UI = window.__NEW_UI !== false;
 const STAGE_W = 1440;
