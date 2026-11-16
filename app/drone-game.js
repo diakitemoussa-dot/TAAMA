@@ -3,6 +3,7 @@
    Dépend de window.MosqueScene exposé par mosque-viewer.js.
    ========================================================== */
 import * as THREE from 'three';
+import { toggleHologram, setHologram } from './hologram.js?v=2';
 import { mediaUrl, currentBytesPlan } from './device-quality.js?v=6';
 import { t as _t } from './i18n.js?v=1';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -395,6 +396,7 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'KeyP') { e.preventDefault(); takePhoto(); }
   else if (e.code === 'KeyV') { e.preventDefault(); toggleRecord(); }
+  else if (e.code === 'KeyG') { e.preventDefault(); toggleHologram(); }                // 🔮 mosquée en hologramme
 });
 window.addEventListener('keyup', (e) => { kbHeld.delete(e.code); });
 window.addEventListener('blur', () => kbHeld.clear());
@@ -439,6 +441,7 @@ const TB_ICONS = {
   dgPhoto: '<svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.6"/></svg>',
   dgList: '<svg viewBox="0 0 24 24"><path d="M5 7h14 M5 12h14 M5 17h14"/></svg>',
   dgModel: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><circle cx="5.5" cy="5.5" r="2.6"/><circle cx="18.5" cy="5.5" r="2.6"/><circle cx="5.5" cy="18.5" r="2.6"/><circle cx="18.5" cy="18.5" r="2.6"/><path d="M7.4 7.4l3 3 M16.6 7.4l-3 3 M7.4 16.6l3-3 M16.6 16.6l-3-3"/></svg>',
+  dgHolo: '<svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z M4 7.5l8 4.5 8-4.5 M12 12v9"/></svg>',
   dgVideo: '<svg viewBox="0 0 24 24"><path d="M3 7h12v10H3z M15 11l6-3v8l-6-3"/></svg>',
 };
 let _tbStyled = false;
@@ -740,6 +743,7 @@ function exit(opts){
   const toSanctuary = !!opts.toSanctuary;
   if (!active) return;
   active = false;
+  setHologram(false);                       // la mosquée retrouve son aspect normal en quittant le mode drone
   if (_dronePartTimer) { clearTimeout(_dronePartTimer); _dronePartTimer = null; }
   _dronePart.pause(); _dronePart.currentTime = 0;
   if (recorder){ try { recorder.stop(); } catch(_){} }
@@ -1007,6 +1011,7 @@ function applyGamepad(dt){
     takePhoto();
     GP.toast('📷 Photo prise !');
   }
+  if (GP.justPressed('X') && poiPanel.hidden) toggleHologram();   // ▢/X : mosquée en hologramme
   if (GP.justPressed('RB'))   toggleRecord();            // 🎥 démarrer / arrêter la vidéo
   if (GP.justPressed('Y') && _insp.pickup) inspectionPickup();   // △/Y : récupérer le dispositif (scène 1)
   if (GP.justPressed('START') || GP.justPressed('BACK')) toggleList();   // ☰ menu des lieux
@@ -1328,6 +1333,7 @@ function takePhoto(){
   a.click();
 }
 btnPhoto?.addEventListener('click', takePhoto);
+document.getElementById('dgHolo')?.addEventListener('click', () => toggleHologram());
 
 /* ---------- Outil Galerie ---------- */
 function toggleGallery(){
