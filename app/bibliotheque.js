@@ -12,7 +12,7 @@
    ========================================================== */
 import * as THREE from 'three';
 import { t } from './i18n.js?v=1';
-import { BOOKS } from './bibliotheque-textes.js?v=1';
+import { BOOKS } from './bibliotheque-textes.js?v=2';
 import { Book3D } from './livre-3d.js?v=6';
 
 const M = window.MosqueScene;
