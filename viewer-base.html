@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Base Néantis · modèle 3D</title>
+<style>
+  :root { --bg:#17121c; --ink:#f3ecdf; --gold:#f9d58b; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#f4efe6; --ink:#2a1d15; --gold:#9a6b1f; } }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px system-ui, "Segoe UI", sans-serif; overflow:hidden; }
+  canvas { display:block; width:100%; height:100%; }
+  #info { position:fixed; left:16px; top:12px; background:rgba(0,0,0,.45); padding:8px 12px; border-radius:10px; color:#f3ecdf; }
+  #info b { color:var(--gold); }
+</style>
+</head>
+<body>
+<div id="info"><b>Base Néantis</b> · glisser : tourner · molette : zoom · clic droit : déplacer<br><span id="stat">chargement…</span></div>
+<script type="importmap">
+{ "imports": { "three": "./assets/vendor/three/build/three.module.js", "three/addons/": "./assets/vendor/three/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x2a2233);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 5000);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x554466, 1.6));
+const sun = new THREE.DirectionalLight(0xfff2d8, 2.2); sun.position.set(60, 100, 40); scene.add(sun);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const draco = new DRACOLoader(); draco.setDecoderPath('./assets/vendor/three/examples/jsm/libs/draco/');
+const loader = new GLTFLoader(); loader.setDRACOLoader(draco);
+loader.load('assets/models/neantis-base.glb?v=9', (g) => {
+  scene.add(g.scene);
+  const box = new THREE.Box3().setFromObject(g.scene);
+  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const r = Math.max(size.x, size.y, size.z);
+  camera.position.copy(c).add(new THREE.Vector3(r * 0.5, r * 0.32, r * 0.5));
+  controls.target.copy(c); controls.update();
+  scene.add(new THREE.GridHelper(r * 2, 20, 0x8a7a99, 0x4a3f55)).position.y = box.min.y;
+  let n = 0; g.scene.traverse(o => { if (o.isMesh) n++; });
+  document.getElementById('stat').textContent = n + ' objets · ' + size.x.toFixed(0) + ' × ' + size.y.toFixed(0) + ' × ' + size.z.toFixed(0) + ' m';
+}, undefined, (e) => { document.getElementById('stat').textContent = 'Erreur : ' + (e.message || e); });
+
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
