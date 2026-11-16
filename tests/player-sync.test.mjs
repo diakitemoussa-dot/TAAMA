@@ -13,3 +13,11 @@ test('adresse configurable : variable globale puis balise meta', () => {
   assert.equal(resolveEndpoint({ TAAMA_PLAYERS_ENDPOINT: ' https://x.example/api/players ' }, meta('autre')), 'https://x.example/api/players');
   assert.equal(resolveEndpoint({}, meta(' https://m.example/p ')), 'https://m.example/p');
 });
+
+import { isAppsScript } from '../app/player-sync.js';
+test('isAppsScript : reconnaît un script Google, pas l\'adresse du serveur Taama', () => {
+  assert.equal(isAppsScript('https://script.google.com/macros/s/AKfy/exec'), true);
+  assert.equal(isAppsScript('https://script.googleusercontent.com/x'), true);
+  assert.equal(isAppsScript('api/players'), false);
+  assert.equal(isAppsScript('https://monserveur.example/api/players'), false);
+});
