@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { t } from './i18n.js?v=1';
 import { BOOKS } from './bibliotheque-textes.js?v=1';
+import { Book3D } from './livre-3d.js?v=6';
 
 const M = window.MosqueScene;
 const KEY_LUS = 'taama.biblio.lus', KEY_PH = 'taama.drone.phrases';
@@ -34,7 +35,7 @@ const DroneBase = {
 };
 window.DroneBase = DroneBase;
 
-const state = { books: [], loaded: false, near: null, open: false, lock: 0, prompt: null, marks: [], fini: false };
+const state = { reader: null, books: [], loaded: false, near: null, open: false, lock: 0, prompt: null, marks: [], fini: false };
 const unlocked = () => { try { return localStorage.getItem('taama.tombe') === '1'; } catch (_) { return false; } };
 const lus = () => store.get(KEY_LUS, []);
 
@@ -100,42 +101,95 @@ function updateMarks(show) {
   }
 }
 
-/* ---------- lecteur ---------- */
+/* ---------- lecteur : le texte est ÉCRIT sur les vraies pages du livre 3D (app/livre-3d.js) ----------
+   Page de gauche : titre, sujet, consigne, boutons dessinés. Page de droite : les phrases, avec une pastille à cocher.
+   Sélection : clic / toucher sur la page, ↑ ↓ + Entrée au clavier, croix directionnelle + ✕ à la manette ; Échap ou ○ pour fermer. */
+const INK = '#2a1d15', INK2 = '#6f5f52', GOLD = '#b8741a';
+function wrapLines(g, text, maxW) {
+  const out = []; let line = '';
+  for (const w of String(text).split(/\s+/)) { const tryL = line ? line + ' ' + w : w; if (g.measureText(tryL).width > maxW && line) { out.push(line); line = w; } else line = tryL; }
+  if (line) out.push(line); return out;
+}
+function rrect(g, x, y, w, h, r) { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); }
+
 function openReader(book) {
   if (state.open) return; state.open = true;
   window.__storyFreeze = true; window.GamepadKit?.capture?.(true);
   try { window.DroneGame?.setTouchAxes?.(0, 0, 0, 0); } catch (_) {}
-  const css = document.createElement('style');
-  css.textContent = '#bqReader{position:fixed;inset:0;z-index:9000;background:rgba(10,6,14,.82);display:flex;align-items:center;justify-content:center;font-family:system-ui,"Segoe UI",sans-serif}#bqReader .bq-box{width:min(720px,92vw);max-height:88vh;overflow:auto;background:#f6ead2;color:#2a1d15;border-radius:18px;padding:26px 30px;box-shadow:0 12px 50px rgba(0,0,0,.6)}#bqReader h2{margin:0 0 4px;font-size:26px}#bqReader .bq-sub{margin:0 0 12px;color:#6f5f52}#bqReader .bq-ph{display:block;width:100%;text-align:left;padding:12px 14px;margin:8px 0;border:2px solid #d8c7a3;border-radius:12px;background:#fffaf1;color:#2a1d15;font:inherit;font-size:17px;line-height:1.35;cursor:pointer}#bqReader .bq-ph.sel{border-color:#b8741a;background:#fde7b0;font-weight:700}#bqReader .bq-ph.foc,#bqReader .bq-btn.foc{outline:3px solid #b8741a;outline-offset:2px}#bqReader .bq-row{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:18px;flex-wrap:wrap}#bqReader .bq-btn{padding:11px 20px;border-radius:12px;border:0;background:#2a1d15;color:#f9d58b;font:inherit;font-weight:700;cursor:pointer}#bqReader .bq-btn.sec{background:#d8c7a3;color:#2a1d15}';
-  const readerEl = document.createElement('div'); readerEl.id = 'bqReader';
+  // fond assombri qui s'installe pendant que le livre sort de l'étagère
+  const dim = document.createElement('div'); dim.style.cssText = 'position:fixed;inset:0;z-index:8980;background:rgba(10,6,14,.62);opacity:0;transition:opacity .5s ease;pointer-events:none';
+  document.body.appendChild(dim); requestAnimationFrame(() => { dim.style.opacity = '1'; });
+  // le livre quitte son étagère : écran (position projetée) → devant la caméra, ouverture en 3D
+  const pv = book.pos.clone().project(M.camera), onScr = pv.z < 1;
+  const b3 = Book3D.open(onScr ? Math.max(-1, Math.min(1, pv.x)) : 0, onScr ? Math.max(-1, Math.min(1, pv.y)) : -0.4);
+  if (book.node) book.node.visible = false;
+  let ready = false, closing = false, raf = 0, cur = 0, regions = [];
   const sel = new Set(), already = DroneBase.phrases().map((p) => p.id);
-  const box = document.createElement('div'); box.className = 'bq-box';
-  box.innerHTML = '<h2>' + t('Livre n°') + ' ' + book.id + ' · ' + t(book.data.titre) + '</h2><p class="bq-sub">' + t(book.data.sujet) + '</p><p class="bq-sub">' + t('Sélectionne les phrases à retenir (une ou plusieurs), puis valide.') + '</p>';
-  const items = [];
-  let info = null;
-  const count = () => { info.textContent = sel.size + ' ' + t('phrase(s) sélectionnée(s)'); };
-  book.data.phrases.forEach((txt, i) => {
-    const id = book.id + ':' + i, b = document.createElement('button'); b.type = 'button'; b.className = 'bq-ph'; b.textContent = t(txt);
-    if (already.includes(id)) { sel.add(id); b.classList.add('sel'); }
-    b.addEventListener('click', () => { if (sel.has(id)) sel.delete(id); else sel.add(id); b.classList.toggle('sel', sel.has(id)); count(); });
-    box.appendChild(b); items.push({ el: b, act: () => b.click() });
-  });
-  const row = document.createElement('div'); row.className = 'bq-row';
-  info = document.createElement('span'); row.appendChild(info);
-  const bV = document.createElement('button'); bV.type = 'button'; bV.className = 'bq-btn'; bV.textContent = t('Valider la sélection');
-  const bC = document.createElement('button'); bC.type = 'button'; bC.className = 'bq-btn sec'; bC.textContent = t('Fermer');
-  row.append(bC, bV); box.appendChild(row); readerEl.appendChild(box); document.body.appendChild(readerEl); document.head.appendChild(css);
-  count();
-  let cur = 0;
-  const focus = (i) => { cur = (i + items.length + 2) % (items.length + 2); const all = [...items.map((x) => x.el), bC, bV]; all.forEach((el, k) => el.classList.toggle('foc', k === cur)); all[cur].scrollIntoView({ block: 'nearest' }); };
-  const act = () => { if (cur < items.length) items[cur].act(); else if (cur === items.length) close(); else validate(); };
-  focus(0);
-  let raf = 0;
-  const t0 = performance.now();
+  const phr = book.data.phrases.map((txt, i) => ({ id: book.id + ':' + i, text: t(txt) }));
+  phr.forEach((p) => { if (already.includes(p.id)) sel.add(p.id); });
+  const NF = phr.length + 2;                                  // phrases + Valider + Fermer (ordre du focus)
+
+  /* ----- dessin des deux pages ----- */
+  function draw() {
+    if (!b3.pages) return;
+    const L = b3.pages.left.cv, R = b3.pages.right.cv, gl = L.getContext('2d'), gr = R.getContext('2d'), W = L.width, H = L.height;
+    gl.clearRect(0, 0, W, H); gr.clearRect(0, 0, W, H); regions = [];
+    const padX = 62;
+    // page de gauche
+    gl.fillStyle = INK; gl.textBaseline = 'alphabetic';
+    gl.font = 'bold 50px Georgia, serif'; let y = 120;
+    for (const ln of wrapLines(gl, t('Livre n°') + ' ' + book.id, W - 2 * padX)) { gl.fillText(ln, padX, y); y += 58; }
+    gl.font = 'bold 44px Georgia, serif';
+    for (const ln of wrapLines(gl, t(book.data.titre), W - 2 * padX)) { gl.fillText(ln, padX, y); y += 52; }
+    y += 6; gl.strokeStyle = GOLD; gl.lineWidth = 3; gl.beginPath(); gl.moveTo(padX, y); gl.lineTo(W - padX, y); gl.stroke(); y += 46;
+    gl.fillStyle = INK2; gl.font = 'italic 32px Georgia, serif';
+    for (const ln of wrapLines(gl, t(book.data.sujet), W - 2 * padX)) { gl.fillText(ln, padX, y); y += 40; }
+    y += 24; gl.font = '29px Georgia, serif';
+    for (const ln of wrapLines(gl, t('Sélectionne les phrases à retenir (une ou plusieurs), puis valide.'), W - 2 * padX)) { gl.fillText(ln, padX, y); y += 37; }
+    y += 18; gl.fillStyle = GOLD; gl.font = 'bold 32px Georgia, serif'; gl.fillText(sel.size + ' ' + t('phrase(s) sélectionnée(s)'), padX, y);
+    // boutons dessinés
+    const btn = (label, by, primary, idx) => {
+      const bw = W - 2 * padX, bh = 88;
+      rrect(gl, padX, by, bw, bh, 20); gl.fillStyle = primary ? INK : 'rgba(120,90,50,.28)'; gl.fill();
+      if (cur === idx) { rrect(gl, padX - 5, by - 5, bw + 10, bh + 10, 24); gl.strokeStyle = GOLD; gl.lineWidth = 6; gl.stroke(); }
+      gl.fillStyle = primary ? '#f9d58b' : INK; gl.font = 'bold 36px Georgia, serif'; gl.textAlign = 'center'; gl.fillText(label, W / 2, by + 57); gl.textAlign = 'left';
+      regions.push({ page: 'left', x: padX, y: by, w: bw, h: bh, idx });
+    };
+    btn(t('Valider la sélection'), H - 290, true, phr.length);
+    btn(t('Fermer'), H - 184, false, phr.length + 1);
+    gl.fillStyle = INK2; gl.font = 'italic 25px Georgia, serif';
+    gl.fillText(window.GamepadKit?.connected?.() ? '↕ ' + t('choisir') + ' · ✕ ' + t('cocher') + ' · ○ ' + t('fermer') : '↑ ↓ ' + t('choisir') + ' · ' + t('Entrée') + ' ' + t('cocher') + ' · Échap ' + t('fermer'), padX, H - 52);
+    // page de droite : les phrases (la taille du texte s'ajuste pour que tout tienne)
+    let fs = 38, lines;
+    const layout = (size) => { gr.font = 'bold ' + size + 'px Georgia, serif'; return phr.map((p) => wrapLines(gr, p.text, W - 2 * padX - 70)); };
+    for (; fs > 22; fs -= 2) { lines = layout(fs); const tot = lines.reduce((a, l) => a + l.length * (fs * 1.28) + 38, 0); if (tot < H - 150) break; }
+    lines = layout(fs);
+    let ry = 78;
+    phr.forEach((p, i) => {
+      const lh = fs * 1.28, bh = lines[i].length * lh + 26, on = sel.has(p.id);
+      if (on) { rrect(gr, padX - 18, ry, W - 2 * padX + 36, bh, 16); gr.fillStyle = 'rgba(253,214,120,.75)'; gr.fill(); }
+      if (cur === i) { rrect(gr, padX - 18, ry, W - 2 * padX + 36, bh, 16); gr.strokeStyle = GOLD; gr.lineWidth = 5; gr.stroke(); }
+      const cy = ry + bh / 2;
+      gr.beginPath(); gr.arc(padX + 18, cy, 17, 0, Math.PI * 2); gr.strokeStyle = on ? GOLD : INK2; gr.lineWidth = 4; gr.stroke();
+      if (on) { gr.beginPath(); gr.arc(padX + 18, cy, 9, 0, Math.PI * 2); gr.fillStyle = GOLD; gr.fill(); }
+      gr.fillStyle = INK; gr.font = (on ? 'bold ' : '') + fs + 'px Georgia, serif'; gr.textBaseline = 'alphabetic';
+      lines[i].forEach((ln, k) => gr.fillText(ln, padX + 70, ry + 13 + lh * (k + 0.8)));
+      regions.push({ page: 'right', x: padX - 18, y: ry, w: W - 2 * padX + 36, h: bh, idx: i });
+      ry += bh + 22;
+    });
+    b3.refresh();
+  }
+  const toggle = (i) => { const id = phr[i].id; if (sel.has(id)) sel.delete(id); else sel.add(id); draw(); };
+  const act = (idx) => { cur = idx; if (idx < phr.length) toggle(idx); else if (idx === phr.length) validate(); else close(); };
+
   function close() {
-    if (!state.open) return;
-    cancelAnimationFrame(raf); window.removeEventListener('keydown', onKey, true); readerEl.remove(); css.remove();
-    state.open = false; state.lock = 0.8; window.__storyFreeze = false; window.GamepadKit?.capture?.(false);
+    if (!state.open || closing) return; closing = true;
+    dim.style.opacity = '0'; cancelAnimationFrame(raf);
+    window.removeEventListener('keydown', onKey, true); window.removeEventListener('pointerdown', onPtr, true);
+    b3.close().then(() => {                                                      // le livre se referme et retourne à l'étagère, puis le jeu reprend
+      dim.remove(); if (book.node) book.node.visible = true; state.reader = null;
+      state.open = false; state.lock = 0.8; window.__storyFreeze = false; window.GamepadKit?.capture?.(false);
+    });
   }
   function validate() {
     const picked = [...sel].map((id) => { const [bk, i] = id.split(':').map(Number); return { id, livre: bk, texte: BOOKS.find((x) => x.id === bk).phrases[i] }; });
@@ -145,28 +199,35 @@ function openReader(book) {
     window.dispatchEvent(new CustomEvent('bibliotheque:valide', { detail: { livre: book.id, nouvelles: n } }));
     close(); checkFini();
   }
-  bC.addEventListener('click', close); bV.addEventListener('click', validate);
   function onKey(e) {
-    if (performance.now() - t0 < 300) { e.stopImmediatePropagation(); e.preventDefault(); return; }
     if (e.code === 'Escape') close();
-    else if (e.code === 'ArrowDown') focus(cur + 1);
-    else if (e.code === 'ArrowUp') focus(cur - 1);
-    else if (e.code === 'Enter' || e.code === 'Space') act();
+    else if (!ready) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+    else if (e.code === 'ArrowDown') { cur = (cur + 1) % NF; draw(); }
+    else if (e.code === 'ArrowUp') { cur = (cur + NF - 1) % NF; draw(); }
+    else if (e.code === 'Enter' || e.code === 'Space') act(cur);
     else return;
     e.preventDefault(); e.stopImmediatePropagation();
   }
-  window.addEventListener('keydown', onKey, true);
+  function onPtr(e) {                                                            // clic / toucher directement sur la page du livre
+    if (!ready || closing) return;
+    const h = b3.pick(e.clientX, e.clientY); if (!h) return;
+    const r = regions.find((q) => q.page === h.page && h.x >= q.x && h.x <= q.x + q.w && h.y >= q.y && h.y <= q.y + q.h);
+    if (r) { e.preventDefault(); e.stopImmediatePropagation(); act(r.idx); }
+  }
+  window.addEventListener('keydown', onKey, true); window.addEventListener('pointerdown', onPtr, true);
   const poll = () => {
     const R = window.GamepadKit?.raw;
-    if (R && performance.now() - t0 > 400) {
+    if (R && ready) {
       if (R.justPressed('B')) { close(); return; }
-      if (R.justPressed('DOWN')) focus(cur + 1);
-      if (R.justPressed('UP')) focus(cur - 1);
-      if (R.justPressed('A')) act();
+      if (R.justPressed('DOWN')) { cur = (cur + 1) % NF; draw(); }
+      if (R.justPressed('UP')) { cur = (cur + NF - 1) % NF; draw(); }
+      if (R.justPressed('A')) act(cur);
     }
     raf = requestAnimationFrame(poll);
   };
   raf = requestAnimationFrame(poll);
+  b3.opened.then(() => { ready = true; draw(); });
+  state.reader = { toggle, validate, close, focus: (i) => { cur = i; draw(); }, selected: () => [...sel], count: phr.length, ready: () => ready };
 }
 
 function checkFini() {
@@ -220,4 +281,5 @@ window.Bibliotheque = {
   reset() { store.set(KEY_LUS, []); DroneBase.clear(); state.fini = false; },
   debug: () => ({ books: state.books.map((b) => ({ id: b.id, pos: b.pos.toArray().map((v) => Math.round(v * 10) / 10) })), near: state.near && state.near.id, open: state.open }),
   open: (id) => { const b = state.books.find((x) => x.id === id); if (b) openReader(b); },
+  reader: () => state.reader,                                                   // contrôle du lecteur (tests) : toggle(i), validate(), close()
 };
