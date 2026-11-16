@@ -112,6 +112,8 @@ function init() {
     const nb = window.NeantisBase;
     if (nb && nb.loaded) { const r = gameToReal(nb.center.x, nb.center.z); l.push({ id: 'neantis', name: 'Base NÉANTIS', short: 'NÉANTIS', e: r.e, n: r.n, kind: 'neantis', info: 'Complexe du groupe NÉANTIS : le dispositif y est gardé.' }); }
     // cercle jaune = laboratoire de Tapama (visible dès que le dispositif 1 est récupéré)
+    // tombe de Tapama Djenepo : lieu du dispositif 2 (visible après le dispositif 1, tant qu'il n'est pas récupéré)
+    if (ls('taama.dispositif1') && !ls('taama.tombe')) { const r = gameToReal(-465.7, 286.5); l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', short: 'Tombe Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Tapama t’a parlé d’un dispositif caché sur sa tombe.' }); }
     if (ls('taama.dispositif1')) { const r = gameToReal(-175.012, -219.890); l.push({ id: 'deuxieme', name: 'Laboratoire de Tapama', short: 'Labo Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Le cercle jaune : Tapama t’y attend avec son établi et ses écrans.' }); }
     return l;
   };
