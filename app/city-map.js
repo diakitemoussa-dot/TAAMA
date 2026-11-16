@@ -101,11 +101,11 @@ function init() {
   let autoOpened = false;   // carte ouverte PAR L'HISTOIRE (openTo) : les sticks sont bloqués tant qu'elle reste ouverte ; ouverte à la main : ils déplacent la carte
   const ls = (k) => { try { return localStorage.getItem(k) === '1'; } catch (_) { return false; } };
   // destination suggérée selon l'avancement de l'histoire (bible chapitre 1) : dispositif 1 -> labo ; labo 1 fait -> aucune ;
-  // gadget -> base NÉANTIS ; dispositif 2 -> labo ; labo 2 fait -> aucune
+  // véhicule/labo 1 fait -> tombe de Tapama ; tombe faite -> bibliothèque ; dispositif 2 -> labo ; labo 2 fait -> aucune
   const bibliFini = () => { try { return JSON.parse(localStorage.getItem('taama.biblio.lus') || '[]').length >= 12; } catch (_) { return false; } };
   const lsv = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const storyTarget = () => (lsv('taama.lab2') === 'done' || lsv('taama.chapitre1') === 'done') ? null
-    : ls('taama.dispositif2') ? 'deuxieme' : ls('taama.gadget') ? (!ls('taama.tombe') ? 'tombe' : bibliFini() ? 'deuxieme' : 'bibliotheque') : lsv('taama.lab1') === 'done' ? (ls('taama.vol') ? null : 'mosquee') : ls('taama.dispositif1') ? 'deuxieme' : null;   // labo 1 fait : retour à la mosquée (S7)
+    : ls('taama.dispositif2') ? 'deuxieme' : ls('taama.tombe') ? (bibliFini() ? 'deuxieme' : 'bibliotheque') : ls('taama.vol') ? 'tombe' : lsv('taama.lab1') === 'done' ? (ls('taama.vol') ? null : 'mosquee') : ls('taama.dispositif1') ? 'deuxieme' : null;   // labo 1 fait : retour à la mosquée (S7)
   const sel = { id: null, route: null, from: null };               // lieu choisi + itinéraire calculé depuis `from`
   let hits = [];                                                   // pastilles cliquables à l'écran : { id, x, y, r } (px canvas)
   const places = () => {

@@ -96,7 +96,6 @@ let _droneNRespawnT      = 0;
 let _droneNNoRespawn     = false;   // sentinelles de la base : neutralisées jusqu'à la prochaine entrée dans le sanctuaire
 let _droneNGltf          = null;    // gltf d'origine (clonage des sentinelles de la base)
 let _boundCtx            = null;    // contexte de sentinelle actuellement lié aux variables globales (null = sentinelle d'origine)
-let _droneLaserLock      = false;
 const _droneRoster       = [];      // sentinelles supplémentaires du poste de la base : { id, d, health, dead, respawnT, fireCd, noRespawn }
 
 const _fireworkFx        = [];
@@ -239,147 +238,6 @@ function _tickEntryGuide(dt) {
   el.querySelector('[data-d]').textContent = Math.round(dist) + ' m';
 }
 
-/* ---------- Récupération du gadget dans le monde ----------
-   Après le dossier NÉANTIS (app/dispositif1.js pose taama.gadget.pending = '1'), le gadget apparaît à ≈ 3 m du joueur, bien visible et au même niveau,
-   flotte avec un léger rebond ; le joueur le ramasse en marchant dessus. taama.gadget = '1' (qui le met dans ses mains) n'est écrit qu'à ce contact. */
-const GADGET_SIDE_DIST = 4.0, GADGET_PICK_DIST_CAR = 8.0, GADGET_PICK_R_CAR = 4.5, GADGET_CAR_SCALE = 1.6;   // au volant : gadget posé plus loin, plus gros, ramassé en roulant dessus
-const GADGET_PICK_DIST = 3.0, GADGET_PICK_R = 1.2, GADGET_PICK_SIZE = 0.7;
-let _gadgetPickup = null, _gadgetWaitT = 0, _gadgetCarAnchored = false;                // { root, fl, ring, x, z, gy, t } ; attente du décor avant l'apparition
-const _lsFlag = (k) => { try { return localStorage.getItem(k) === '1'; } catch (_) { return false; } };
-
-/** Point au sol où poser le gadget. À pied : à ≈ 3 m du joueur, en diagonale devant la caméra, dégagé. En voiture : à 9 m devant la caméra,
-    dans le cadre et sans mur entre la caméra et lui (sinon il serait caché derrière un mur ou une falaise). */
-function _gadgetPickupSpot() {
-  const veh = _inVehicle(), D = veh ? GADGET_PICK_DIST_CAR : GADGET_PICK_DIST;
-  if (veh && window.Vehicle && M?.camera) {                                    // au volant : à CÔTÉ de la voiture (à droite, ou à gauche si la droite est hors cadre)
-    const cp = window.Vehicle.position, fwd = M.camera.getWorldDirection(new THREE.Vector3()); fwd.y = 0; fwd.normalize();
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);                          // latéral horizontal (droite de la caméra)
-    for (const sgn of [1, -1]) {
-      const cx = cp.x + right.x * sgn * GADGET_SIDE_DIST, cz = cp.z + right.z * sgn * GADGET_SIDE_DIST;
-      const ndc = new THREE.Vector3(cx, cp.y + 1.0, cz).project(M.camera);
-      if (ndc.z > 1 || Math.abs(ndc.x) > 0.7) continue;
-      _rayOrigin.set(cx, cp.y + 3, cz); raycaster.set(_rayOrigin, _down); raycaster.far = 8;
-      const h = colliders && colliders.length ? raycaster.intersectObjects(colliders, false).filter((x) => !/^Voiture_Collider/.test(x.object.name)) : [];
-      const gy = h.length ? h[0].point.y : cp.y;
-      return new THREE.Vector3(cx, gy, cz);
-    }
-    return new THREE.Vector3(cp.x + right.x * GADGET_SIDE_DIST, cp.y, cp.z + right.z * GADGET_SIDE_DIST);
-  }
-  let yaw0 = cameraYaw;
-  if (veh && M?.camera) { const f = M.camera.getWorldDirection(new THREE.Vector3()); yaw0 = Math.atan2(f.x, f.z); }   // au volant : devant la caméra (le cap de la voiture n'est pas celui de la caméra)
-  const feetY = veh && window.Vehicle ? window.Vehicle.ground : playerPos.y - EYE_HEIGHT;       // au volant, playerPos est au niveau du siège : le sol est celui de la voiture
-  if (colliders && colliders.length) {
-    const offs = veh ? [1.57, -1.57, 1.25, -1.25, 1.9, -1.9] : [0.7, -0.7, 1.15, -1.15, 0, 1.9, -1.9, Math.PI];
-    for (const off of offs) {
-      const a = yaw0 + off, dx = Math.sin(a), dz = Math.cos(a);
-      const ox = veh && window.Vehicle ? window.Vehicle.position.x : playerPos.x, oz = veh && window.Vehicle ? window.Vehicle.position.z : playerPos.z;   // au volant : à côté de la VOITURE (pas du joueur qui monte dedans)
-      const cx = ox + dx * D, cz = oz + dz * D;     // variables locales : _rayOrigin est un vecteur partagé que clearDist() modifie
-      _rayOrigin.set(cx, feetY + 2.5, cz);
-      raycaster.set(_rayOrigin, _down); raycaster.far = 6;
-      const h = raycaster.intersectObjects(colliders, false).filter((x) => !/^Voiture_Collider/.test(x.object.name));
-      if (!h.length || Math.abs(h[0].point.y - feetY) > (veh ? 2.5 : 0.6)) continue;   // pas de sol, ou pas au même niveau (marche, mur) ; au volant, la pente du bord de route est tolérée
-      const gy = h[0].point.y;
-      if (!veh && clearDist(_tmpA.set(dx, 0, dz), D + 0.4) < D + 0.4) continue;   // un mur entre le joueur et le gadget
-      if (veh) {                                                                  // au volant : visible depuis la caméra (dans le cadre, sans mur entre les deux)
-        const g = new THREE.Vector3(cx, gy + 1.0, cz), ndc = g.clone().project(M.camera);
-        if (ndc.z > 1 || Math.abs(ndc.x) > 0.75 || Math.abs(ndc.y) > 0.7) continue;
-        const cp = M.camera.position.clone(), dir = g.clone().sub(cp), L = dir.length(); dir.multiplyScalar(1 / L);
-        raycaster.set(cp, dir); raycaster.far = L - 0.8;
-        if (raycaster.intersectObjects(colliders, false).some((x) => !/^Voiture_Collider/.test(x.object.name))) continue;
-      }
-      return new THREE.Vector3(cx, gy, cz);
-    }
-  }
-  const a = yaw0 + 0.7;                                                           // repli (collisions indisponibles) : toujours en diagonale
-  return new THREE.Vector3(playerPos.x + Math.sin(a) * D, feetY, playerPos.z + Math.cos(a) * D);
-}
-/** Le gadget (copie de l'arme du personnage, remise à l'échelle), ou un boîtier bleu de repli. */
-function _buildGadgetPickupMesh() {
-  const inner = new THREE.Group();
-  let built = false;
-  if (_gadgetNode) {
-    _gadgetNode.updateWorldMatrix(true, true);
-    const inv = new THREE.Matrix4().copy(_gadgetNode.matrixWorld).invert();
-    _gadgetNode.traverse((o) => {
-      if (!o.isMesh || !o.geometry) return;
-      const m = new THREE.Mesh(o.geometry, o.material);
-      m.matrixAutoUpdate = false; m.matrix.copy(inv).multiply(o.matrixWorld); m.raycast = () => {}; m.frustumCulled = false;
-      inner.add(m); built = true;
-    });
-  }
-  if (!built) {
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.18), new THREE.MeshBasicMaterial({ color: 0x49b9ff }));
-    box.raycast = () => {}; inner.add(box);
-  }
-  inner.updateMatrixWorld(true);
-  const bb = new THREE.Box3().setFromObject(inner), c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
-  const k = GADGET_PICK_SIZE / (Math.max(s.x, s.y, s.z) || 1);
-  inner.scale.setScalar(k); inner.position.set(-c.x * k, -c.y * k, -c.z * k);        // centré sur son point de flottaison
-  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), new THREE.MeshBasicMaterial({ color: 0xF9D58B, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending }));
-  halo.raycast = () => {}; halo.renderOrder = 4;
-  const fl = new THREE.Group(); fl.name = 'GadgetFlottant'; fl.add(inner, halo);
-  return fl;
-}
-function _spawnGadgetPickup() {
-  if (!M?.scene) return;
-  const spot = _gadgetPickupSpot();
-  const root = new THREE.Group(); root.name = 'GadgetPickup'; root.position.copy(spot);
-  const fl = _buildGadgetPickupMesh(); fl.position.y = 1.0; root.add(fl);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.62, 40), new THREE.MeshBasicMaterial({ color: 0xF9D58B, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
-  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.raycast = () => {}; ring.renderOrder = 5; root.add(ring);   // anneau doré posé sous le gadget
-  if (_inVehicle()) root.scale.setScalar(GADGET_CAR_SCALE);                       // bien visible depuis la voiture
-  M.scene.add(root);
-  _gadgetPickup = { root, fl, ring, x: spot.x, z: spot.z, gy: spot.y, t: 0 };
-}
-function _removeGadgetPickup() {
-  if (!_gadgetPickup) return;
-  M?.scene.remove(_gadgetPickup.root);
-  _gadgetPickup.ring.geometry.dispose(); _gadgetPickup.ring.material.dispose();
-  _gadgetPickup = null;
-}
-function _collectGadgetPickup() {
-  try { localStorage.setItem('taama.gadget', '1'); localStorage.removeItem('taama.gadget.pending'); } catch (_) {}   // le gadget est attribué ICI, au contact, pas avant
-  if (_gadgetPickup) { _gadgetPickup.root.scale.setScalar(1); _gadgetPickup.collecting = 0.0001; _gadgetPickup.from = _gadgetPickup.fl.position.clone(); }   // il disparaît en s'envolant vers le joueur (voir _tickGadgetPickup)
-  window.GamepadKit?.rumble?.(120, 0.5);
-  window.GamepadKit?.toast?.('Objet récupéré');
-  try { window.dispatchEvent(new CustomEvent('taama:gadget-pris')); } catch (_) {}
-}
-const GADGET_COLLECT_S = 0.6;                              // durée de l'animation de ramassage
-function _tickGadgetPickup(dt) {
-  if (_gadgetPickup && _gadgetPickup.collecting) {          // animation : le gadget file vers la poitrine du joueur en rétrécissant ; l'anneau s'élargit et s'efface
-    const p = _gadgetPickup; p.collecting += dt;
-    const k = Math.min(1, p.collecting / GADGET_COLLECT_S), e = k * k * (3 - 2 * k);
-    p.fl.position.set(p.from.x + (playerPos.x - p.x - p.from.x) * e, p.from.y + (playerPos.y - 0.45 - p.gy - p.from.y) * e, p.from.z + (playerPos.z - p.z - p.from.z) * e);
-    p.fl.scale.setScalar(Math.max(0.01, 1 - e * 0.95));
-    p.fl.rotation.y += dt * 14;
-    p.ring.scale.setScalar(1 + e * 1.8); p.ring.material.opacity = 0.9 * (1 - e);
-    if (k >= 1) _removeGadgetPickup();
-    return;
-  }
-  if (!_lsFlag('taama.gadget.pending') || _lsFlag('taama.gadget')) { if (_gadgetPickup) _removeGadgetPickup(); return; }
-  if (!active || state !== S_FPS || !_playerReady) return;
-  if (!_inVehicle()) _gadgetCarAnchored = false;
-  else if (!_gadgetCarAnchored && _gadgetPickup && !_gadgetPickup.collecting) {                 // une seule fois par montée en voiture : le gadget posé à pied est trop loin → on le repose devant la voiture, puis il ne bouge plus (sinon il saute à chaque mètre et se retrouve sur le capot)
-    _gadgetCarAnchored = true;
-    if (Math.hypot(playerPos.x - _gadgetPickup.x, playerPos.z - _gadgetPickup.z) > 9) _removeGadgetPickup();
-  }
-  if (!_gadgetPickup) {
-    if (window.__storyFreeze || window.__gadgetHold || (window.CityMap && window.CityMap.isOpen) || _swimming) return;   // pas derrière la carte de la base : il faut que le joueur le voie apparaître
-    _gadgetWaitT += dt;
-    if (!(colliders && colliders.length) && _gadgetWaitT < 6) return;            // on attend le décor (sol, murs) pour bien placer le gadget ; au bout de 6 s on le pose quand même
-    _gadgetWaitT = 0; _spawnGadgetPickup(); if (!_gadgetPickup) return;
-  }
-  const p = _gadgetPickup; p.t += dt;
-  p.fl.position.y = 1.0 + Math.sin(p.t * 3.2) * 0.14;                           // léger rebond
-  p.fl.rotation.y += dt * 1.1;
-  p.ring.material.opacity = 0.55 + 0.35 * Math.sin(p.t * 3.2);
-  if (_swimming || window.__storyFreeze) return;
-  const veh = _inVehicle(), feetY = veh && window.Vehicle ? window.Vehicle.ground : playerPos.y - EYE_HEIGHT;   // à pied ou en roulant dessus
-  if (veh && (!window.Vehicle || window.Vehicle.state !== 'drive')) return;   // au volant : ramassé seulement en roulant (pas en montant dans la voiture)
-  if (Math.hypot(playerPos.x - p.x, playerPos.z - p.z) < (veh ? GADGET_PICK_R_CAR : GADGET_PICK_R) && Math.abs(feetY - p.gy) < 1.5) _collectGadgetPickup();
-}
-window.addEventListener('taama:reset', () => _removeGadgetPickup());
-
 /* ---------- Plan de caméra d'ouverture : montrer le dispositif 1 sur le toit ----------
    Après les tutos du début (déclenché par app/dispositif1.js à la fermeture de la carte), la caméra quitte sa place, survole la mosquée et se pose face au dispositif 1,
    puis un bouton « Commencer » (brillant) la ramène EXACTEMENT à sa position normale. Les deux trajets sont fluides (courbe de Catmull-Rom parcourue en « smootherstep »)
@@ -388,7 +246,7 @@ window.addEventListener('taama:reset', () => _removeGadgetPickup());
 let _introCam = null;                                       // { phase: 'out' | 'hold' | 'back', t, dur, curve, look0, look1, device, onDone }
 let _introBtn = null, _introTitle = null, _introSkip = null;
 let _icObs = null;                                          // obstacles testés par le plan de caméra (null = les collisions du sanctuaire ; le plan de la base y ajoute les maillages de la base)
-const _ICSKIP = /^Voiture_Collider|^Neantis_Porte_/;           // ni les voitures ni les portes de la base (elles s'ouvrent au passage de la caméra) ne comptent comme obstacles
+const _ICSKIP = /^Voiture_Collider/;           // ni les voitures ni les portes de la base (elles s'ouvrent au passage de la caméra) ne comptent comme obstacles
 const _icLook = new THREE.Vector3(), _icCity = new THREE.Vector3(), _icUp = new THREE.Vector3(0, 1, 0);
 
 /** Le segment [a, b] est-il libre (aucun mur ni objet) avec une marge `r` tout autour ? Cinq rayons : l'axe et quatre décalés. */
@@ -524,7 +382,6 @@ function _icStartBack() {
   const c = _introCam;
   if (!c || c.phase !== 'hold') return;
   _introBtn.classList.remove('on'); _introTitle && _introTitle.classList.remove('on');
-  if (c.mode === 'kf') { _bcStartBack(c); return; }                            // plan de la base : retour par l'intérieur, les portes, puis en arc au-dessus du complexe
   _camRig.snap(_rigState());
   const E = _computeDesiredCamera(new THREE.Vector3());                       // la position « normale » de la caméra de jeu (celle qu'elle aurait si rien ne s'était passé)
   const r = _icBuildCurve(M.camera.position.clone(), E);
@@ -539,7 +396,6 @@ function _icEnd() {
   if (_introTitle) _introTitle.classList.remove('on');
   if (_introSkip) _introSkip.classList.remove('on');
   _icObs = null;
-  try { window.NeantisBase?.setProbe?.(null); } catch (_) {}                   // les portes de la base redeviennent sensibles au joueur (elles se referment)
   for (const k in keys) keys[k] = false; joyInput.x = 0; joyInput.y = 0;
   window.__storyFreeze = false;
   try { window.GamepadKit?.capture?.(false); } catch (_) {}
@@ -552,7 +408,6 @@ function _tickIntroCam(dt) {
   _playerTag.update(M.camera, _tagPos.set(playerPos.x, playerPos.y - EYE_HEIGHT + 2.0, playerPos.z), { name: '', frac: 1, hidden: true });   // pas d'étiquette flottante pendant le plan
   if (_guideEl) _guideEl.style.display = 'none';                                // ni la pastille « Dispositif à … m »
   if (c.phase === 'hold') {
-    if (c.mode === 'kf') { try { window.NeantisBase?.setProbe?.(M.camera.position); } catch (_) {} }   // la caméra reste devant la porte du coffre : elle reste ouverte
     const gk = window.GamepadKit, raw = gk && (gk.raw || gk);
     if (raw && gk.connected && gk.connected() && (raw.justPressed('A') || raw.justPressed('START'))) _icStartBack();
     return;
@@ -574,7 +429,6 @@ function _tickIntroCam(dt) {
       }
     }
     M.camera.lookAt(_icLook); M.camera.updateMatrixWorld();
-    try { window.NeantisBase?.setProbe?.(M.camera.position); } catch (_) {}   // les portes de la base s'ouvrent devant la caméra
     if (c.t >= c.kf.dur) { if (c.phase === 'out') _icArrive(c); else _icEnd(); }
     return;
   }
@@ -607,143 +461,6 @@ window.addEventListener('keydown', (e) => {
   else if (_introCam.skippable && _introCam.phase !== 'hold' && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); _icEnd(); }      // Échap : passer le plan
 }, true);
 
-/* ---------- Plan de caméra : arrivée à la base NÉANTIS (dispositif 2) ----------
-   Déclenché par app/neantis-base.js quand le joueur (à pied, gadget en poche) arrive à moins de 35 m du complexe. Le jeu s'arrête (window.__storyFreeze, update() ne fait plus que la caméra :
-   les drones restent figés), la caméra visite les drones à neutraliser, descend devant le centre de contrôle, y ENTRE par la porte d'entrée, la porte du sas, la porte du coffre
-   (les portes s'ouvrent devant elle : NeantisBase.setProbe) et se pose face au dispositif 2 (titre « Dispositif 2 » + bouton « Commencer »). Le bouton ramène la caméra par le même chemin, puis à sa place normale.
-   Le trajet est un ensemble d'images clés (position, regard, instant) : le minutage est maîtrisé (lent à l'intérieur pour laisser aux portes le temps de s'ouvrir, rapide dehors).
-   Tout est vérifié contre les maillages de la base et de la ville (portes exclues) ; si un trajet n'est pas sûr, le plan est abandonné plutôt que de faire traverser un mur à la caméra. */
-const BASE_TOUR = ['Portail', 'Tour_SE', 'Hangar', 'Tour_NE', 'Tour_NO', 'Tour_SO', 'Dock', 'Allee', 'Entree'];   // drones de l'extérieur, dans l'ordre de la visite
-const BASE_CUBES = ['Cube1', 'Cube2', 'Cube3', 'Cube4'];                                                        // drones du centre de contrôle, aperçus pendant la traversée
-const BASE_EYE = -10.1;                                      // hauteur d'yeux dans le centre de contrôle (le sol est à −11,9)
-// Trajet intérieur [x, z] : devant la porte d'entrée → porte d'entrée → porte du sas → salle des écrans → porte du coffre → face au dispositif.
-// Calculé par une recherche A* sur grille (cases de 0,4 m, marge 0,5 m autour des murs et du mobilier, portes exclues) puis lissé.
-const BASE_IN = [[334.2, -404.4], [334.1, -412.4], [333.9, -418.3], [333.8, -421.2], [329.0, -427.2], [328.6, -430.4], [329.8, -431.6]];
-const BASE_IN_SPEED = 4.6, BASE_FLY_SPEED = 48;              // m/s : lent à l'intérieur (les portes mettent 0,7 s à s'ouvrir), rapide dehors
-
-/** Courbe de temps monotone (PCHIP) : passe par (T[i], Y[i]), vitesse nulle au départ et à l'arrivée, sans à-coup entre les images clés. */
-function _icPchip(T, Y) {
-  const n = T.length, h = [], d = [], m = new Array(n).fill(0);
-  for (let i = 0; i < n - 1; i++) { h[i] = Math.max(1e-6, T[i + 1] - T[i]); d[i] = (Y[i + 1] - Y[i]) / h[i]; }
-  for (let i = 1; i < n - 1; i++) {
-    if (d[i - 1] * d[i] <= 0) { m[i] = 0; continue; }
-    const w1 = 2 * h[i] + h[i - 1], w2 = h[i] + 2 * h[i - 1];
-    m[i] = (w1 + w2) / (w1 / d[i - 1] + w2 / d[i]);
-  }
-  return (t) => {
-    if (t <= T[0]) return Y[0];
-    if (t >= T[n - 1]) return Y[n - 1];
-    let i = 0; while (t > T[i + 1]) i++;
-    const s = (t - T[i]) / h[i], s2 = s * s, s3 = s2 * s;
-    return (2 * s3 - 3 * s2 + 1) * Y[i] + (s3 - 2 * s2 + s) * h[i] * m[i] + (-2 * s3 + 3 * s2) * Y[i + 1] + (s3 - s2) * h[i] * m[i + 1];
-  };
-}
-function _icKf(P, L, T) {                                    // images clés → { courbe de position, courbe de regard, temps }
-  return { curveP: new THREE.CatmullRomCurve3(P, false, 'centripetal'), curveL: new THREE.CatmullRomCurve3(L, false, 'centripetal'),
-           f: _icPchip(T, T.map((_, i) => i / (T.length - 1))), dur: T[T.length - 1] };
-}
-const _bcDronePos = (id) => { const r = _droneRoster.find((x) => x.id === id); return r && r.d && r.d.group ? r.d.group.getWorldPosition(new THREE.Vector3()) : null; };
-function _bcObstacles(nb) {                                  // collisions de la ville + maillages de la base ; ni les portes (elles s'ouvrent) ni le dispositif
-  const set = new Set();
-  for (const c of colliders) if (!_ICSKIP.test(c.name || '')) set.add(c);
-  nb.root.traverse((o) => { if (!o.isMesh) return; for (let p = o; p; p = p.parent) if (/^Neantis_Porte_|^Dispositif$/.test(p.name || '')) return; set.add(o); });
-  return [...set];
-}
-/** Point de vue sur un drone : cherche (distance, hauteur, angle) un point libre avec vue dégagée sur lui, du côté extérieur du complexe en priorité. */
-function _bcVantage(P, C) {
-  const out = new THREE.Vector3(P.x - C.x, 0, P.z - C.z); if (out.lengthSq() < 1) out.set(0, 0, 1); out.normalize();
-  const base = Math.atan2(out.x, out.z);
-  for (const [dist, h] of [[12, 7], [16, 10], [20, 13], [26, 18], [34, 26]]) {
-    for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.4, -2.4, Math.PI]) {
-      const a = base + off, p = new THREE.Vector3(P.x + Math.sin(a) * dist, P.y + h, P.z + Math.cos(a) * dist);
-      if (!_icPointFree(p, 1.2)) continue;
-      const d = new THREE.Vector3().subVectors(P, p), L = d.length(); d.multiplyScalar(1 / L);
-      raycaster.set(p, d); raycaster.far = L - 0.8;
-      if (raycaster.intersectObjects(_icObs, false).some((x) => !_ICSKIP.test(x.object.name))) continue;
-      return p;
-    }
-  }
-  return new THREE.Vector3(P.x, P.y + 30, P.z + 20);          // repli : au-dessus, sans garantie (la vérification du trajet décidera)
-}
-/** Vérifie la courbe ; en cas de collision sur un tronçon réparable (lo ≤ k < hi), insère un point relevé de 12 m à l'endroit fautif et recommence. true = trajet sûr. */
-function _bcRepair(P, L, T, lo, hi) {
-  const STEP = 36;
-  for (let iter = 0; iter < 18; iter++) {
-    const n = P.length, curve = new THREE.CatmullRomCurve3(P, false, 'centripetal'), pts = curve.getPoints((n - 1) * STEP);
-    let bad = -1;
-    for (let i = 0; i < pts.length - 1; i++) if (!_icSegmentClear(pts[i], pts[i + 1], 0.5)) { bad = i; break; }
-    if (bad < 0) return true;
-    const k = Math.min(n - 2, Math.floor(bad / STEP));
-    if (k < lo || k >= hi) { console.warn('[plan de la base] collision hors zone réparable, tronçon', k, 'sur', n, pts[bad].toArray().map((v) => +v.toFixed(1))); return false; }   // le trajet intérieur est calculé : il ne se « répare » pas
-    const fr = bad / STEP - k, q = pts[bad].clone(); q.y += 12;
-    if (iter > 15) console.warn('[plan de la base] réparation sans fin, tronçon', k);
-    P.splice(k + 1, 0, q); L.splice(k + 1, 0, L[k].clone().lerp(L[k + 1], fr)); T.splice(k + 1, 0, T[k] + (T[k + 1] - T[k]) * fr);
-    if (isFinite(hi)) hi++;
-  }
-  return false;
-}
-function _bcBuildOut(A, Alook) {
-  const nb = window.NeantisBase, C = nb.center, dev = nb.anchors.Anchor_Dispositif;
-  const P = [A.clone()], L = [Alook.clone()], T = [0];
-  let t = 0, prev = A;
-  const up = A.clone(); up.y += 22; if (_icPointFree(up, 1.2)) { t = 1.0; P.push(up); L.push(Alook.clone().lerp(_bcDronePos(BASE_TOUR[0]) || Alook, 0.5)); T.push(t); prev = up; }   // départ en montée verticale : évite d'emblée les murs et arbres autour du joueur
-  for (const id of BASE_TOUR) {                               // visite : un point de vue par drone, le regard glisse de drone en drone
-    const dp = _bcDronePos(id); if (!dp) continue;
-    const v = _bcVantage(dp, C);
-    t += Math.max(1.2, prev.distanceTo(v) / BASE_FLY_SPEED);
-    P.push(v); L.push(dp); T.push(t); prev = v;
-  }
-  const I = BASE_IN.map(([x, z]) => new THREE.Vector3(x, BASE_EYE, z));
-  const cube = (id, fb) => _bcDronePos(id) || fb;
-  const ahead = new THREE.Vector3(334.0, BASE_EYE + 0.3, -424);
-  const looksIn = [ahead, cube('Cube1', ahead), cube('Cube2', ahead), cube('Cube2', ahead), cube('Cube3', ahead), cube('Cube4', ahead), dev.clone()];   // les drones du bâtiment défilent, puis le dispositif
-  const extIdx = P.length;                                     // indice de la première image clé intérieure (devant la porte d'entrée)
-  t += Math.max(1.5, prev.distanceTo(I[0]) / 22);
-  P.push(I[0]); L.push(looksIn[0]); T.push(t);
-  for (let i = 1; i < I.length; i++) { t += Math.max(0.6, I[i - 1].distanceTo(I[i]) / BASE_IN_SPEED); P.push(I[i]); L.push(looksIn[i]); T.push(t); }
-  if (!_bcRepair(P, L, T, 0, extIdx)) return null;
-  return { kf: _icKf(P, L, T), I, dev, ext: P.length - I.length };
-}
-/** Retour : par l'intérieur en sens inverse (portes ouvertes devant la caméra), puis en arc au-dessus du complexe jusqu'à la position normale de la caméra de jeu. */
-function _bcStartBack(c) {
-  const I = c.built.I, n = I.length;
-  _camRig.snap(_rigState());
-  const E = _computeDesiredCamera(new THREE.Vector3()), Elook = _camLookRig.clone();       // la position « normale » de la caméra de jeu
-  const P = [], L = [], T = []; let t = 0;
-  for (let i = n - 1; i >= 0; i--) {                           // intérieur à rebours : le regard va dans le sens de la marche
-    if (i < n - 1) t += Math.max(0.6, I[i + 1].distanceTo(I[i]) / BASE_IN_SPEED);
-    const nextPos = i > 0 ? I[i - 1] : I[0].clone().add(new THREE.Vector3().subVectors(I[0], I[1]).setY(0).normalize().multiplyScalar(8));
-    P.push(I[i].clone()); L.push(nextPos.clone().add(new THREE.Vector3().subVectors(nextPos, I[i]).multiplyScalar(0.6))); T.push(t);
-  }
-  const tCrane = t, r = _icBuildCurve(I[0], E), s = r.curve.getSpacedPoints(10);
-  for (let i = 1; i < s.length; i++) {                         // sortie : arc au-dessus du complexe, échantillonné en images clés (rapide)
-    t += Math.max(0.6, s[i - 1].distanceTo(s[i]) / 34);
-    P.push(s[i]); L.push(i === s.length - 1 ? Elook : s[Math.min(s.length - 1, i + 2)].clone()); T.push(t);
-  }
-  if (!_bcRepair(P, L, T, n - 1, Infinity)) { console.warn('[plan de la base] retour non sûr : plan terminé'); _icEnd(); return; }
-  c.kf = _icKf(P, L, T); c.kf.city = [tCrane, T[T.length - 1]];
-  c.dir = new THREE.Vector3(E.x - I[0].x, 0, E.z - I[0].z).normalize();
-  c.t = 0; c.phase = 'back';
-  if (_introSkip) _introSkip.classList.add('on');
-}
-
-function showBaseIntro(opts = {}) {
-  if (_introCam || !active || state !== S_FPS || !M?.camera || !colliders || !colliders.length || !_droneRoster.length) return false;
-  if (_swimming || _pilotHold || window.__storyFreeze) return false;                // au volant : autorisé (la voiture est arrêtée, voir plus bas) ; en drone : NeantisBase rappelle d'abord le drone
-  const nb = window.NeantisBase; if (!nb || !nb.loaded || !nb.anchors.Anchor_Dispositif) return false;
-  _icObs = _bcObstacles(nb);
-  const built = _bcBuildOut(M.camera.position.clone(), _camLookAt.clone());
-  if (!built) { _icObs = null; console.warn('[plan de la base] trajet non sûr : plan abandonné'); return 'skip'; }
-  _introCam = { mode: 'kf', base: true, skippable: true, phase: 'out', t: 0, kf: built.kf, built, onDone: opts.onDone, dir: new THREE.Vector3(0, 0, -1) };
-  for (const k in keys) keys[k] = false; joyInput.x = 0; joyInput.y = 0;
-  _stopWalk();
-  try { if (_inVehicle()) window.Vehicle?.pause?.(true); } catch (_) {}                // voiture arrêtée net pendant le plan
-  window.__storyFreeze = true;
-  try { window.GamepadKit?.capture?.(true); } catch (_) {}
-  _icButton(); _introTitle.textContent = 'Dispositif 2'; _introSkip.classList.add('on');
-  return true;
-}
-
 function _clearDirMarkers() {
   _dirNodes.forEach(n => M?.scene.remove(n));
   _dirNodes.length = 0;
@@ -760,6 +477,7 @@ function _loadDirModel() {
   // Cercle posé à l'emplacement du cube placé dans la scène Blender « Djenné — maquette » : Blender (−203,59 ; −185,18 ; 3,68) -> repère du jeu par le recalage de la ville (échelle 1/0,84, rotation −90°, décalage de la mosquée) -> three (x, z, −y)
   _spawnDirAt(new THREE.Vector3(-175.012, 5.40, -219.890), PORTAL_RADIUS, { snapGround: true });
 }
+
 
 /* ---------- Son scanner ---------- */
 const _scannerSound = new Audio('assets/audio/scanner_sound.mp3');
@@ -1604,7 +1322,7 @@ function _initLookDrag() {
 // du bâtiment et le personnage tombe en chute libre.
 // Minarets = les tours de la façade : le personnage, la caméra et les balles ne les traversent plus.
 // Ville v2 (djenne-ville-leger.glb) : sol/relief (Sol_*) et maisons (Bat_*) ; elle remplace l'ancien sol plat Plane012.
-const COLLIDER_NAMES = /Mosquee_Base|Piliers|Poteaux|Cloture|Torons|boxcollider|Tombeaux|Plateforme|Tapis|land|Minarets|^Cube015$|^Plane012$|^Sol_|^Bat_|^Neantis_|^Voiture_Collider/i;
+const COLLIDER_NAMES = /Mosquee_Base|Piliers|Poteaux|Cloture|Torons|boxcollider|Tombeaux|Plateforme|Tapis|land|Minarets|^Cube015$|^Plane012$|^Sol_|^Bat_|^Voiture_Collider/i;
 
 async function buildColliders() {
   colliders = [];
@@ -3451,7 +3169,6 @@ function _playDroneNDodge() {
 
 function _onDroneNAnimationFinished(event) {
   const owner = _droneRoster.find((r) => r.d.mixer === event.target);
-  if (owner && _boundCtx !== owner) { _withCtx(owner, () => _onDroneNAnimationFinished(event)); return; }
   const d = _sanctuaryDroneN;
   if (!d) return;
   const a = d.actions || {};
@@ -3522,12 +3239,6 @@ function _respawnDroneN() {
 function _updateGadgetHud() {
   if (!snTarget) return;
   // cible affichée : la sentinelle vivante la plus proche
-  let focus = null, fd = Infinity;
-  for (const c of _liveDrones([])) {
-    const dist = Math.hypot(c.d.group.position.x - playerPos.x, c.d.group.position.z - playerPos.z);
-    if (dist < fd) { fd = dist; focus = c; }
-  }
-  if (focus && focus.r && focus.r !== _boundCtx) { _withCtx(focus.r, _updateGadgetHudFor); return; }
   _updateGadgetHudFor();
 }
 function _updateGadgetHudFor() {
@@ -3832,140 +3543,6 @@ function _loadSanctuaryDroneN() {
   });
 }
 
-/* ---------- Sentinelles de la base NÉANTIS : plusieurs drones N indépendants ----------
-   Chaque sentinelle a son contexte (vie, mort, tir, IA) ; les fonctions d'origine travaillent sur des variables globales,
-   on les « lie » donc au contexte voulu le temps d'un appel (_withCtx). Aucune alerte de groupe : chaque IA ne réagit qu'à
-   ce qu'elle perçoit elle-même (cône de vision de 12 m, bruit à 5 m) — le joueur peut les neutraliser une par une. */
-const SENTINEL_ACTIVE_R = 240;           // m — au-delà, une sentinelle en patrouille est gelée (économie) ; relevé (160 -> 240) car elles patrouillent maintenant sur de grandes zones
-// Patrouille « de partout » : chaque drone choisit des points au hasard dans un disque autour de son poste (drone-n-ai.js : pickRoamPoint).
-const DRONE_N_ROAM_RADIUS = 140;         // m — sentinelle d'origine (devant la mosquée)
-const SENTINEL_ROAM_RADIUS = { Cube: 55, Dock: 75, default: 110 };   // m — sentinelles du poste de la base, selon leur poste
-const DRONE_N_ALARM_COOLDOWN = 1.0;      // s — délai mini entre deux propagations d'alarme
-function _saveGlobals() {
-  return { d: _sanctuaryDroneN, h: _droneNHealth, dead: _droneNDead, rt: _droneNRespawnT, fc: _droneNFireCooldown, nr: _droneNNoRespawn, ctx: _boundCtx };
-}
-function _loadGlobals(g) {
-  _sanctuaryDroneN = g.d; _droneNHealth = g.h; _droneNDead = g.dead; _droneNRespawnT = g.rt; _droneNFireCooldown = g.fc; _droneNNoRespawn = g.nr; _boundCtx = g.ctx;
-}
-function _bindCtx(r) {
-  _sanctuaryDroneN = r.d; _droneNHealth = r.health; _droneNDead = r.dead; _droneNRespawnT = r.respawnT; _droneNFireCooldown = r.fireCd;
-  _droneNNoRespawn = !!r.noRespawn; _boundCtx = r;
-}
-function _syncCtx(r) { r.health = _droneNHealth; r.dead = _droneNDead; r.respawnT = _droneNRespawnT; r.fireCd = _droneNFireCooldown; }
-function _withCtx(r, fn) {
-  if (!r) return fn();
-  const saved = _saveGlobals();
-  if (saved.ctx === null) _mainSaved = { d: saved.d, dead: saved.dead };
-  _bindCtx(r);
-  try { return fn(); } finally { _syncCtx(r); _loadGlobals(saved); }
-}
-/** Contexte propriétaire d'un objet drone (null = sentinelle d'origine). */
-function _ctxOfDrone(d) { return _droneRoster.find((r) => r.d === d) || null; }
-/** Toutes les sentinelles vivantes et visibles : [{ r, d }] (r = null pour la sentinelle d'origine). */
-let _mainSaved = null;
-function _liveDrones(out = []) {
-  out.length = 0;
-  const main = _boundCtx ? _mainSaved : { d: _sanctuaryDroneN, dead: _droneNDead };
-  if (main && main.d?.group?.visible && !main.dead) out.push({ r: null, d: main.d });
-  for (const r of _droneRoster) {
-    const dead = r === _boundCtx ? _droneNDead : r.dead;
-    if (r.d.group?.visible && !dead) out.push({ r, d: r.d });
-  }
-  return out;
-}
-
-function _spawnBaseSentinels() {
-  // Violence retirée : plus aucune sentinelle-drone ennemie (tir laser, dégâts). Code d'origine : archive-violence/app/sanctuary-mode.js
-  return;
-  const nb = window.NeantisBase;
-  if (!_droneNGltf || !_sanctuaryDroneN || !nb || !nb.loaded || _droneRoster.length || !M) return;
-  const POSTS = ['Portail', 'Allee', 'Entree', 'Tour_SO', 'Tour_SE', 'Tour_NO', 'Tour_NE', 'Hangar', 'Dock', 'Cube1', 'Cube2', 'Cube3', 'Cube4'];
-  const maxDim = _sanctuaryDroneN.maxDim || 1;
-  for (const nm of POSTS) {
-    const home = nb.anchor('Anchor_Drone_' + nm), look = nb.anchor('Anchor_DroneLook_' + nm);
-    if (!home || !look) continue;
-    const model = SkeletonUtils.clone(_droneNGltf.scene);
-    const group = new THREE.Group();
-    group.name = 'droneN_' + nm;
-    group.add(model);
-    group.scale.setScalar(DRONE_N_SIZE / maxDim);
-    group.position.copy(home);
-    group.visible = active;
-    const mixer = new THREE.AnimationMixer(model);
-    const actions = {};
-    for (const clip of _droneNGltf.animations) {
-      const a = mixer.clipAction(clip);
-      if (clip.name === 'Idle') { a.setLoop(THREE.LoopRepeat, Infinity); a.clampWhenFinished = false; }
-      else { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
-      a.enabled = true; actions[clip.name] = a;
-    }
-    if (!actions.Idle && _droneNGltf.animations[0]) { const f = mixer.clipAction(_droneNGltf.animations[0]); f.setLoop(THREE.LoopRepeat, Infinity); f.enabled = true; actions.Idle = f; }
-    M.scene.add(group);
-    group.lookAt(look.x, look.y, look.z);                 // le nez (+Z local) regarde vers le point de visée du poste
-    const emitter = model.getObjectByName('Cylinder.001') || model.getObjectByName('Cylinder001');
-    const d = {
-      group, model, mixer, actions, home: home.clone(), post: nm,
-      ai: DroneAI.createAI(DroneAI.makePatrolWaypoints(home, /^Cube/.test(nm) ? 1.0 : (nm === 'Dock' ? 2.0 : 3.0), 3),
-        { center: home.clone(), radius: /^Cube/.test(nm) ? SENTINEL_ROAM_RADIUS.Cube : (nm === 'Dock' ? SENTINEL_ROAM_RADIUS.Dock : SENTINEL_ROAM_RADIUS.default) }),
-      yaw: 0, scanning: false, scanBaseYaw: 0, statusSprite: null,
-      initialTransforms: _captureDroneNTransforms(model), baseQuat: group.quaternion.clone(), emitter,
-      currentAction: null, dodging: false, dodgeDir: 0, maxDim,
-    };
-    mixer.addEventListener('finished', _onDroneNAnimationFinished);
-    _resetDroneNModel(d, true);
-    _droneRoster.push({ id: nm, d, health: DRONE_N_MAX_HP, dead: false, respawnT: 0, fireCd: 1.2, noRespawn: true });
-  }
-  console.log('[Sanctuaire] sentinelles de la base :', _droneRoster.length);
-}
-
-function _resetSentinels(visible) {
-  for (const r of _droneRoster) {
-    _resetDroneNModel(r.d, visible);
-    r.d.group.position.copy(r.d.home); r.d.group.quaternion.copy(r.d.baseQuat);
-    r.d.group.visible = visible;
-    r.health = DRONE_N_MAX_HP; r.dead = false; r.respawnT = 0; r.fireCd = 1.2;
-    if (r.d.statusSprite) r.d.statusSprite.visible = false;
-  }
-}
-
-/**
- * Alarme : dès qu'un drone repère le joueur (ALERT / ENGAGE), les drones en patrouille dans un rayon de DRONE_N_ALARM_RADIUS viennent
- * fouiller le secteur (SEARCH à la dernière position connue). Les drones morts ou déjà en action ne sont pas touchés.
- */
-let _droneAlarmT = 0;
-function _shareDroneAlarm(dt) {
-  _droneAlarmT -= dt;
-  if (_droneAlarmT > 0) return;
-  const all = [];
-  if (_sanctuaryDroneN?.ai && !_droneNDead) all.push({ ai: _sanctuaryDroneN.ai, pos: _sanctuaryDroneN.group.position });
-  for (const r of _droneRoster) if (!r.dead && r.d.ai && r.d.group) all.push({ ai: r.d.ai, pos: r.d.group.position });
-  let raised = false;
-  for (const a of all) {
-    if ((a.ai.state !== DroneAI.AI_ALERT && a.ai.state !== DroneAI.AI_ENGAGE) || !a.ai.lastKnown) continue;
-    for (const b of all) {
-      if (b === a || DroneAI.horizontalDist(a.pos, b.pos) > DroneAI.DRONE_N_ALARM_RADIUS) continue;
-      if (DroneAI.onAlarm(b.ai, a.ai.lastKnown)) raised = true;
-    }
-  }
-  if (raised) _droneAlarmT = DRONE_N_ALARM_COOLDOWN;
-}
-
-function _updateAllDroneN(dt, passive = false) {
-  _updateSanctuaryDroneN(dt, passive);                  // sentinelle d'origine (variables globales = elle)
-  if (!_droneRoster.length) { if (active) _spawnBaseSentinels(); return; }
-  if (!passive && active) _shareDroneAlarm(dt);         // un drone qui repère le joueur prévient ses voisins
-  _droneLaserLock = true;                               // les balles ont déjà été avancées par la sentinelle d'origine
-  try {
-    for (const r of _droneRoster) {
-      const g = r.d.group; if (!g) continue;
-      if (!r.dead && r.d.ai.state === DroneAI.AI_PATROL && Math.hypot(g.position.x - playerPos.x, g.position.z - playerPos.z) > SENTINEL_ACTIVE_R) continue;
-      _withCtx(r, () => {
-        if (r.d.mixer) r.d.mixer.update(dt);
-        _updateSanctuaryDroneN(dt, passive);
-      });
-    }
-  } finally { _droneLaserLock = false; }
-}
 
 const DRONE_N_STATUS_COLORS = {
   PATROL: 0x38ddff,   // bleu : patrouille
@@ -4552,7 +4129,6 @@ function _stepDroneNBullet(fx, bullet, dt) {
 }
 
 function _tickDroneNLaser(dt) {
-  if (_droneLaserLock) return;
   const fx = _droneNLaser;
   if (!fx) return;
 
@@ -4660,7 +4236,6 @@ function pilotTick(dt, dronePos) {
   _updateFireworkFx(Math.min(dt, 0.05));
   // Le drone N reste visible et patrouille (sans tirer) pendant que le joueur pilote.
   if (_sanctuaryDroneN?.mixer) _sanctuaryDroneN.mixer.update(Math.min(dt, 0.05));
-  _updateAllDroneN(Math.min(dt, 0.05), true);
   if (_playerMixer) _playerMixer.update(Math.min(dt, 0.05));
   if (_playerRoot) _syncPlayerRoot();
   if (pointLight) {
@@ -5391,11 +4966,6 @@ function _updateAimPoint() {
   else _aimPoint.copy(_aimRay.ray.origin).addScaledVector(_aimRay.ray.direction, Aim.AIM_RANGE);
 
   let lock = false;
-  for (const c of _liveDrones([])) {
-    c.d.group.getWorldPosition(_aimDronePos);
-    _aimDronePos.y += 0.15;
-    if (Aim.segmentHitsSphere(_aimRay.ray.origin, _aimPoint, _aimDronePos, Aim.aimHitRadius(window.GameSettings?.aimAssist))) { lock = true; break; }
-  }
   if (lock !== _aimLocked) _setAimLock(lock);
 }
 
@@ -5667,7 +5237,6 @@ function tickFPS(dt) {
 
   _tickDirAnim(dt);
   _tickEntryGuide(dt);
-  _tickGadgetPickup(dt);
   window.ShadowFollow?.update?.(_shadowC.set(playerPos.x, playerPos.y - EYE_HEIGHT, playerPos.z));       // la carte d'ombre du soleil suit le joueur : vraies ombres nettes
   _tickScanHint(dt);
   _searchTomb(dt); _tickSilentScans();
@@ -5706,7 +5275,6 @@ function update(dt) {
 
   // Idle du drone N supplémentaire (l'ancien drone reste sur le sac).
   if (_sanctuaryDroneN?.mixer) _sanctuaryDroneN.mixer.update(dt);
-  _updateAllDroneN(dt);
   _updatePlayerHealth(dt);
 
   // Cinématique de retour du drone : pas de contrôle joueur pendant ce temps.
@@ -5789,7 +5357,6 @@ function update(dt) {
     _stopWalk(); _playerRunning = false; _freeFall = false;         // plus de bruit de pas au volant
     if (_swimming || _waterState !== 'dry') _forceDry();
     _vehicleCtl.tick(dt);                       // véhicule (app/vehicle.js) : monte/descend/conduit — il pilote le joueur et la caméra
-    _tickGadgetPickup(dt);                      // le gadget flotte et se ramasse aussi en voiture (sinon il reste figé, invisible)
   } else if (state === S_FPS) {
     tickFPS(dt);
     const inside = isInsideMosque();
@@ -6029,16 +5596,9 @@ window.SanctuaryMode = {
   debugFlyFix: (deg) => _applyFlyFix(deg),   // réglage de l'orientation de « Flying » (tests)
   debugFlying: () => { const a = _playerActions.flying; if (!a || !_playerModel) return null; const names = a.getClip().tracks.map((t) => t.name); const bones = new Set(); _playerModel.traverse((o) => { if (o.name) bones.add(o.name); }); const miss = names.filter((n) => !bones.has(n.split('.')[0])); return { tracks: names.length, missing: miss.length, missingBones: [...new Set(miss.map((n) => n.split('.')[0]))].slice(0, 30), sample: names.slice(0, 6), duration: a.getClip().duration }; },
   debugDash: (go = true) => { if (go) _dashRequest = true; return { cd: +_dashCd.toFixed(2), t: +_dashT.toFixed(2), velY: +_velY.toFixed(2), inAir: _inAir, jumping: _playerJumping, jumpCount: _jumpCount, landT: +_landT.toFixed(2), anim: _playerCurrentAction, freeFall: _freeFall }; },   // propulsion sans manette (tests) ; debugDash(false) = état seul
-  debugGadgetPickup: () => {
-    if (!_gadgetPickup) return null;
-    const v = _gadgetPickup.root.localToWorld(_gadgetPickup.fl.position.clone()).project(M.camera);   // position à l'écran : x, y entre -1 et 1 = dans le champ de la caméra
-    return { x: _gadgetPickup.x, z: _gadgetPickup.z, groundY: _gadgetPickup.gy, floatY: _gadgetPickup.fl.position.y, scale: _gadgetPickup.fl.scale.x, collecting: _gadgetPickup.collecting || 0,
-      visible: _gadgetPickup.root.visible, children: _gadgetPickup.fl.children.length, ndc: [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(3)] };
-  },
   // diagnostic : téléporte le personnage (test de l'IA de la Sentinelle)
   debugTeleport: (x, y, z) => { playerPos.set(x, y, z); },
   // diagnostic : inflige des dégâts à une sentinelle de la base (id = poste) ou à celle d'origine (sans id)
-  debugDamage: (id, n = 1) => { const r = id ? _droneRoster.find((x) => x.id === id) : null; _withCtx(r, () => _damageDroneN(n)); },
   // position du personnage (null hors sanctuaire) : portes et ramassage de la base NÉANTIS
   playerPosition: () => (active ? playerPos : null),
   // interface du véhicule (app/vehicle.js) : le contrôleur { active(), tick(dt) } remplace tickFPS tant qu'il est actif
@@ -6067,7 +5627,6 @@ window.SanctuaryMode = {
   },
   enter, exit, isActive, spots, resetScans,
   showDeviceIntro,                                           // plan de caméra d'ouverture (lancé par app/dispositif1.js) : { target: Vector3, onDone }
-  showBaseIntro,                                             // plan de caméra d'arrivée à la base NÉANTIS (lancé par app/neantis-base.js) : { onDone } → true | false (réessayer) | 'skip' (trajet non sûr)
   introState: () => (_introCam ? { phase: _introCam.phase, t: +_introCam.t.toFixed(2), dur: +((_introCam.kf ? _introCam.kf.dur : _introCam.dur) || 0).toFixed(2), safe: _introCam.safe } : null),   // diagnostic
   introSkipToHold: () => { if (_introCam && _introCam.phase === 'out') _introCam.t = _introCam.dur; },                                               // diagnostic
   takeoffDrone: _startDroneTakeoff,

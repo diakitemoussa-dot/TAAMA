@@ -30,9 +30,9 @@ import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLA
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=10';
+import { EN } from './i18n-en.js?v=12';
 import { sendProfile, deviceLabel } from './player-sync.js?v=4';
-import { SEQUENCES } from './tapama-core.js?v=2';
+import { SEQUENCES } from './tapama-core.js?v=3';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
 
 const NEW_UI = window.__NEW_UI !== false;
@@ -1168,7 +1168,7 @@ function beginGame() {
   persistSave();
   track('nouvelle-partie', {});
   // Nouvelle partie : on repart de zéro — ni voiture ni gadget (débloqués au premier dispositif), dispositifs à retrouver, questions de Tapama remises à zéro
-  try { window.Dispositif1?.reset?.(); window.NeantisBase?.resetDevice?.(); } catch (_) {}
+  try { window.Dispositif1?.reset?.(); } catch (_) {}
   try { NEW_GAME_KEYS.forEach((k) => localStorage.removeItem(k)); } catch (_) {}
   playOpening();                              // pas de deuxième vidéo : la cinématique a déjà été jouée après « Appuie pour commencer »
 }

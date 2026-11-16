@@ -28,8 +28,6 @@ const LABO = 'Tu fais fausse route, {nom}. Suis la ligne jaune de ta carte jusqu
 function currentStage() {
   if (val('taama.lab2') === 'done' || flag('taama.chapitre1')) return null;                                                // chapitre terminé
   if (flag('taama.dispositif2')) return { id: 'labo2', place: 'deuxieme', text: LABO };
-  if (flag('taama.gadget')) return { id: 'base', place: 'neantis', text: 'Tu t’éloignes de la base, {nom}. Ouvre ta carte et suis l’itinéraire.' };
-  if (flag('taama.gadget.pending')) return null;                                                                            // le gadget est juste à côté du joueur
   if (val('taama.lab1') === 'done') return { id: 'retour', place: 'mosquee', text: 'Tu fais fausse route, {nom}. Retourne vers la mosquée, vite.' };
   if (flag('taama.dispositif1')) return { id: 'labo1', place: 'deuxieme', text: LABO };
   return { id: 'inspection', place: 'mosquee', text: 'Tu t’éloignes de la mosquée, {nom}. Reviens : le dispositif est sur le toit.' };

@@ -22,7 +22,7 @@ import {
   SEQUENCES, RADIO, HELP_LEVELS, PUZZLES, ANALYSES,
   PLAYER_NAME, TAPAMA_NAME,
   createSequence, createRadioQueue, helpFor, portraitUrl, safeMood, analysisSummary,
-} from './tapama-core.js?v=2';
+} from './tapama-core.js?v=3';
 import { fillName } from './player-profile.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
 import './tapama-voice.js?v=5';

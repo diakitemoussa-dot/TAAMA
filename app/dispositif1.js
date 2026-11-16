@@ -12,7 +12,7 @@
      mémorisée dans le navigateur) — le joueur repart avec ;
    • API : window.Dispositif1 { position, active, taken, activate(), take(), reset(), radioThen() } · événements window « dispositif1:active » et « dispositif1:taken ».
    • CHEF D'ORCHESTRE de l'histoire (bible docs/scenario-chapitre1.md, S2 → S14), en bas de ce fichier : radio de récupération -> carte vers le
-     laboratoire (cercle jaune) -> labo stade 1 -> vol hors-champ devant la mosquée + dossier -> gadget + carte vers la base -> (base : neantis-base.js)
+     laboratoire (cercle jaune) -> labo stade 1 -> radio de Tapama -> carte vers sa tombe (tombe-tapama.js) -> bibliothèque (bibliotheque.js) -> labo stade 2
      -> carte vers le labo -> labo stade 2 -> fin du chapitre. État dans localStorage (clés taama.*), reprise de partie incluse.
    ========================================================== */
 import * as THREE from 'three';
@@ -174,7 +174,6 @@ function finishTake() {
     openMapTo('deuxieme'); window.dispatchEvent(new CustomEvent('taama:carte-labo'));
   }), 900);
 }
-window.addEventListener('neantis:dispositif', () => badge(2, 'Dispositif 2'));
 window.addEventListener('bibliotheque:fini', () => badge(2, 'Dispositif 2'));
 
 /* ==========================================================
@@ -286,41 +285,13 @@ M?.addFrameHook(() => {
   tryEnterLab();
 });
 
-/* S7 — retour devant la mosquée après le labo 1 : le vol a eu lieu « hors-champ » ; radio, puis dossier NÉANTIS (S8), gadget et carte vers la base.
-   Reprise : si le vol est fait mais pas le dossier (rechargement), le dossier est rouvert. API : Dispositif1.stealDevice2() = doVol(). */
+/* S7 — après le labo 1 : Tapama envoie le joueur sur sa tombe, à Djenépo, où se trouve le second dispositif (app/tombe-tapama.js). */
 function doVol() {
   if (lsGet(VOL_KEY) === '1' || S.volBusy) return;
-  S.volBusy = true; lsSet(VOL_KEY, '1'); lsSet(ACTE, '3:vol');
+  S.volBusy = true; lsSet(VOL_KEY, '1'); lsSet(ACTE, '3:tombe');
   window.GamepadKit?.rumble?.(160, 0.5);
-  toast('⚠️ NÉANTIS a emporté le deuxième dispositif !');
-  emit('neantis:vol'); seq(7);
-  setTimeout(() => radioThen({ text: '{nom}… un groupe est passé juste avant toi. Ils ont emporté le second dispositif. J’ai vu leurs images sur mon écran.', mood: 'inquiete', duration: 10 }, openDossier), 1200);
-}
-function openDossier() {
-  S.volBusy = true; freeze(true);
-  let fin = false;
-  const done = () => {
-    if (fin) return; fin = true;
-    // le gadget n'est PAS encore donné : il apparaît dans le monde à ≈ 3 m du joueur (sanctuary-mode.js : _tickGadgetPickup) ;
-    // taama.gadget = '1' n'est écrit qu'au moment où le personnage marche dessus
-    lsSet(DOSSIER, '1'); lsSet(GADGET_PENDING, '1'); lsSet(ACTE, '3:base');
-    freeze(false); S.volBusy = false;
-    // le gadget n'apparaît qu'une fois la carte de la base (itinéraire que Tapama vient d'envoyer) refermée : sinon il surgit derrière la carte et le joueur ne le voit pas
-    window.__gadgetHold = true;
-    setTimeout(() => {
-      openMapTo('neantis'); emit('taama:carte-base');
-      let wasOpen = false; const t0 = performance.now();
-      const iv = setInterval(() => {
-        const o = !!window.CityMap?.isOpen; if (o) wasOpen = true;
-        if ((wasOpen && !o) || performance.now() - t0 > 30000) {                                                    // repli à 30 s si la carte ne s'ouvre pas
-          clearInterval(iv); window.__gadgetHold = false;
-          setTimeout(() => toast('Un gadget t’attend juste à côté : marche dessus pour le ramasser'), 400);       // il vient d'apparaître devant le joueur
-        }
-      }, 300);
-    }, 500);
-  };
-  if (window.Dossier?.open) { try { window.Dossier.open({ onDone: done }); } catch (e) { console.warn('[Dossier]', e); done(); } }
-  else { toast('Dossier NÉANTIS indisponible : scène ignorée.'); setTimeout(done, 700); }
+  seq(7);
+  setTimeout(() => radioThen({ text: 'Il manque une pièce, {nom} : le second dispositif est caché sur ma tombe, à Djenépo. Va le récupérer.', mood: 'attentive', duration: 10 }, () => { S.volBusy = false; openMapTo('tombe'); }), 1200);
 }
 /* Plan de caméra d'ouverture (sanctuary-mode.js : showDeviceIntro) : une fois les tutos du début faits (marche, carte), dès que la carte se referme, la caméra survole la mosquée
    et se pose sur le dispositif 1 (toit) ; le bouton « Commencer » la ramène à sa position normale. Une seule fois par partie (taama.intro.cam, posé à la fin du plan). */
@@ -366,7 +337,7 @@ setInterval(() => {
   if (lsGet(LAB1) !== 'done' || S.volBusy || S.labBusy || lsGet(DOSSIER) === '1') return;
   const sm = window.SanctuaryMode;
   if (!(sm && sm.isActive && sm.isActive()) || window.Tapama?.isBusy?.() || window.CityMap?.isOpen) return;
-  if (lsGet(VOL_KEY) === '1') { openDossier(); return; }            // reprise de partie
+  if (lsGet(VOL_KEY) === '1') return;                                            // reprise de partie
   const p = _zoneWatcherPos();
   if (p && p.x >= MOSQUE_ZONE.x0 && p.x <= MOSQUE_ZONE.x1 && p.z >= MOSQUE_ZONE.z0 && p.z <= MOSQUE_ZONE.z1) doVol();
 }, 700);

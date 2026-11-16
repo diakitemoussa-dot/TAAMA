@@ -218,15 +218,15 @@ const LIGNES = {
     { who: 'tapama', mood: 'inquiete', text: 'Attends, attends… Je regarde ce qui s’est passé.' },
   ],
   fin1: [
-    { who: 'tapama', mood: 'attentive', text: 'Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché dans la mosquée. C’est lui qu’il nous faut, {nom}.' },
-    { who: 'tapama', mood: 'inquiete', text: 'Retourne vers la mosquée avec le pick-up. Et fais vite, j’ai un mauvais pressentiment.' },
+    { who: 'tapama', mood: 'attentive', text: 'Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché sur ma tombe, à Djenépo. C’est lui qu’il nous faut, {nom}.' },
+    { who: 'tapama', mood: 'inquiete', text: 'Va à ma tombe avec le pick-up, près du fleuve. Et fais vite, j’ai un mauvais pressentiment.' },
   ],
   proj2: { who: 'tapama', mood: 'surprise', text: 'Regarde cette carte, {nom}. Djenné n’est qu’un point parmi d’autres.' },
   coupure2: [
     { who: 'tapama', mood: 'inquiete', text: 'Non, non, non… Reste avec moi, je relance les écrans.' },
   ],
   fin2: [
-    { who: 'tapama', mood: 'attentive', text: 'Les deux dispositifs ne sont qu’un début. Il y en a d’autres, cachés ailleurs en Afrique de l’Ouest. NÉANTIS le sait aussi.' },
+    { who: 'tapama', mood: 'attentive', text: 'Les deux dispositifs ne sont qu’un début. Il y en a d’autres, cachés ailleurs en Afrique de l’Ouest.' },
     { who: 'player', text: 'Alors on doit les trouver avant eux.' },
     { who: 'tapama', mood: 'souriante', text: 'Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac, {nom} !' },
   ],
@@ -428,7 +428,7 @@ function sceneSVG() {
       <rect x="226" y="222" width="28" height="18" rx="2" fill="#a86a3a" opacity=".6"/><text x="240" y="234" text-anchor="middle" font-family="Rubik,sans-serif" font-size="6" font-weight="700" fill="#3a2010">MARCHÉ</text>
       <g fill="#8b5a3a" opacity=".5"><rect x="92" y="200" width="16" height="12"/><rect x="112" y="196" width="12" height="10"/><rect x="300" y="196" width="18" height="12"/><rect x="316" y="214" width="12" height="10"/></g>
       ${mosque}
-      <!-- parcours de Tapama : labo -> mosquée -> dispositif, et branche vers la base -->
+      <!-- parcours de Tapama : labo -> dispositif 1 -->
       <path d="M150 198 L206 282 L288 268" fill="none" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 5"/>
       <g fill="#b3261e"><circle cx="150" cy="198" r="5"/><circle cx="288" cy="268" r="5"/></g>
       <g font-family="Rubik,sans-serif" font-size="8" font-weight="800" fill="#7a1a14" letter-spacing=".5">
