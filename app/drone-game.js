@@ -3,7 +3,7 @@
    Dépend de window.MosqueScene exposé par mosque-viewer.js.
    ========================================================== */
 import * as THREE from 'three';
-import { toggleHologram, setHologram } from './hologram.js?v=2';
+import { toggleHologram, setHologram } from './hologram.js?v=3';
 import { mediaUrl, currentBytesPlan } from './device-quality.js?v=6';
 import { t as _t } from './i18n.js?v=1';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
