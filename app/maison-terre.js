@@ -13,21 +13,61 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 const M = window.MosqueScene;
 const URL = 'assets/models/maison-terre.glb?v=2';
 const DRACO = 'assets/vendor/three/examples/jsm/libs/draco/';
-const SPOT = { x: -640, z: -405 };               // position placée dans Blender (vide « Bibliotheque ») convertie dans le repère du jeu ; y = sol
+const SPOT = { x: -444.2, z: 227.3 };              // vide « Bibliotheque » dans Blender, converti dans le repère du jeu (x = x, z = -y)
+const YAW = 0.0122;                               // rotation du vide (-0,7° dans Blender, convertie en rotation autour de Y)
+const FOOT = { w: 28.5, d: 20.5 };                // emprise du sol de la maison (dalle, en m)
+const WATER_Y = -12;                              // niveau du fleuve : la maison ne doit pas être posée dans l'eau
 
 const state = { loaded: false, root: null, position: new THREE.Vector3(), requested: false };
 
-function groundY(x, z) {                          // hauteur du sol sous le point (rayon depuis le haut)
+/* Hauteur du sol sous l'emprise de la maison : on échantillonne une grille sur la dalle (orientée comme la maison)
+   et on prend la médiane. Ainsi la maison ne s'enfonce pas dans la terre d'un côté ni ne flotte de l'autre. */
+function footprintGround(cx, cz) {
   const meshes = [];
-  M.scene.traverse((o) => { if (o.isMesh && o.visible && !/^Fleuve|Glow|Points|Halo/i.test(o.name)) meshes.push(o); });
-  const ray = new THREE.Raycaster(new THREE.Vector3(x, 400, z), new THREE.Vector3(0, -1, 0));
-  const hit = ray.intersectObjects(meshes, false)[0];
-  return hit ? hit.point.y : 0;
+  M.scene.traverse((o) => { if (o.isMesh && o.visible && !/^Fleuve|Glow|Points|Halo|Maison|Livre|Arbre|Plante/i.test(o.name)) meshes.push(o); });
+  const ray = new THREE.Raycaster();
+  const cs = Math.cos(YAW), sn = Math.sin(YAW);
+  const pts = [];                                   // [lx, lz, y] dans le repère de la maison
+  for (let i = 0; i <= 6; i++) for (let j = 0; j <= 6; j++) {
+    const lx = (i / 6 - 0.5) * FOOT.w, lz = (j / 6 - 0.5) * FOOT.d;
+    const x = cx + lx * cs + lz * sn, z = cz - lx * sn + lz * cs;
+    ray.set(new THREE.Vector3(x, 400, z), new THREE.Vector3(0, -1, 0));
+    const hit = ray.intersectObjects(meshes, false)[0];
+    if (hit) pts.push([lx, lz, hit.point.y]);
+  }
+  if (!pts.length) return { y: 0, tilt: null, spread: 0, min: 0 };
+  // plan moyen y = a + bx·lx + bz·lz (moindres carrés) : la maison épouse la pente au lieu de s'enfoncer d'un côté
+  let n = pts.length, sx = 0, sz = 0, sxx = 0, szz = 0, sxz = 0, sy = 0, sxy = 0, szy = 0;
+  for (const [x, z, y] of pts) { sx += x; sz += z; sxx += x * x; szz += z * z; sxz += x * z; sy += y; sxy += x * y; szy += z * y; }
+  const A = [[n, sx, sz], [sx, sxx, sxz], [sz, sxz, szz]], B = [sy, sxy, szy];
+  const sol = solve3(A, B) || [sy / n, 0, 0];
+  const [a0, bx, bz] = sol;
+  const ys = pts.map((p) => p[2]).sort((u, v) => u - v);
+  return { y: a0, bx, bz, tilt: Math.hypot(bx, bz) * 180 / Math.PI, spread: ys[ys.length - 1] - ys[0], min: ys[0] };
+}
+
+function solve3(A, B) {                             // système 3×3 par élimination de Gauss
+  const M3 = A.map((r, i) => [...r, B[i]]);
+  for (let c = 0; c < 3; c++) {
+    let piv = c; for (let r = c + 1; r < 3; r++) if (Math.abs(M3[r][c]) > Math.abs(M3[piv][c])) piv = r;
+    [M3[c], M3[piv]] = [M3[piv], M3[c]];
+    if (Math.abs(M3[c][c]) < 1e-9) return null;
+    for (let r = 0; r < 3; r++) if (r !== c) { const f = M3[r][c] / M3[c][c]; for (let k = c; k < 4; k++) M3[r][k] -= f * M3[c][k]; }
+  }
+  return [0, 1, 2].map((i) => M3[i][3] / M3[i][i]);
 }
 
 function build(gltf) {
   const root = gltf.scene;
-  root.position.set(SPOT.x, groundY(SPOT.x, SPOT.z), SPOT.z);
+  const g = footprintGround(SPOT.x, SPOT.z);
+  root.position.set(SPOT.x, g.y, SPOT.z);
+  // inclinaison selon la pente : la normale du plan (-bx, 1, -bz) devient l'axe vertical de la maison, puis lacet
+  const up = new THREE.Vector3(-g.bx, 1, -g.bz).normalize();
+  const tilt = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), up);
+  const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), YAW);
+  root.quaternion.copy(tilt.multiply(yaw));
+  if (g.min < WATER_Y) console.warn("[MAISON-TERRE] une partie de l'emprise est sous l'eau");
+  console.log('[MAISON-TERRE] sol', g.y.toFixed(2), 'm · pente', (g.tilt || 0).toFixed(2), '° · dénivelé sous la maison', g.spread.toFixed(2), 'm');
   root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   M.scene.add(root);
   state.root = root; state.position.copy(root.position); state.loaded = true;
