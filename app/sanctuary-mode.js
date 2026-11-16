@@ -3860,6 +3860,8 @@ function _liveDrones(out = []) {
 }
 
 function _spawnBaseSentinels() {
+  // Violence retirée : plus aucune sentinelle-drone ennemie (tir laser, dégâts). Code d'origine : archive-violence/app/sanctuary-mode.js
+  return;
   const nb = window.NeantisBase;
   if (!_droneNGltf || !_sanctuaryDroneN || !nb || !nb.loaded || _droneRoster.length || !M) return;
   const POSTS = ['Portail', 'Allee', 'Entree', 'Tour_SO', 'Tour_SE', 'Tour_NO', 'Tour_NE', 'Hangar', 'Dock', 'Cube1', 'Cube2', 'Cube3', 'Cube4'];
