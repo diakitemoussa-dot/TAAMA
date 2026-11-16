@@ -308,6 +308,7 @@ function build(gltf) {
     M.scene.add(L); lights.push(L);
   }
   state.root = root; state.loaded = true;
+  root.visible = false;     // la base NÉANTIS est remplacée par la maison de terre (app/maison-terre.js) : géométrie masquée, logique (portes, dispositif, mission) conservée
   console.log('[NÉANTIS] base chargée, centre', state.center.toArray().map((v) => Math.round(v)).join(', '));
 }
 
