@@ -29,7 +29,6 @@ _gltfDir.setDRACOLoader(_draco);
 
 /* ---------- Personnage joueur (GLB animé, 3e personne) ---------- */
 import { heroUrl } from './hero.js?v=3';
-import { MuzzleFlash } from './muzzle-flash.js?v=1';
 import * as Sniper from './sniper-cam.js?v=1';
 import * as AimSolve from './aim-solve.js?v=1';
 import { HitIndicators } from './hit-indicator.js?v=1';
@@ -107,7 +106,6 @@ let   _explosionRingTexture  = null;
 const _gadgetOrigin      = new THREE.Vector3();
 const _bulletEnd         = new THREE.Vector3();   // point visé de la balle avant l'arrêt par un obstacle
 const _muzzleDir         = new THREE.Vector3();   // direction réelle du canon
-let   _muzzleFx          = null;                  // flamme de canon, traceur, impact (app/muzzle-flash.js)
 let   _hitInd            = null;                  // arcs jaunes : d'où viennent les tirs reçus (app/hit-indicator.js, repris de Sahel Game)
 let   _hitIdN            = 0;
 const _hitDir            = new THREE.Vector3();
@@ -2754,7 +2752,6 @@ function _fireGadgetShotOnce() {
   }
   // Comme dans Sahel Game : en visée (ou en tireur d'élite) la balle part du canon vers le point du réticule (centre de l'écran) ;
   // hors visée elle part droit devant le canon. Tant que le fondu n'est pas à mi-course, on tire droit devant.
-  _fireBulletShot(_aiming && _aimBlend >= 0.5);
 }
 
 function _updateGadgetShot(moving, running) {
@@ -5386,45 +5383,6 @@ function _updateAimPoint() {
  * Tir en visée : de la bouche du gadget vers le point visé, arrêté par le premier
  * obstacle. Le drone n'est touché que si ce trajet le traverse réellement.
  */
-function _fireBulletShot(useReticle) {
-  _muzzleDirection(_muzzleDir);
-  if (useReticle) _bulletEnd.copy(_aimPoint);
-  else _bulletEnd.copy(_gadgetOrigin).addScaledVector(_muzzleDir, Aim.AIM_RANGE);
-  _gadgetDir.copy(_bulletEnd).sub(_gadgetOrigin);
-  const dist = _gadgetDir.length();
-  _aimSegEnd.copy(_bulletEnd);
-  if (dist > 0.05) {
-    _gadgetDir.multiplyScalar(1 / dist);
-    if (colliders && colliders.length) {
-      _gadgetRay.set(_gadgetOrigin, _gadgetDir);
-      _gadgetRay.near = 0.05;
-      _gadgetRay.far = dist;
-      const wallHits = _gadgetRay.intersectObjects(colliders, false);
-      if (wallHits.length) _aimSegEnd.copy(wallHits[0].point);
-    }
-  }
-
-  let hit = false, hitCtx = null, bestD = Infinity;
-  for (const c of _liveDrones([])) {
-    c.d.group.getWorldPosition(_tgtTmp);
-    _tgtTmp.y += 0.15;
-    if (!Aim.segmentHitsSphere(_gadgetOrigin, _aimSegEnd, _tgtTmp, Aim.aimHitRadius(window.GameSettings?.aimAssist))) continue;
-    const dd = _gadgetOrigin.distanceTo(_tgtTmp);
-    if (dd < bestD) { bestD = dd; hit = true; hitCtx = c.r; _aimDronePos.copy(_tgtTmp); }
-  }
-
-  // Flamme à la bouche du canon, traceur jusqu'au point d'impact, étincelles et poussière là où la balle s'arrête.
-  _ensureMuzzleFx();
-  // 0,7 = échelle du pistolet (Sahel Game, où le canon est vu à ~3 m). En vue de visée le canon est à ~0,7 m de la caméra : on réduit
-  // la flamme dans la même proportion pour qu'elle garde la même taille apparente (jamais sous 40 %).
-  const camDist = M.camera ? _gadgetOrigin.distanceTo(M.camera.position) : 3;
-  _muzzleFx.shot(_gadgetOrigin, _muzzleDir, 0.7 * Math.min(1, Math.max(0.4, camDist / 2.5)));
-  const end = hit ? _aimDronePos : _aimSegEnd;
-  _muzzleFx.tracer(_gadgetOrigin, end);
-  if (hit) _withCtx(hitCtx, () => _damageDroneN(GADGET_SHOT_DAMAGE));
-  if (hit || end.distanceToSquared(_bulletEnd) > 0.01) _muzzleFx.impact(end);   // la balle a rencontré quelque chose (drone, mur, sol)
-  _playPistolShotSound();
-}
 
 /** Direction de tir réelle du pistolet : axe +X du nœud Muzzle_Pistol (même convention que Sahel Game). */
 function _muzzleDirection(out) {
@@ -5435,35 +5393,8 @@ function _muzzleDirection(out) {
   return out.set(Math.sin(playerYaw), 0, Math.cos(playerYaw));
 }
 
-function _ensureMuzzleFx() {
-  if (_muzzleFx || !M?.scene) return;
-  _muzzleFx = new MuzzleFlash(M.scene, M.camera, M.renderer);
-}
 
 /** Détonation de pistolet : claquement bref (bruit filtré) + petit « thump » grave. */
-function _playPistolShotSound() {
-  try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    if (!_gadgetAudio) { _gadgetAudio = new AC(); window.GameAudio?.ctx(_gadgetAudio, 'effects'); }
-    const ctx = _gadgetAudio;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-    const t = ctx.currentTime;
-    const len = Math.floor(ctx.sampleRate * 0.16);
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
-    const noise = ctx.createBufferSource(); noise.buffer = buf;
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
-    const ng = ctx.createGain();
-    ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.32, t + 0.003); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
-    noise.connect(hp); hp.connect(ng); ng.connect(ctx.destination); noise.start(t);
-    const thump = ctx.createOscillator(); const tg = ctx.createGain();
-    thump.type = 'sine'; thump.frequency.setValueAtTime(170, t); thump.frequency.exponentialRampToValueAtTime(55, t + 0.09);
-    tg.gain.setValueAtTime(0.0001, t); tg.gain.exponentialRampToValueAtTime(0.28, t + 0.004); tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
-    thump.connect(tg); tg.connect(ctx.destination); thump.start(t); thump.stop(t + 0.12);
-  } catch (_) {}
-}
 
 function _setAiming(on){
   if (on && (_inVehicle() || _swimming)) on = false;
@@ -5697,7 +5628,6 @@ function tickFPS(dt) {
   _updateThirdPersonCamera(dt);
   _updateAimPoint();
   _applyCameraShake(dt);
-  _muzzleFx?.update(dt);
   // Repère du joueur (nom + barre de vie jaune) au-dessus de la tête ; caché en visée aux yeux / lunette, à la mort et au volant.
   if (!_playerTag) _playerTag = new PlayerTag();
   _tagPos.set(playerPos.x, playerPos.y - EYE_HEIGHT + 2.0, playerPos.z);
