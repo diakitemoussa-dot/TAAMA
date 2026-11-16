@@ -21,7 +21,7 @@
    API : window.GameUI = { show, isOpen, openPause, settings, save, … }
    ========================================================== */
 
-import { SCREENS } from './game-screens.js?v=12';
+import { SCREENS } from './game-screens.js?v=13';
 import { applyTaamaLogo } from './taama-logo.js?v=3';
 import * as G from './game-save.js?v=1';
 import { detectQuality } from './device-quality.js?v=6';
@@ -31,7 +31,7 @@ import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
 import { EN } from './i18n-en.js?v=3';
-import { sendProfile } from './player-sync.js?v=1';
+import { sendProfile, deviceLabel } from './player-sync.js?v=3';
 import { SEQUENCES } from './tapama-core.js?v=2';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=11';
 
@@ -1050,6 +1050,7 @@ const NEW_GAME_KEYS = ['taama.dispositif1', 'taama.dispositif2', 'taama.vol', 't
   'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.chapitre1', 'taama.next'];
 
 let playClock = 0;
+let progressTick = 0;
 let remindClock = 0;
 const REMIND_MS = 4 * 60 * 1000;
 
@@ -1066,6 +1067,7 @@ function startPlayClock() {
   playClock = setInterval(() => {
     if (!inGame || open || document.hidden || !save) return;
     save = G.addPlayTime(save, PLAYCLOCK_MS, iso());
+    if (++progressTick % 4 === 0) syncProgress();          // ~1 fois par minute de jeu
     persistSave();
   }, PLAYCLOCK_MS);
 }
@@ -1713,6 +1715,25 @@ async function syncProfile() {
   } finally { syncing = false; }
 }
 window.addEventListener('online', () => { syncProfile(); });
+
+/* Progression (temps de jeu, chapitre, séquence, découvertes) : envoyée à la base joueurs (Google Sheets) toutes les minutes de jeu et à la fermeture de la page */
+let progressSending = false;
+let visitCounted = false;
+async function syncProgress() {
+  if (!profile || !save || progressSending || !inGame) return;
+  progressSending = true;
+  try {
+    await sendProfile(profile, { progress: {
+      playMs: save.playMs, chapter: save.chapter, sequence: save.sequence,
+      discoveries: save.discoveries, lastPlayed: save.lastPlayed,
+      deviceLabel: deviceLabel(),
+      newVisit: !visitCounted,                      // une seule nouvelle connexion par chargement de la page
+    } });
+    visitCounted = true;
+  } finally { progressSending = false; }
+}
+window.addEventListener('pagehide', () => { syncProgress(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) syncProgress(); });
 
 /* ==========================================================
    DÉMARRAGE

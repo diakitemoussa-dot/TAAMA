@@ -21,7 +21,7 @@ export function resolveEndpoint(win = globalThis.window, doc = globalThis.docume
 export const PLAYERS_ENDPOINT = 'api/players';
 
 /** @returns {Promise<boolean>} true si le serveur a bien enregistré le joueur */
-export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = resolveEndpoint(), timeoutMs = 8000 } = {}) {
+export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = resolveEndpoint(), timeoutMs = 8000, progress = null } = {}) {
   if (!profile || typeof fetchFn !== 'function') return false;
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
@@ -29,7 +29,7 @@ export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = r
     const res = await fetchFn(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toPayload(profile)),
+      body: JSON.stringify(progress ? { ...toPayload(profile), progress } : toPayload(profile)),
       signal: ctrl ? ctrl.signal : undefined,
       keepalive: true,
     });
@@ -41,4 +41,14 @@ export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = r
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+/** Appareil comme dans la feuille Bamako Drive : « Windows · souris », « iOS · tactile », « Android · tactile », « Autre · souris ». */
+export function deviceLabel(win = globalThis.window) {
+  try {
+    const ua = (win && win.navigator && win.navigator.userAgent) || '';
+    const os = /Windows/i.test(ua) ? 'Windows' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Android/i.test(ua) ? 'Android' : /Mac OS X|Macintosh/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Autre';
+    const touch = !!(win && win.matchMedia && win.matchMedia('(pointer: coarse)').matches);
+    return `${os} · ${touch ? 'tactile' : 'souris'}`;
+  } catch (_) { return ''; }
 }

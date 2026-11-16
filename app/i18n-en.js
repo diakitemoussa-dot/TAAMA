@@ -332,7 +332,7 @@ export const EN = {
   '« Ravie de te rencontrer ! »': '“Nice to meet you!”',
   '« Ravie de te rencontrer, {nom}. »': '“Nice to meet you, {nom}.”',
   'Ce que nous enregistrons.': 'What we record.',
-  'Ton prénom ou pseudo, ton âge, le type d’appareil et la langue sont gardés dans la base du projet Kabakoo, pour personnaliser le jeu. Nous ne demandons ni nom de famille, ni e-mail, ni photo. Tu peux changer ton nom quand tu veux depuis le menu principal.': 'Your first name or nickname, your age, the type of device and the language are kept in the Kabakoo project database, to personalise the game. We do not ask for a surname, an e-mail address or a photo. You can change your name whenever you like from the main menu.',
+  'Ton prénom ou pseudo, ton âge, le type d’appareil et la langue et ta progression (temps de jeu, chapitre) sont gardés dans la base du projet Kabakoo, pour personnaliser le jeu. Nous ne demandons ni nom de famille, ni e-mail, ni photo. Tu peux changer ton nom quand tu veux depuis le menu principal.': 'Your first name or nickname, your age, the type of device, the language and your progress (play time, chapter) are kept in the Kabakoo project database, to personalise the game. We do not ask for a surname, an e-mail address or a photo. You can change your name whenever you like from the main menu.',
   'Enregistrer': 'Save',
   'Ex. Moussa': 'E.g. Moussa',
   'Ex. 14': 'E.g. 14',
