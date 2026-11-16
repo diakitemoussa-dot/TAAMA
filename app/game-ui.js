@@ -30,7 +30,7 @@ import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLA
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=8';
+import { EN } from './i18n-en.js?v=9';
 import { sendProfile, deviceLabel } from './player-sync.js?v=4';
 import { SEQUENCES } from './tapama-core.js?v=2';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
@@ -1197,7 +1197,7 @@ function startExplore() {
   const go = () => {
     hideUI();
     window.MosqueScene?.resumeLoop?.();
-    import('./explore.js?v=2').then((m) => m.start()).catch((e) => { console.warn('[Exploration]', e && e.message); fail(); });
+    import('./explore.js?v=3').then((m) => m.start()).catch((e) => { console.warn('[Exploration]', e && e.message); fail(); });
   };
   if (window.MosqueScene && window.MosqueScene.loaded) go();
   else {

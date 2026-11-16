@@ -2,15 +2,15 @@
    TOMBE DE TAPAMA DJENEPO — lieu du dispositif 2
    ----------------------------------------------------------
    Position GPS (lien Google Maps) : 13,9034375 N ; -4,5589219 E.
-   Convertie dans le repère du jeu à partir de l'origine du modèle de la ville (13,9056 ; -4,5553, voir
-   destinations-map.js GEO.djenne) et de l'échelle 1,19 : x ≈ -466, z ≈ 287 (x = est, z = sud : à confirmer en jeu).
+   Convertie dans le repère du jeu avec la même conversion que la carte (city-map.js gameToReal : x = nord, z = est,
+   K = 0,84, mosquée à (-12 ; -5,2)) : x ≈ -310,5 ; z ≈ -476,4.
    Ce module pose un repère doré visible sur le sol. API : window.TombeTapama { loaded, position }.
    ========================================================== */
 import * as THREE from 'three';
 import { t } from './i18n.js?v=1';
 
 const M = window.MosqueScene;
-const SPOT = { x: -465.7, z: 286.5 };
+const SPOT = { x: -310.5, z: -476.4 };
 const state = { loaded: false, position: new THREE.Vector3(SPOT.x, 0, SPOT.z) };
 
 function groundAt(x, z) {

@@ -568,6 +568,8 @@ export const EN = {
   'Quitter le mode jeu': 'Leave game mode',
   'Galerie': 'Gallery',
   'Photo': 'Photo',
+  'Barey So': 'Barey So',
+  'La bibliothèque de terre : les livres gardent les mots qui ouvrent le dispositif.': 'The mud library: the books hold the words that open the device.',
   'Ouvrir': 'Open',
   'Livre n°': 'Book no.',
   'Sélectionne les phrases à retenir (une ou plusieurs), puis valide.': 'Select the sentences to remember (one or several), then confirm.',
