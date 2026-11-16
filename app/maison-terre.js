@@ -18,7 +18,7 @@ const YAW = 0.0122;                               // rotation du vide (-0,7° da
 const FOOT = { w: 28.5, d: 20.5 };                // emprise du sol de la maison (dalle, en m)
 const WATER_Y = -12;                              // niveau du fleuve : la maison ne doit pas être posée dans l'eau
 
-const state = { loaded: false, root: null, position: new THREE.Vector3(), requested: false };
+const state = { solid: 0, loaded: false, root: null, position: new THREE.Vector3(), requested: false };
 
 /* Hauteur du sol sous l'emprise de la maison : on échantillonne une grille sur la dalle (orientée comme la maison)
    et on prend la médiane. Ainsi la maison ne s'enfonce pas dans la terre d'un côté ni ne flotte de l'autre. */
@@ -57,6 +57,27 @@ function solve3(A, B) {                             // système 3×3 par élimin
   return [0, 1, 2].map((i) => M3[i][3] / M3[i][i]);
 }
 
+/* Collisions : murs, intérieur (mezzanine, escalier), dalle, mobilier et étagères sont des obstacles pour le joueur à pied.
+   Les torons, tapis, livres, plantes et arbres n'en sont pas. Le sanctuaire construit sa liste une seule fois : on ajoute ici
+   les maillages de la maison dès que cette liste existe (SanctuaryMode.vehicle.addCollider, avec calcul du BVH). */
+const SOLID = /^(Maison_Terre|Interieur_Terre|Escalier_Marches|Dalle|Mobilier|Etageres)/;
+function registerColliders(root) {
+  const todo = [];
+  root.traverse((o) => { if (!o.isMesh) return; for (let p = o; p; p = p.parent) if (SOLID.test(p.name || '')) { todo.push(o); return; } });
+  let tries = 0;
+  const go = () => {
+    const sm = window.SanctuaryMode && window.SanctuaryMode.vehicle;
+    if (!sm || !sm.colliders() || !sm.colliders()._done) { if (tries++ < 200) setTimeout(go, 500); return; }
+    for (const o of todo) {
+      if (o.geometry && !o.geometry.boundsTree && o.geometry.computeBoundsTree) o.geometry.computeBoundsTree();
+      sm.addCollider(o);
+    }
+    state.solid = todo.length;
+    console.log('[MAISON-TERRE]', todo.length, 'maillages solides ajoutés aux collisions');
+  };
+  go();
+}
+
 function build(gltf) {
   const root = gltf.scene;
   const g = footprintGround(SPOT.x, SPOT.z);
@@ -68,9 +89,11 @@ function build(gltf) {
   root.quaternion.copy(tilt.multiply(yaw));
   if (g.min < WATER_Y) console.warn("[MAISON-TERRE] une partie de l'emprise est sous l'eau");
   console.log('[MAISON-TERRE] sol', g.y.toFixed(2), 'm · pente', (g.tilt || 0).toFixed(2), '° · dénivelé sous la maison', g.spread.toFixed(2), 'm');
-  root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.userData.maison = true; } });
   M.scene.add(root);
   state.root = root; state.position.copy(root.position); state.loaded = true;
+  root.updateMatrixWorld(true);
+  registerColliders(root);
   console.log('[MAISON-TERRE] placée au bord du fleuve', root.position.toArray().map((v) => Math.round(v)).join(', '));
 }
 

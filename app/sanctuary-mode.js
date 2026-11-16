@@ -1613,6 +1613,7 @@ async function buildColliders() {
   const newCity = !!M.newCity;
   M.scene.traverse((o) => {
     if (!o.isMesh) return;
+    if (o.userData && o.userData.maison) return;               // la maison de terre (Barey So) ajoute ses propres obstacles (maison-terre.js) : ni torons ni tapis
     if (!COLLIDER_NAMES.test(o.name || '')) return;
     if (newCity && /^Plane012$/i.test(o.name)) return;     // sol plat masqué : on marche sur le relief de la ville v2
     meshes.push(o);
