@@ -26,7 +26,7 @@ import { applyTaamaLogo } from './taama-logo.js?v=3';
 import * as G from './game-save.js?v=2';
 import { detectQuality } from './device-quality.js?v=6';
 import { CINE, cinematicUrl, preloadCinematic, introPre } from './intro-video.js?v=1';
-import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLACK_MS } from './screen-fx.js?v=2';
+import { blackTransition, isMenuScreen, BLACK_MS } from './screen-fx.js?v=2';
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
@@ -962,7 +962,7 @@ function playCinematic(then) {
   // Vidéo déjà en mémoire (téléchargée pendant la barre de chargement) : lecture immédiate, sans réseau. Sinon : streaming du bon fichier (AV1 / mobile / H.264).
   v.src = introPre.state === 'ready' ? introPre.blobUrl : cinematicUrl();
   // En boucle tant que le joueur peut la passer (bouton PASSER). S'il a désactivé « Cinématiques passables », elle se joue une seule fois puis la partie continue : jamais de joueur bloqué.
-  v.loop = false;                  // lue une seule fois, puis le flyer s'affiche (voir showEndFlyer)
+  v.loop = false;                  // lue une seule fois, puis la partie continue (plus de flyer en fin de cinématique)
   v.style.cssText = bg ? bg.getAttribute('style') : 'position:absolute;left:0;top:0;width:1440px;height:810px;object-fit:cover';
   v.volume = clamp((settings.muteAll ? 0 : settings.volume / 100), 0, 1);
   if (bg) bg.replaceWith(v); else r.firstElementChild.prepend(v);
@@ -982,7 +982,7 @@ function playCinematic(then) {
     if (capBox) capBox.style.display = settings.subtitles ? '' : 'none';
   };
   v.addEventListener('timeupdate', paint);
-  v.addEventListener('ended', () => showEndFlyer());
+  v.addEventListener('ended', () => finishCinematic());
   let fallbackTried = false;
   v.addEventListener('error', () => {
     // décodage impossible (ex. AV1 annoncé mais refusé) : on retente une fois avec le H.264 avant de renoncer à la cinématique
@@ -998,25 +998,6 @@ function playCinematic(then) {
 function skipCinematic() {
   if (!settings.skippableCutscenes) { toast('Cette cinématique ne peut pas être passée (Options › Jeu et langue).'); return; }
   finishCinematic();
-}
-
-/* Fin de la cinématique : le flyer reste FLYER_HOLD_MS, puis fondu au noir (app/screen-fx.js), sans bouton */
-function showEndFlyer() {
-  if (!cine || cine.ended || document.getElementById('endFlyer')) return;
-  const box = document.createElement('div');
-  box.id = 'endFlyer';
-  box.setAttribute('role', 'img');
-  box.setAttribute('aria-label', 'TAAMA');
-  box.style.cssText = 'position:fixed;inset:0;z-index:9000;overflow:hidden;background:#3A2D42;';
-  const img = document.createElement('img');
-  img.src = 'assets/images/taama-flyer.png';
-  img.alt = 'TAAMA : un jeu d’aventure au cœur de la Grande Mosquée de Djenné';
-  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center';
-  box.appendChild(img);
-  document.body.appendChild(box);
-  const go = () => fadeToBlack(FADE_MS).then(() => { box.remove(); finishCinematic(); });
-  const hold = () => setTimeout(go, FLYER_HOLD_MS);
-  if (img.decode) img.decode().then(hold, hold); else hold();
 }
 
 function finishCinematic() {
