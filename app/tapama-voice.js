@@ -22,7 +22,7 @@ export function lineKey(raw) {
 const AUDIO_BASE = 'assets/audio/tapama/';
 let manifest = null, manifestP = null, segTimer = 0, segAudio = null, token = 0, speakingAudio = false, busy = false;   // busy : une réplique est en cours (y compris les pauses entre ses phrases)
 const off = () => { try { return localStorage.getItem('taama.voice') === '0' || /[?&]novoice=1/.test(location.search); } catch (_) { return false; } };
-const loadManifest = () => manifestP || (manifestP = fetch(AUDIO_BASE + 'manifest.json?v=3').then((r) => (r.ok ? r.json() : {})).then((m) => (manifest = m)).catch(() => (manifest = {})));
+const loadManifest = () => manifestP || (manifestP = fetch(AUDIO_BASE + 'manifest.json?v=4').then((r) => (r.ok ? r.json() : {})).then((m) => (manifest = m)).catch(() => (manifest = {})));
 if (typeof window !== 'undefined') setTimeout(() => { if (!off()) loadManifest(); }, 1500);
 
 /* Analyse du son joué (pour animer la bouche de Tapama) : les phrases passent par un analyseur puis par un gain (volume du jeu). */
@@ -55,6 +55,58 @@ function playSegments(segs, vol) {
   step(0);
 }
 
+/* Prénom du joueur : prononcé par la voix du navigateur (fr-FR), entre les morceaux enregistrés de Tapama. */
+function playerFirstName() {
+  try { const p = window.GameUI && window.GameUI.player && window.GameUI.player(); return p && p.name ? String(p.name).trim() : ''; } catch (_) { return ''; }
+}
+function sayName(name, vol, my, next) {
+  if (!name || !window.speechSynthesis || my !== token) { next(); return; }
+  try {
+    const u = new SpeechSynthesisUtterance(name); u.lang = 'fr-FR'; u.rate = 0.95; u.pitch = 1.15; u.volume = Math.min(1, vol);
+    speakingAudio = true;
+    u.onend = () => { speakingAudio = false; if (my === token) next(); };
+    u.onerror = () => { speakingAudio = false; if (my === token) next(); };
+    window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+  } catch (_) { next(); }
+}
+/** Joue une suite de morceaux : { segs } (fichiers enregistrés) ou { name } (prénom du joueur). */
+function playQueue(items, vol) {
+  const my = ++token; busy = true;
+  const step = (i) => {
+    if (my !== token || i >= items.length) { if (my === token) { speakingAudio = false; busy = false; } return; }
+    const it = items[i];
+    if (it.name !== undefined) { sayName(it.name, vol, my, () => step(i + 1)); return; }
+    playOne(it.segs, 0, vol, my, () => step(i + 1));
+  };
+  step(0);
+}
+function playOne(segs, j, vol, my, done) {
+  if (my !== token) return;
+  if (j >= segs.length) { done(); return; }
+  const a = new Audio(AUDIO_BASE + segs[j].f); segAudio = a;
+  const ctx = audioGraph();
+  if (ctx) { try { ctx.resume(); outGain.gain.value = Math.min(1, vol); ctx.createMediaElementSource(a).connect(analyser); } catch (_) { a.volume = Math.min(1, vol); } }
+  else a.volume = Math.min(1, vol);
+  a.onplaying = () => { if (my === token) speakingAudio = true; };
+  a.onended = () => { speakingAudio = false; segTimer = setTimeout(() => playOne(segs, j + 1, vol, my, done), segs[j].gap || 0); };
+  a.onerror = () => { speakingAudio = false; segTimer = setTimeout(() => playOne(segs, j + 1, vol, my, done), 0); };
+  a.play().catch(() => { if (my === token) { speakingAudio = false; busy = false; } });
+}
+/** Découpe une réplique avec {nom} en morceaux enregistrés + prénom. Renvoie null si un morceau n'est pas enregistré. */
+function nameQueue(raw) {
+  if (!manifest || !raw.includes('{nom}')) return null;
+  const parts = raw.split('{nom}'), items = [], name = playerFirstName();
+  for (let i = 0; i < parts.length; i++) {
+    const pt = parts[i].trim();
+    if (/[A-Za-zÀ-ÿ]/.test(pt)) {
+      const segs = manifest[lineKey(pt)]; if (!segs || !segs.length) return null;
+      items.push({ segs });
+    }
+    if (i < parts.length - 1 && name) items.push({ name });
+  }
+  return items.length ? items : null;
+}
+
 /** Réplique de Tapama : raw = texte français d'origine (avec {nom}), mood = humeur (informatif). Renvoie true si une voix enregistrée va être jouée. */
 function line(raw, mood) {
   if (off() || !raw) return false;
@@ -62,7 +114,7 @@ function line(raw, mood) {
   const GA = window.GameAudio; const g = GA && GA.gain ? GA.gain('master') : 1;
   if (g <= 0 || getLang() === 'en') return false;                     // son coupé ; anglais : pas encore de voix enregistrée
   const my = token;
-  const play = () => { if (my !== token) return false; const segs = manifest && manifest[lineKey(raw)]; if (!segs || !segs.length) return false; playSegments(segs, g); return true; };
+  const play = () => { if (my !== token) return false; const q = nameQueue(raw); if (q) { playQueue(q, g); return true; } const segs = manifest && manifest[lineKey(raw)]; if (!segs || !segs.length) return false; playSegments(segs, g); return true; };
   if (manifest) return play();
   busy = true; loadManifest().then(() => { if (my === token) busy = false; play(); });                                    // première réplique avant le chargement du manifeste : elle est jouée dès qu'il arrive
   return true;

@@ -44,6 +44,14 @@ for (const f of fs.readdirSync(path.join(root, 'app')).filter((n) => n.endsWith(
     for (const a of lab.matchAll(AFF)) { const text = base.replace('{r}', a[1]); lines.set(lineKey(text), { key: lineKey(text), text, mood: mm[1] }); }
   }
 }
+// prénom du joueur : le navigateur le prononce entre les morceaux enregistrés. Chaque morceau autour de {nom} est aussi une réplique à part.
+for (const l of [...lines.values()]) {
+  if (!l.text.includes('{nom}')) continue;
+  for (const part of l.text.split('{nom}')) {
+    const pt = part.trim();
+    if (/[A-Za-zÀ-ÿ]/.test(pt) && !lines.has(lineKey(pt))) lines.set(lineKey(pt), { key: lineKey(pt), text: pt, mood: l.mood });
+  }
+}
 const out = [...lines.values()];
 fs.writeFileSync(path.join(root, 'tools', '.tapama-lines.json'), JSON.stringify(out, null, 1));
 console.log(`${out.length} répliques collectées`);
