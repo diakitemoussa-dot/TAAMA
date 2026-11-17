@@ -209,8 +209,8 @@ const LIGNES = {
     { who: 'tapama', mood: 'attentive', text: 'Il est verrouillé. Trois mots de passe, et ils parlent tous de la mosquée. On les trouve ensemble : tu observes, je cherche dans mes notes.' },
   ],
   intro2: [
-    { who: 'tapama', mood: 'surprise', text: 'Il est là ! {nom}, tu es incroyable. Pose-le dans la machine, à côté du premier.' },
-    { who: 'tapama', mood: 'attentive', text: 'Cette fois les verrous sont plus costauds. Trois nouveaux mots de passe. On y va, calmement.' },
+    { who: 'tapama', mood: 'surprise', text: 'Tu l’as ! {nom}, tu es incroyable. Pose-le dans la machine, à côté du premier.' },
+    { who: 'tapama', mood: 'attentive', text: 'Il est verrouillé, et je n’ai aucun mot de passe cette fois. Mais tu as lu les livres de Barey So : les phrases que tu as retenues sont nos clés.' },
   ],
   proj1: { who: 'tapama', mood: 'surprise', text: 'Regarde ! Ce n’est pas un écran, ça sort de l’objet lui-même… {nom}, tu vois cette scène ?' },
   coupure1: [
@@ -221,9 +221,9 @@ const LIGNES = {
     { who: 'tapama', mood: 'attentive', text: 'Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché à côté de la tombe de Djenépo. C’est lui qu’il nous faut, {nom}.' },
     { who: 'tapama', mood: 'attentive', text: 'Va à la tombe de Djenépo avec le pick-up, près du fleuve. Je t’attends là-bas, {nom}. Prends ton temps, mais reste vigilant.' },
   ],
-  proj2: { who: 'tapama', mood: 'surprise', text: 'Regarde cette carte, {nom}. Djenné n’est qu’un point parmi d’autres.' },
+  proj2: { who: 'tapama', mood: 'surprise', text: 'Regarde cette carte, {nom}. Tes phrases viennent de lancer le dispositif : Djenné n’est qu’un point parmi d’autres.' },
   coupure2: [
-    { who: 'tapama', mood: 'inquiete', text: 'Non, non, non… Reste avec moi, je relance les écrans.' },
+    { who: 'tapama', mood: 'attentive', text: 'La carte s’est éteinte. Je relance les écrans, mais retiens bien ce que le dispositif vient de nous montrer.' },
   ],
   fin2: [
     { who: 'tapama', mood: 'attentive', text: 'Les deux dispositifs ne sont qu’un début. Il y en a d’autres, cachés ailleurs en Afrique de l’Ouest.' },
@@ -233,6 +233,12 @@ const LIGNES = {
 };
 
 const MSG = {
+  frasesDemande: { mood: 'attentive', text: 'Montre-moi les phrases que tu as retenues, {nom}. Appuie sur « Mes phrases » et choisis celles qui comptent.' },
+  frasesWow: { mood: 'souriante', text: 'Wow, {nom} ! Tu as choisi pas mal de phrases. J’espère que ça t’a appris quelque chose : on va tout décortiquer.' },
+  frasesPasMal: { mood: 'souriante', text: 'Pas mal, {nom} ! Tu as retenu quelques phrases. On va les décortiquer ensemble.' },
+  frasesRien: { mood: 'inquiete', text: 'Tu n’as rien retenu pour l’instant, {nom}. Choisis au moins une phrase, sinon je ne peux rien décortiquer.' },
+  frasesFortes: { mood: 'attentive', text: 'Regarde : je rassemble tes phrases en phrases fortes, une par livre. C’est ce qui doit te rester en tête.' },
+  deverrouille: { mood: 'surprise', text: 'Les verrous cèdent un par un… {nom}, ce sont tes phrases qui ouvrent le dispositif 2 !' },
   reprise: { mood: 'souriante', text: 'On reprend où on s’était arrêtés, {nom}.' },
   placer: { mood: 'curieuse', text: 'Glisse le dispositif jusqu’à l’alvéole lumineuse. Ou appuie sur « Placer le dispositif ».' },
   place: { mood: 'souriante', text: 'Parfait, il est bien en place. Les verrous s’affichent… regardons le premier.' },
@@ -1082,6 +1088,23 @@ function coupure(stopNoise, stopHum, ms) {
   setTimeout(() => { if (ui) ui.black.classList.remove('on'); }, ms);
 }
 
+/* Stade 2 : le joueur montre à Tapama les phrases retenues dans les livres (interface de app/laboratoire-phrases.js) ;
+   quand elle a décortiqué et rassemblé les phrases fortes, les trois verrous s'ouvrent. */
+async function phasePhrases() {
+  S.phase = 'phrases';
+  ui.panel.hidden = true;
+  say(MSG.frasesDemande.mood, MSG.frasesDemande.text);
+  await new Promise((resolve) => {
+    const done = () => { window.removeEventListener('lab:phrases-fortes', done); resolve(); };
+    window.addEventListener('lab:phrases-fortes', done);
+    window.dispatchEvent(new CustomEvent('lab:phrases-demande'));            // le panneau « Mes phrases » s'ouvre tout de suite
+  });
+  guard();
+  for (let i = 0; i < 3; i++) { markLock(i, true); await pause(650); guard(); }
+  say(MSG.deverrouille.mood, MSG.deverrouille.text);
+  await pause(2400);
+}
+
 async function projection2() {
   S.phase = 'projection';
   ui.panel.hidden = true;
@@ -1162,7 +1185,8 @@ async function scene(stage, onDone) {
       say(MSG.reprise.mood, MSG.reprise.text);
       await pause(900);
     }
-    if (resume < 3) {
+    if (stage === 2) await phasePhrases();
+    else if (resume < 3) {
       for (let i = resume; i < 3; i++) await runEnigme(list[i], i + 1, 3);
     }
     ui.panel.hidden = true;
@@ -1337,6 +1361,9 @@ function startPadLoop() {
 
 /* ---------------- API publique ---------------- */
 
-const api = { open, close, state, isOpen: false, ENIGMES, verifier };
+const api = { open, close, state, isOpen: false, ENIGMES, verifier,
+  /** Fait dire à Tapama (dans le labo) un message prédéfini de MSG ; renvoie false si le labo n'est pas ouvert. */
+  sayMsg(key) { const m = MSG[key]; if (!m || !S || !S.open || !ui) return false; say(m.mood, m.text); return true; },
+  whenSilent: () => (window.TapamaVoice && window.TapamaVoice.whenDone ? window.TapamaVoice.whenDone(20000) : Promise.resolve()) };
 if (browser) window.Lab = api;
 export default api;
