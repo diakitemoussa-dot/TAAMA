@@ -285,29 +285,19 @@
   "mood": "souriante"
  },
  {
-  "key": "509ccf38",
-  "text": "Montre-moi les phrases que tu as retenues, {nom}. Appuie sur « Mes phrases » et choisis celles qui comptent.",
+  "key": "8be3cbca",
+  "text": "Maintenant, {nom}, dis-moi ce que tu as retenu de ton aventure dans ce jeu. Écris une phrase qui t’a marqué : c’est elle qui déverrouille le dispositif.",
   "mood": "attentive"
  },
  {
-  "key": "ec81faf1",
-  "text": "Wow, {nom} ! Tu as choisi pas mal de phrases. J’espère que ça t’a appris quelque chose : on va tout décortiquer.",
+  "key": "8e8acc5a",
+  "text": "C’est un peu court, {nom}. Écris une vraie phrase, avec tes mots, pour que je puisse la garder.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "37f0aa54",
+  "text": "Merci, {nom}. Voilà une phrase qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.",
   "mood": "souriante"
- },
- {
-  "key": "335ec161",
-  "text": "Pas mal, {nom} ! Tu as retenu quelques phrases. On va les décortiquer ensemble.",
-  "mood": "souriante"
- },
- {
-  "key": "e3175217",
-  "text": "Tu n’as rien retenu pour l’instant, {nom}. Choisis au moins une phrase, sinon je ne peux rien décortiquer.",
-  "mood": "inquiete"
- },
- {
-  "key": "c0d9fd4c",
-  "text": "Regarde : je rassemble tes phrases en phrases fortes, une par livre. C’est ce qui doit te rester en tête.",
-  "mood": "attentive"
  },
  {
   "key": "fd1aa9ee",
@@ -635,44 +625,34 @@
   "mood": "souriante"
  },
  {
-  "key": "e2b57357",
-  "text": "Montre-moi les phrases que tu as retenues,",
+  "key": "5f2c0a14",
+  "text": "Maintenant,",
   "mood": "attentive"
  },
  {
-  "key": "6f6f2586",
-  "text": ". Appuie sur « Mes phrases » et choisis celles qui comptent.",
+  "key": "7d102aa1",
+  "text": ", dis-moi ce que tu as retenu de ton aventure dans ce jeu. Écris une phrase qui t’a marqué : c’est elle qui déverrouille le dispositif.",
   "mood": "attentive"
  },
  {
-  "key": "9ccd0a18",
-  "text": "Wow,",
+  "key": "cd934d29",
+  "text": "C’est un peu court,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "249525ae",
+  "text": ". Écris une vraie phrase, avec tes mots, pour que je puisse la garder.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "41cf3641",
+  "text": "Merci,",
   "mood": "souriante"
  },
  {
-  "key": "a0eb0a6e",
-  "text": "! Tu as choisi pas mal de phrases. J’espère que ça t’a appris quelque chose : on va tout décortiquer.",
+  "key": "facc31c0",
+  "text": ". Voilà une phrase qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.",
   "mood": "souriante"
- },
- {
-  "key": "4b4443ff",
-  "text": "Pas mal,",
-  "mood": "souriante"
- },
- {
-  "key": "b6810bed",
-  "text": "! Tu as retenu quelques phrases. On va les décortiquer ensemble.",
-  "mood": "souriante"
- },
- {
-  "key": "d31959c8",
-  "text": "Tu n’as rien retenu pour l’instant,",
-  "mood": "inquiete"
- },
- {
-  "key": "6e8dedb8",
-  "text": ". Choisis au moins une phrase, sinon je ne peux rien décortiquer.",
-  "mood": "inquiete"
  },
  {
   "key": "3a6a5958",

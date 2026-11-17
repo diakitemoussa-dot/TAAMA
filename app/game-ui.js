@@ -30,8 +30,8 @@ import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLA
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=17';
-import { sendProfile, deviceLabel } from './player-sync.js?v=4';
+import { EN } from './i18n-en.js?v=18';
+import { sendProfile, deviceLabel } from './player-sync.js?v=5';
 import { SEQUENCES } from './tapama-core.js?v=3';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
 
@@ -723,6 +723,7 @@ function act(name) {
     case 'explore': return startExplore();
     case 'credits': return show('credits', { push: true });
     case 'journal': return openJournal();
+    case 'notes': return window.Notes && window.Notes.openPanel();     // Pause › « Mes notes » (app/notes.js)
     case 'delete-save': return deleteSave();
     case 'cine-skip': return skipCinematic();
     case 'cine-pause': return toggleCinePause();
@@ -1337,6 +1338,7 @@ function setupScreen(scr) {
 
   injectGuideButton(root, id);
   injectSideButton(root, id);
+  injectNotesButton(root, id);
   if (scr.bgRoot) translateTree(scr.bgRoot);
   translateTree(root);                    // dernier : les repérages par texte français ci-dessus sont déjà faits
 
@@ -1384,6 +1386,16 @@ function injectSideButton(root, id) {
   const b = src.cloneNode(true); b.dataset.act = 'side-btn';
   const ic = $(b, 'svg'); if (ic) ic.innerHTML = '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>';
   const lab = $(b, 'span'); (lab || b).textContent = sideLabel();
+  src.insertAdjacentElement('afterend', b);
+}
+/* Pause › « Mes notes » : le carnet du joueur (app/notes.js). Cloné du bouton « Commandes », comme « Comment jouer ? ». */
+EN['Mes notes'] = EN['Mes notes'] || 'My notes';
+function injectNotesButton(root, id) {
+  if (id !== 'pause' || $(root, '[data-act="notes"]')) return;
+  const src = $(root, '[data-act="journal"]'); if (!src) return;
+  const b = src.cloneNode(true); b.dataset.act = 'notes';
+  const ic = $(b, 'svg'); if (ic) ic.innerHTML = '<path d="M4 20l4-1 11-11a2.1 2.1 0 0 0-3-3L5 16z"/><line x1="14" y1="7" x2="17" y2="10"/>';
+  const lab = $(b, 'span'); (lab || b).textContent = t('Mes notes');
   src.insertAdjacentElement('afterend', b);
 }
 function toggleSideBtn() {

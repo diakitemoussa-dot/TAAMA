@@ -233,11 +233,9 @@ const LIGNES = {
 };
 
 const MSG = {
-  frasesDemande: { mood: 'attentive', text: 'Montre-moi les phrases que tu as retenues, {nom}. Appuie sur « Mes phrases » et choisis celles qui comptent.' },
-  frasesWow: { mood: 'souriante', text: 'Wow, {nom} ! Tu as choisi pas mal de phrases. J’espère que ça t’a appris quelque chose : on va tout décortiquer.' },
-  frasesPasMal: { mood: 'souriante', text: 'Pas mal, {nom} ! Tu as retenu quelques phrases. On va les décortiquer ensemble.' },
-  frasesRien: { mood: 'inquiete', text: 'Tu n’as rien retenu pour l’instant, {nom}. Choisis au moins une phrase, sinon je ne peux rien décortiquer.' },
-  frasesFortes: { mood: 'attentive', text: 'Regarde : je rassemble tes phrases en phrases fortes, une par livre. C’est ce qui doit te rester en tête.' },
+  noteDemande: { mood: 'attentive', text: 'Maintenant, {nom}, dis-moi ce que tu as retenu de ton aventure dans ce jeu. Écris une phrase qui t’a marqué : c’est elle qui déverrouille le dispositif.' },
+  noteCourte: { mood: 'curieuse', text: 'C’est un peu court, {nom}. Écris une vraie phrase, avec tes mots, pour que je puisse la garder.' },
+  noteMerci: { mood: 'souriante', text: 'Merci, {nom}. Voilà une phrase qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.' },
   deverrouille: { mood: 'surprise', text: 'Les verrous cèdent un par un… {nom}, ce sont tes phrases qui ouvrent le dispositif 2 !' },
   reprise: { mood: 'souriante', text: 'On reprend où on s’était arrêtés, {nom}.' },
   placer: { mood: 'curieuse', text: 'Glisse le dispositif jusqu’à l’alvéole lumineuse. Ou appuie sur « Placer le dispositif ».' },
@@ -556,7 +554,7 @@ class Annule extends Error {}
 function ensureCss() {
   if (cssPromise) return cssPromise;
   cssPromise = new Promise((resolve) => {
-    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=8';
+    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=9';
     let link = [...document.querySelectorAll('link[rel="stylesheet"]')].find((l) => /laboratoire\.css/.test(l.getAttribute('href') || ''));
     if (link) { resolve(); return; }
     link = document.createElement('link');
@@ -1088,18 +1086,104 @@ function coupure(stopNoise, stopHum, ms) {
   setTimeout(() => { if (ui) ui.black.classList.remove('on'); }, ms);
 }
 
-/* Stade 2 : le joueur montre à Tapama les phrases retenues dans les livres (interface de app/laboratoire-phrases.js) ;
-   quand elle a décortiqué et rassemblé les phrases fortes, les trois verrous s'ouvrent. */
-async function phasePhrases() {
-  S.phase = 'phrases';
-  ui.panel.hidden = true;
-  say(MSG.frasesDemande.mood, MSG.frasesDemande.text);
-  await new Promise((resolve) => {
-    const done = () => { window.removeEventListener('lab:phrases-fortes', done); resolve(); };
-    window.addEventListener('lab:phrases-fortes', done);
-    window.dispatchEvent(new CustomEvent('lab:phrases-demande'));            // le panneau « Mes phrases » s'ouvre tout de suite
+/* Stade 2 : le joueur écrit, avec ses mots, une phrase qu'il a retenue dans le jeu. Tapama la range dans son carnet (menu pause, app/notes.js),
+   elle part dans la feuille du jeu, et c'est elle qui déverrouille le dispositif 2. Clavier à l'écran : manette et tactile. */
+const NOTE_MIN_CARS = 12, NOTE_MIN_MOTS = 3;
+const KEYPAD_NOTE = [...'azertyuiopqsdfghjklmwxcvbn', 'é', 'è', 'à', 'ç', 'ê', '’', ',', '.', '?', '!'];
+
+function renderNote() {
+  const panel = ui.panel;
+  panel.hidden = false;
+  panel.className = 'lab-panel lab-enigme lab-note';
+  panel.replaceChildren();
+  const top = el('div', 'lab-p-top');
+  top.append(el('span', 'lab-kicker', 'Ma note'), el('span', 'lab-chip', 'Carnet de Tapama'));
+  const q = el('h2', 'lab-q', 'Écris une phrase que tu as retenue dans le jeu.');
+  q.id = 'labQ';
+  const row = el('div', 'lab-answer');
+  const input = document.createElement('input');
+  input.type = 'text'; input.id = 'labInput';
+  input.autocomplete = 'off'; input.autocapitalize = 'sentences'; input.spellcheck = false;
+  input.maxLength = 140;
+  input.setAttribute('aria-labelledby', 'labQ');
+  input.setAttribute('aria-label', t('Ta phrase'));
+  input.placeholder = t('Ce que j’ai retenu…');
+  const touch = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  const pad_ = !!(window.GamepadKit && window.GamepadKit.connected && window.GamepadKit.connected());
+  if (touch || pad_) input.inputMode = 'none';                              // clavier du labo (manette ou tactile) : pas le clavier du téléphone par-dessus
+  const ok = el('button', 'lab-btn lab-gold lab-valider', 'Valider');
+  ok.type = 'button'; ok.append(el('kbd', null, 'Entrée'));
+  row.append(input, ok);
+  const count = el('div', 'lab-status'); count.setAttribute('aria-live', 'polite');
+
+  const pad = el('div', 'lab-keypad is-abc is-note');
+  pad.setAttribute('role', 'group'); pad.setAttribute('aria-label', t('Clavier'));
+  const typeKey = (k) => {
+    if (input.value.length >= input.maxLength) return;
+    const first = !input.value.trim() || /[.!?]\s$/.test(input.value);
+    input.value += first && k.length === 1 ? k.toUpperCase() : k;
+  };
+  for (const k of [...KEYPAD_NOTE, '␣', '⌫', '↵']) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'lab-key' + (k === '↵' ? ' enter' : '') + (k === '⌫' ? ' back' : '') + (k === '␣' ? ' space' : '');
+    b.textContent = k;
+    b.setAttribute('aria-label', k === '⌫' ? t('Effacer') : k === '↵' ? t('Valider') : k === '␣' ? t('Espace') : k);
+    b.addEventListener('click', () => {
+      if (k === '⌫') input.value = input.value.slice(0, -1);
+      else if (k === '↵') { submitNote(); return; }
+      else if (k === '␣') { if (input.value && !input.value.endsWith(' ')) typeKey(' '); }
+      else typeKey(k);
+      count.textContent = ''; sfx.key(0.04);
+    });
+    pad.appendChild(b);
+  }
+  panel.append(top, q, row, pad, count);
+  translateTree(panel);
+  const cur = S.cur = { input, status: count, busy: false, note: true };
+  ok.addEventListener('click', submitNote);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); submitNote(); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); input.blur(); }
   });
+  input.addEventListener('input', () => { cur.status.textContent = ''; cur.status.className = 'lab-status'; });
+  if (!touch && !pad_) setTimeout(() => input.focus({ preventScroll: true }), 60);
+}
+
+function submitNote() {
+  if (!S || !S.cur || !S.cur.note || S.cur.busy || S.phase !== 'note' || locked()) return;
+  const c = S.cur, texte = c.input.value.replace(/\s+/g, ' ').trim();
+  const mots = texte.split(' ').filter((w) => w.length > 0).length;
+  if (texte.length < NOTE_MIN_CARS || mots < NOTE_MIN_MOTS) {
+    say(MSG.noteCourte.mood, MSG.noteCourte.text);
+    c.status.textContent = t('Écris une phrase d’au moins trois mots.');
+    c.status.className = 'lab-status is-bad';
+    ui.panel.classList.remove('shake'); void ui.panel.offsetWidth; ui.panel.classList.add('shake');
+    return;
+  }
+  c.busy = true; c.texte = texte; c.resolve();
+}
+
+async function phaseNote() {
+  S.phase = 'note';
+  ui.panel.hidden = true;
+  say(MSG.noteDemande.mood, MSG.noteDemande.text);
+  await pause(400);
+  renderNote();
+  await new Promise((resolve) => { S.cur.resolve = resolve; });
   guard();
+  const c = S.cur;
+  c.input.disabled = true;
+  ui.panel.classList.add('is-win');
+  burst(ui.panel);
+  sfx.unlock();
+  window.GamepadKit?.rumble?.(220, 0.7);
+  try { window.Notes && window.Notes.add({ texte: c.texte, source: 'labo2' }); } catch (_) {}
+  try { window.dispatchEvent(new CustomEvent('lab:note', { detail: { texte: c.texte } })); } catch (_) {}
+  say(MSG.noteMerci.mood, MSG.noteMerci.text);
+  await pause(2600);
+  S.cur = null;
+  ui.panel.hidden = true;
   for (let i = 0; i < 3; i++) { markLock(i, true); await pause(650); guard(); }
   say(MSG.deverrouille.mood, MSG.deverrouille.text);
   await pause(2400);
@@ -1167,6 +1251,7 @@ async function scene(stage, onDone) {
     await ensureCss();
     guard();
     const list = enigmesDuStade(stage);
+    if (stage === 2) S.solved = [];                // stade 2 : plus d'énigmes à reprendre, la note est toujours demandée
     const resume = S.solved.length;
     root.classList.add('on');
     window.dispatchEvent(new CustomEvent('lab:open', { detail: { stage } }));
@@ -1185,7 +1270,7 @@ async function scene(stage, onDone) {
       say(MSG.reprise.mood, MSG.reprise.text);
       await pause(900);
     }
-    if (stage === 2) await phasePhrases();
+    if (stage === 2) await phaseNote();
     else if (resume < 3) {
       for (let i = resume; i < 3; i++) await runEnigme(list[i], i + 1, 3);
     }
@@ -1277,8 +1362,8 @@ if (browser) {
     }
     if ((k === 'h' || k === 'H' || k === 'r' || k === 'R') && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); toggleHistory(); return; }
     if (S.phase === 'placement' && (k === 'p' || k === 'P') && S.placeNow) { e.preventDefault(); S.placeNow(); return; }
-    if (S.phase === 'enigme' && S.cur) {
-      if ((k === 'i' || k === 'I') && !e.repeat) { e.preventDefault(); askHint(); return; }
+    if ((S.phase === 'enigme' || S.phase === 'note') && S.cur) {
+      if (S.phase === 'enigme' && (k === 'i' || k === 'I') && !e.repeat) { e.preventDefault(); askHint(); return; }
       // un caractère tapé hors du champ : on le renvoie dans le champ
       const inp = S.cur.input;
       if (!inp.disabled && document.activeElement && !document.activeElement.closest('.lab-keypad') && (/^[0-9a-zA-Zà-ÿ]$/.test(k))) { inp.focus(); }
@@ -1289,7 +1374,7 @@ if (browser) {
 function refocus() {
   if (!S || !S.open || !ui || tapamaBusy()) return;
   const c = S.cur;
-  if (S.phase === 'enigme' && c && c.input && !c.input.disabled && !(window.matchMedia && matchMedia('(pointer: coarse)').matches)) c.input.focus({ preventScroll: true });
+  if ((S.phase === 'enigme' || S.phase === 'note') && c && c.input && !c.input.disabled && !(window.GamepadKit && window.GamepadKit.connected && window.GamepadKit.connected()) && !(window.matchMedia && matchMedia('(pointer: coarse)').matches)) c.input.focus({ preventScroll: true });
   else if (S.phase === 'placement') { const b = ui.panel.querySelector('.lab-big'); b && b.focus({ preventScroll: true }); }
 }
 
@@ -1297,7 +1382,7 @@ function refocus() {
 function padNav(dir) {
   const scope = !ui.history.hidden ? ui.history : root;
   let cands = [...scope.querySelectorAll('button:not([disabled]), input:not([disabled])')].filter((n) => n.offsetParent !== null && !n.closest('[hidden]'));
-  if (scope === root && S && S.phase === 'enigme') {            // pendant une énigme, la croix ne parcourt que le pavé, « valider » et « indice » (Relire = bouton Y)
+  if (scope === root && S && (S.phase === 'enigme' || S.phase === 'note')) {            // pendant une énigme, la croix ne parcourt que le pavé, « valider » et « indice » (Relire = bouton Y)
     const only = cands.filter((n) => n.classList.contains('lab-key') || n.classList.contains('lab-btn') && n !== (ui && ui.relire) || n.tagName === 'INPUT');
     if (only.length) cands = only;
   }
@@ -1351,10 +1436,12 @@ function startPadLoop() {
       if (f && f.closest && f.closest('#labRoot') && f.tagName === 'BUTTON') f.click();
       else if (S.phase === 'placement' && S.placeNow) S.placeNow();
       else if (S.phase === 'enigme') submit();
+      else if (S.phase === 'note') submitNote();
     } else if (p.justPressed('B')) {
-      if (S.phase === 'enigme' && S.cur && !S.cur.busy) S.cur.input.value = S.cur.input.value.slice(0, -1);
+      if ((S.phase === 'enigme' || S.phase === 'note') && S.cur && !S.cur.busy) S.cur.input.value = S.cur.input.value.slice(0, -1);
     } else if (p.justPressed('X')) askHint();
     else if (p.justPressed('START') && S.phase === 'enigme') submit();
+    else if (p.justPressed('START') && S.phase === 'note') submitNote();
   };
   requestAnimationFrame(loop);
 }

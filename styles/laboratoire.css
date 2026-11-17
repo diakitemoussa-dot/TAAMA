@@ -204,6 +204,9 @@
 .lab-key.enter{ background: linear-gradient(180deg, #f9d58b, #c9a24b); color: var(--lab-violet); border-color: #f9d58b; }
 .lab-key.back{ background: linear-gradient(180deg, #5a3a34, #3a2420); }
 .lab-keypad.is-abc .enter, .lab-keypad.is-abc .back{ grid-column: span 2; }
+.lab-keypad.is-note .space{ grid-column: span 4; text-transform: none; }
+.lab-note .lab-answer input{ font-size: 1.05rem; }
+.lab-keypad.is-note .lab-key{ text-transform: none; }
 
 .lab-status{ min-height: 1.3em; font-weight: 700; font-size: .92rem; margin-bottom: 8px; }
 .lab-status.is-bad{ color: #ff9a8c; }
