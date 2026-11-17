@@ -280,9 +280,9 @@
   "mood": "attentive"
  },
  {
-  "key": "9caeefcb",
-  "text": "Va à la tombe de Djenépo avec le pick-up, près du fleuve. Et fais vite, j’ai un mauvais pressentiment.",
-  "mood": "inquiete"
+  "key": "bfb6cbbf",
+  "text": "Va à la tombe de Djenépo avec le pick-up, près du fleuve. Je t’attends là-bas, {nom}. Prends ton temps, mais reste vigilant.",
+  "mood": "attentive"
  },
  {
   "key": "48078446",
@@ -627,6 +627,16 @@
  {
   "key": "29f58da0",
   "text": "Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché à côté de la tombe de Djenépo. C’est lui qu’il nous faut,",
+  "mood": "attentive"
+ },
+ {
+  "key": "77493eea",
+  "text": "Va à la tombe de Djenépo avec le pick-up, près du fleuve. Je t’attends là-bas,",
+  "mood": "attentive"
+ },
+ {
+  "key": "07407e78",
+  "text": ". Prends ton temps, mais reste vigilant.",
   "mood": "attentive"
  },
  {
