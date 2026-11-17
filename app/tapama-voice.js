@@ -22,7 +22,7 @@ export function lineKey(raw) {
 const AUDIO_BASE = 'assets/audio/tapama/';
 let manifest = null, manifestP = null, segTimer = 0, segAudio = null, token = 0, speakingAudio = false, busy = false;   // busy : une réplique est en cours (y compris les pauses entre ses phrases)
 const off = () => { try { return localStorage.getItem('taama.voice') === '0' || /[?&]novoice=1/.test(location.search); } catch (_) { return false; } };
-const loadManifest = () => manifestP || (manifestP = fetch(AUDIO_BASE + 'manifest.json?v=2').then((r) => (r.ok ? r.json() : {})).then((m) => (manifest = m)).catch(() => (manifest = {})));
+const loadManifest = () => manifestP || (manifestP = fetch(AUDIO_BASE + 'manifest.json?v=3').then((r) => (r.ok ? r.json() : {})).then((m) => (manifest = m)).catch(() => (manifest = {})));
 if (typeof window !== 'undefined') setTimeout(() => { if (!off()) loadManifest(); }, 1500);
 
 /* Analyse du son joué (pour animer la bouche de Tapama) : les phrases passent par un analyseur puis par un gain (volume du jeu). */

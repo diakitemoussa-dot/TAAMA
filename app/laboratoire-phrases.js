@@ -16,9 +16,6 @@ const store = {
 };
 const drone = () => store.get('taama.drone.phrases', []);
 
-function say(text, mood = 'attentive', duration = 9) {
-  window.Tapama?.radio?.({ text, mood, duration });
-}
 
 /* phrase forte : la phrase la plus marquante du livre (la première retenue) ; Tapama la garde telle quelle */
 function fortesFrom(selected) {
@@ -74,11 +71,12 @@ function openPanel() {
 /* Tapama : réaction, décortication, phrases fortes */
 function decortiqueAvecTapama(picked) {
   const n = picked.length, livres = new Set(picked.map((p) => p.livre)).size;
-  if (!n) { say('Tu n’as rien retenu pour l’instant. Repasse à la bibliothèque, {nom}, et choisis les phrases qui comptent.', 'inquiete'); return; }
-  say(n >= 6 ? 'Wow, {nom} ! Tu as choisi pas mal de phrases. J’espère que ça t’a appris quelque chose : on va tout décortiquer.' : 'Pas mal, {nom} ! Tu as retenu ' + n + ' phrases. On va les décortiquer ensemble.', 'souriante', 10);
+  if (!n) { window.Tapama?.radio?.({ text: 'Tu n’as rien retenu pour l’instant. Repasse à la bibliothèque, {nom}, et choisis les phrases qui comptent.', mood: 'inquiete', duration: 9 }); return; }
+  if (n >= 6) window.Tapama?.radio?.({ text: 'Wow, {nom} ! Tu as choisi pas mal de phrases. J’espère que ça t’a appris quelque chose : on va tout décortiquer.', mood: 'souriante', duration: 10 });
+  else window.Tapama?.radio?.({ text: 'Pas mal, {nom} ! Tu as retenu quelques phrases. On va les décortiquer ensemble.', mood: 'souriante', duration: 10 });
   const fortes = fortesFrom(picked);
   setTimeout(() => {
-    say('Regarde : je rassemble tes phrases en phrases fortes, une par livre. C’est ce qui doit te rester en tête.', 'attentive', 10);
+    window.Tapama?.radio?.({ text: 'Regarde : je rassemble tes phrases en phrases fortes, une par livre. C’est ce qui doit te rester en tête.', mood: 'attentive', duration: 10 });
     store.set(KEY_FORTES, fortes);
     try { localStorage.setItem(KEY_DONE, '1'); } catch (_) {}
     window.dispatchEvent(new CustomEvent('lab:phrases-fortes', { detail: { fortes, livres } }));
