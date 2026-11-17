@@ -269,9 +269,10 @@ function checkEntree(dt) {
   const l = mt.root.worldToLocal(new THREE.Vector3(pp.x, pp.y, pp.z));
   if (Math.abs(l.x) > 14.25 || Math.abs(l.z) > 10.25) return;
   try { localStorage.setItem(KEY_ENTREE, '1'); } catch (_) {}
-  const call = { text: 'Te voilà à Barey So, {nom} ! Décolle ton drone pour repérer les 4 livres où tu sélectionnes des phrases. Elles vont beaucoup nous aider à déverrouiller le dispositif 2.', mood: 'attentive', duration: 11 };
-  const go = () => {};                                           // pas de carte ici : l'itinéraire vers le labo s'ouvre quand les livres sont lus
-  if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, call.duration * 1000); }
+  const call = { text: 'Te voilà à Barey So, {nom} ! Récolte le plus d’informations que tu peux. Juste après, je t’affiche le chemin de retour vers mon laboratoire, puis tu pourras lire les livres.', mood: 'attentive', duration: 11 };
+  const go = () => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} }; // ouvre la carte sur le labo avec l'itinéraire de retour
+  if (window.Dispositif1?.radioThen) { window.Dispositif1.radioThen(call); setTimeout(go, 1000); }
+  else { window.Tapama?.radio?.(call); setTimeout(go, 1000); }
 }
 
 M?.addFrameHook((dt) => {
