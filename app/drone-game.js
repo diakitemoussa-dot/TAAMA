@@ -8,7 +8,7 @@ import { mediaUrl, currentBytesPlan } from './device-quality.js?v=6';
 import { t as _t } from './i18n.js?v=1';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { createRemote, fovFor, aimDrop } from './drone-remote.js?v=1';
+import { createRemote, fovFor, aimDrop } from './drone-remote.js?v=2';
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
 
 // Accélération des collisions : raycast via BVH (O(log n)) au lieu de la force brute
