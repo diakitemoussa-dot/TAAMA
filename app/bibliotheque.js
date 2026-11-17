@@ -269,7 +269,9 @@ function checkEntree(dt) {
   const l = mt.root.worldToLocal(new THREE.Vector3(pp.x, pp.y, pp.z));
   if (Math.abs(l.x) > 14.25 || Math.abs(l.z) > 10.25) return;
   try { localStorage.setItem(KEY_ENTREE, '1'); } catch (_) {}
-  window.Tapama?.radio?.({ text: 'Te voilà à Barey So, {nom} ! Décolle ton drone pour repérer les 4 livres où tu sélectionnes des phrases. Elles vont beaucoup nous aider à déverrouiller le dispositif 2.', mood: 'attentive', duration: 11 });
+  const call = { text: 'Te voilà à Barey So, {nom} ! Décolle ton drone pour repérer les 4 livres où tu sélectionnes des phrases. Elles vont beaucoup nous aider à déverrouiller le dispositif 2.', mood: 'attentive', duration: 11 };
+  const go = () => {};                                           // pas de carte ici : l'itinéraire vers le labo s'ouvre quand les livres sont lus
+  if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, call.duration * 1000); }
 }
 
 M?.addFrameHook((dt) => {

@@ -18,8 +18,10 @@ export const PLACES = [
   { id: 'djennodjeno', name: 'Djenné-Djenno', short: 'Djenné-Djenno', e: 1655, n: -1669, kind: 'site', info: 'Plus ancienne ville connue d’Afrique subsaharienne (UNESCO).' },
 ];
 
-/** Surcoût d'un tronçon (fois sa longueur) selon sa classe d'eau : 0 sec, 1 gué peu profond, 2 gué profond. */
-export const WET_COST = [0, 0.6, 2.0];
+/** Surcoût d'un tronçon (fois sa longueur) selon sa classe d'eau : 0 sec, 1 gué peu profond, 2 gué profond.
+ *  Le gué peu profond (< 0,8 m) est praticable par la voiture : on ne le pénalise plus fortement,
+ *  sinon le routeur fait de grands détours pour l'éviter et l'itinéraire s'allonge inutilement. */
+export const WET_COST = [0, 0.25, 2.0];
 
 export function createRouter(data) {
   const N = data.n, adj = Array.from({ length: N.length }, () => []);
@@ -29,8 +31,8 @@ export function createRouter(data) {
   }
   // grille pour trouver le nœud le plus proche
   const CELL = 120, grid = new Map();
-  N.forEach((p, i) => { const k = Math.floor(p[0] / CELL) + ',' + Math.floor(p[1] / CELL); (grid.get(k) || grid.set(k, []).get(k)).push(i); });
-  function nearest(e, n, maxR = 600) {
+  N.forEach((p, i) => { const k = Math.floor(p[0] / CELL) + ',' + Math.floor(p[1] / CELL); let cell = grid.get(k); if (!cell) { cell = []; grid.set(k, cell); } cell.push(i); });
+  function nearest(e, n, maxR = 1000) {
     let best = -1, bd = Infinity;
     const r = Math.ceil(maxR / CELL), cx = Math.floor(e / CELL), cy = Math.floor(n / CELL);
     for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
@@ -69,3 +71,41 @@ export function createRouter(data) {
 
 export function formatDistance(m) { return m >= 1000 ? (m / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(m / 10) * 10 + ' m'; }
 export function etaMinutes(m, speed) { return Math.max(1, Math.round(m / speed / 60)); }
+
+/** Longueurs cumulées d'une ligne brisée [[e,n],…] : { cum: [0, d1, …], total }. */
+function cumsum(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  return { cum, total: cum[cum.length - 1] || 0 };
+}
+
+/**
+ * Cherche des raccourcis sur un itinéraire : pour chaque paire de points (i, j)
+ * de la ligne (j > i), compare la distance par la route (cum[j] - cum[i]) à la
+ * distance en ligne droite (« à travers »). Retourne les coupes qui ferait gagner
+ * au moins `minSave` mètres et `minPct` % par rapport à la route.
+ *
+ * @param {Array<[number,number]>} pts - points de l'itinéraire (répère {e, n} en mètres)
+ * @param {Object} opts - { minSave (m), minPct (%), maxStep (m, ignore les sauts < maxStep) }
+ * @returns {Array<{i, j, from, to, routeDist, directDist, save, pct}>} trié par économie décroissante
+ */
+export function findShortcuts(pts, opts = {}) {
+  const { minSave = 25, minPct = 25, maxStep = 6 } = opts;
+  if (!pts || pts.length < 3) return [];
+  const { cum } = cumsum(pts);
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    for (let j = i + 2; j < pts.length; j++) {                    // au moins un sommet entre i et j
+      const routeDist = cum[j] - cum[i];
+      if (routeDist < maxStep) continue;
+      const directDist = Math.hypot(pts[j][0] - pts[i][0], pts[j][1] - pts[i][1]);
+      const save = routeDist - directDist;
+      const pct = routeDist > 0 ? (save / routeDist) * 100 : 0;
+      if (save >= minSave && pct >= minPct && directDist < routeDist) {
+        out.push({ i, j, from: pts[i], to: pts[j], routeDist: Math.round(routeDist), directDist: Math.round(directDist), save: Math.round(save), pct: Math.round(pct) });
+      }
+    }
+  }
+  out.sort((a, b) => b.save - a.save || b.pct - a.pct);
+  return out;
+}

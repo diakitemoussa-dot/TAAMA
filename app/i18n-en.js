@@ -570,7 +570,7 @@ export const EN = {
   'Dispositif 2 récupéré. Va à Barey So avec Tapama.': 'Device 2 collected. Go to Barey So with Tapama.',
   'Tu t’éloignes de Barey So, {nom}. Suis l’itinéraire de ta carte.': 'You are moving away from Barey So, {nom}. Follow the route on your map.',
   'Tu fais fausse route, {nom}. Suis l’itinéraire jusqu’à la tombe de Djenépo.': 'Wrong way, {nom}. Follow the route to Djenépo’s tomb.',
-  'Te voilà à Barey So, {nom} ! Décolle ton drone pour repérer les 4 livres où tu sélectionnes des phrases. Elles vont beaucoup nous aider à déverrouiller le dispositif 2.': 'Here you are at Barey So, {nom}! Launch your drone to spot the 4 books where you select sentences. They will help us a lot to unlock device 2.',
+  'Te voilà à Barey So, {nom} ! Retiens le maximum d’informations que tu peux dans les livres. Ensuite, rejoins-moi à mon laboratoire.': 'Here you are at Barey So, {nom}! Retain as much information as you can in the books. Then join me at my laboratory.',
   'Il manque une pièce : un autre dispositif est caché à côté de la tombe de Djenépo. C’est lui qu’il nous faut, {nom}.': 'There is a missing piece: another device is hidden next to Djenépo’s tomb. That is the one we need, {nom}.',
   'Va à la tombe de Djenépo avec le pick-up, près du fleuve. Et fais vite, j’ai un mauvais pressentiment.': 'Go to Djenépo’s tomb with the pick-up, near the river. And hurry, I have a bad feeling.',
   'Tu as récolté toutes les informations, {nom} ! Rejoins-moi à mon laboratoire avec les phrases que tu as retenues : on va déverrouiller le dispositif 2.': 'You gathered all the information, {nom}! Meet me at my lab with the sentences you kept: we will unlock device 2.',
