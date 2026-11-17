@@ -217,7 +217,7 @@ function _guideWanted() {
 function _guideEnsureEl() {
   if (_guideEl) return _guideEl;
   const d = document.createElement('div'); d.id = 'snEntryGuide';
-  d.style.cssText = 'position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:55;padding:4px 10px;border-radius:999px;background:rgba(45,40,34,.38);border:1px solid rgba(249,213,139,.45);color:rgba(248,243,234,.8);font:600 12px/1 Rubik,system-ui,sans-serif;display:none;align-items:center;gap:6px;opacity:.8;white-space:nowrap;pointer-events:none';
+  d.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;padding:4px 10px;border-radius:999px;background:rgba(45,40,34,.38);border:1px solid rgba(249,213,139,.45);color:rgba(248,243,234,.8);font:600 12px/1 Rubik,system-ui,sans-serif;display:none;align-items:center;gap:6px;opacity:.8;white-space:nowrap;pointer-events:none';
   d.innerHTML = '<span data-a style="font-size:14px;color:#F9D58B"></span><span data-l>Dispositif à</span><span data-d style="opacity:.85"></span>';
   document.body.appendChild(d);
   return (_guideEl = d);
