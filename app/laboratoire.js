@@ -559,7 +559,7 @@ class Annule extends Error {}
 function ensureCss() {
   if (cssPromise) return cssPromise;
   cssPromise = new Promise((resolve) => {
-    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=10';
+    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=12';
     let link = [...document.querySelectorAll('link[rel="stylesheet"]')].find((l) => /laboratoire\.css/.test(l.getAttribute('href') || ''));
     if (link) { resolve(); return; }
     link = document.createElement('link');

@@ -451,7 +451,7 @@
   /* énigme : ligne d'en-tête (n°, message, indice) / question / saisie / pavé */
   .lab-panel.lab-enigme{
     display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 8px; align-items: center;
-    grid-template-areas: "top status help" "q q q" "row row row" "pad pad pad";
+    grid-template-areas: "top status status" "q q q" "row row row" "pad pad pad" "help help help";
   }
   .lab-p-top{ grid-area: top; margin: 0; flex-wrap: nowrap; }
   .lab-p-top .lab-chip{ display: none; }
@@ -459,8 +459,9 @@
   .lab-panel:has(.lab-status.is-bad) .lab-p-top .lab-kicker{ display: none; }
   .lab-panel .lab-q{ grid-area: q; }
   .lab-status{ grid-area: status; min-height: 0; margin: 0; font-size: .74rem; line-height: 1.2; }
-  .lab-p-foot{ grid-area: help; }
-  .lab-indice{ width: auto; min-height: 44px; padding: 0 10px; font-size: .76rem; gap: 6px; border-radius: 12px; }
+  .lab-p-foot{ grid-area: help; margin-top: 6px; }                       /* indice : tout en bas du panneau, sous le clavier */
+  .lab-panel.lab-enigme .lab-indice{ width: 100%; min-height: 40px; padding: 0 12px; font-size: .8rem; gap: 8px; border-radius: 12px; justify-content: center; }
+  .lab-panel.lab-enigme .lab-indice .lab-ico{ font-size: 1.1rem; }
   .lab-indice .lab-l-long{ display: none; }
   .lab-indice .lab-l-short, .lab-indice .lab-ico{ display: inline; }
   .lab-hdots i{ width: 7px; height: 7px; }
