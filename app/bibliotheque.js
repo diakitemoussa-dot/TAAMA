@@ -270,7 +270,7 @@ function checkEntree(dt) {
   if (Math.abs(l.x) > 14.25 || Math.abs(l.z) > 10.25) return;
   try { localStorage.setItem(KEY_ENTREE, '1'); } catch (_) {}
   const call = { text: 'Te voilà à Barey So, {nom} ! Récolte le plus d’informations que tu peux. Juste après, je t’affiche le chemin de retour vers mon laboratoire, puis tu pourras lire les livres.', mood: 'attentive', duration: 11 };
-  const go = () => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} }; // ouvre la carte sur le labo avec l'itinéraire de retour
+  const go = () => setTimeout(() => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} }, 2000);     // 2 s après la disparition de la bulle // ouvre la carte sur le labo avec l'itinéraire de retour
   if (window.Dispositif1?.radioThen) { window.Dispositif1.radioThen(call); setTimeout(go, 1000); }
   else { window.Tapama?.radio?.(call); setTimeout(go, 1000); }
 }

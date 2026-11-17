@@ -53,7 +53,7 @@ function buildDevice(root) {
   const tex = makeTextures();
   const g = new THREE.Group(); g.name = 'Dispositif2';
   const prof = [[0.0, -0.30], [0.17, -0.25], [0.27, -0.12], [0.27, 0.12], [0.17, 0.25], [0.0, 0.30]].map(([r, h]) => new THREE.Vector2(r, h));
-  state.glowMat = new THREE.MeshStandardMaterial({ map: tex.base, emissiveMap: tex.glow, emissive: new THREE.Color(0x66e8ff), emissiveIntensity: 0.9, metalness: 0.45, roughness: 0.5, flatShading: true });
+  state.glowMat = new THREE.MeshStandardMaterial({ map: tex.base, emissiveMap: tex.glow, emissive: new THREE.Color(0x66e8ff), emissiveIntensity: 1.6, metalness: 0.45, roughness: 0.5, flatShading: true });
   const core = new THREE.Mesh(new THREE.LatheGeometry(prof, 6), state.glowMat);
   const ringGeo = new THREE.TorusGeometry(0.36, 0.035, 6, 6); ringGeo.rotateX(Math.PI / 2);
   state.ring = new THREE.Mesh(ringGeo, new THREE.MeshStandardMaterial({ color: 0x8a6d3a, metalness: 0.9, roughness: 0.35, emissive: new THREE.Color(0xffc060), emissiveIntensity: 0.5, flatShading: true }));
@@ -67,6 +67,7 @@ function buildDevice(root) {
   });
   g.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.raycast = () => {}; } });
   g.position.set(world.x, y, world.z);
+  g.scale.setScalar(1.5);                                   // un peu plus grand que le dispositif 1 : il doit se repérer à côté de l'enclos
   M.scene.add(g);
   state.group = g; state.device.set(world.x, y, world.z);
 }
@@ -125,7 +126,7 @@ function take() {
   try { window.GameUI?.completeSequence?.(8); } catch (_) {}
   // Tapama envoie le joueur à Barey So ; à la fin de la bulle, la carte s'ouvre avec l'itinéraire
   const call = { text: 'Bien joué, {nom} ! Tu as le dispositif 2, mais il est verrouillé. Va à Barey So, la bibliothèque, récolter des informations sur lui. Ensuite on le déverrouille ensemble dans mon labo.', mood: 'souriante', duration: 9 };
-  const go = () => { try { localStorage.setItem('taama.acte', '3:biblio'); window.CityMap?.openTo?.('bibliotheque'); } catch (_) {} };
+  const go = () => setTimeout(() => { try { localStorage.setItem('taama.acte', '3:biblio'); window.CityMap?.openTo?.('bibliotheque'); } catch (_) {} }, 2000);   // 2 s après la disparition de la bulle
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 10000); }
   window.dispatchEvent(new CustomEvent('tombe:dispositif', { detail: { position: state.device.toArray() } }));
 }
