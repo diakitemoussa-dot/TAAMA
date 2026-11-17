@@ -398,6 +398,24 @@ function init() {
       return [cx + c * t, cy + sn * t, cx, cy];
     };
     const pl = playerReal();
+    // mini-carte : elle tourne pour que la direction de l'itinéraire pointe vers le haut (comme la boussole) ; cadre doré sur l'itinéraire, orange si on s'en écarte
+    if (!open) {
+      const rt = sel.id && sel.route && sel.route.pts && sel.route.pts.length > 1 ? sel.route.pts : null;
+      if (rt) {
+        let bi = 0, bd = Infinity;
+        for (let i = 0; i < rt.length; i++) { const d = Math.hypot(rt[i][0] - pl.e, rt[i][1] - pl.n); if (d < bd) { bd = d; bi = i; } }
+        let j = bi; while (j < rt.length - 1 && Math.hypot(rt[j][0] - rt[bi][0], rt[j][1] - rt[bi][1]) < 30) j++;
+        const de = rt[j][0] - pl.e, dn = rt[j][1] - pl.n;
+        const bear = Math.atan2(de, dn) * 180 / Math.PI;                 // cap du prochain tronçon, depuis le nord, sens horaire
+        const off = bd > 40;
+        cv.style.transform = `rotate(${(-bear).toFixed(1)}deg)`;
+        nTag.style.display = 'none';
+        box.classList.add('is-route'); box.classList.toggle('is-off', off);
+      } else {
+        cv.style.transform = ''; nTag.style.display = '';
+        box.classList.remove('is-route', 'is-off');
+      }
+    } else if (cv.style.transform) { cv.style.transform = ''; nTag.style.display = ''; box.classList.remove('is-route', 'is-off'); }   // grande carte : orientation nord en haut
     const half = open ? view.half : MINI_HALF;
     const hx = half * W / S, hy = half * H / S;                      // demi-étendues (m) horizontale et verticale
     let ce = open ? view.ce : pl.e, cn = open ? view.cn : pl.n;
