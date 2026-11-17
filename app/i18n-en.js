@@ -636,7 +636,6 @@ Object.assign(EN, {
   'Inspecte la mosquée en commençant par le haut': 'Inspect the mosque, starting from the top',
   'Rapproche-toi du dispositif': 'Get closer to the device',
   'Suis les indications sous l’écran, {nom} : quand ça chauffe, descends et tourne-toi doucement. Il est sur le toit.': 'Follow the hints under the screen, {nom}: when it gets warm, fly lower and turn slowly. It’s on the roof.',
-  // Tapama : message quand le joueur reste 2 minutes sur le mauvais chemin (app/wrong-way.js)
   'Tu fais fausse route, {nom}. Suis la ligne jaune de ta carte jusqu’à mon labo.': 'You’re going the wrong way, {nom}. Follow the yellow line on your map to my lab.',
   'Tu t’éloignes de la base, {nom}. Ouvre ta carte et suis l’itinéraire.': 'You’re moving away from the base, {nom}. Open your map and follow the route.',
   'Tu fais fausse route, {nom}. Retourne vers la mosquée, vite.': 'You’re going the wrong way, {nom}. Head back to the mosque, quickly.',

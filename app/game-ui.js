@@ -30,7 +30,7 @@ import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLA
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=14';
+import { EN } from './i18n-en.js?v=16';
 import { sendProfile, deviceLabel } from './player-sync.js?v=4';
 import { SEQUENCES } from './tapama-core.js?v=3';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
@@ -1106,22 +1106,7 @@ function hintDroneLaunch(tries = 0) {
    Tant que le dispositif n'est ni repéré ni récupéré, si le joueur reste à pied plus de 75 s, on lui rappelle (3 fois au plus)
    que le dispositif se repère d'en haut, avec le drone. */
 let footHintTimer = 0;
-function watchDroneOnFoot() {
-  clearInterval(footHintTimer);
-  let onFootSince = performance.now(), shown = 0, lastShown = 0;
-  footHintTimer = setInterval(() => {
-    let spotted = false, taken = false;
-    try { spotted = localStorage.getItem('taama.d1.spotted') === '1'; taken = localStorage.getItem('taama.dispositif1') === '1'; } catch (_) {}
-    if (!inGame || spotted || taken || shown >= 3) { if (!inGame || spotted || taken) clearInterval(footHintTimer); return; }
-    const flying = !!window.DroneGame?.isActive?.();
-    const now = performance.now();
-    if (flying || open || window.__storyFreeze || window.Tapama?.isBusy?.()) { onFootSince = now; return; }
-    if (now - onFootSince > 75000 && now - lastShown > 90000) {
-      shown++; lastShown = now;
-      window.GamepadKit?.toast?.(t('🚁 Le dispositif se repère d’en haut : relance ton drone (R · L1 à la manette · bouton Drone sur mobile)'));
-    }
-  }, 5000);
-}
+function watchDroneOnFoot() { /* rappel « le drone repère le dispositif » après une attente à pied : supprimé */ }
 
 function takeoffWhenReady(tries = 0) {
   if (!inGame || window.__storyFreeze || window.Dispositif1?.busy) return;
