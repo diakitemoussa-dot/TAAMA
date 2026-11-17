@@ -104,8 +104,17 @@ function init() {
   // véhicule/labo 1 fait -> tombe de Tapama ; tombe faite -> bibliothèque ; dispositif 2 -> labo ; labo 2 fait -> aucune
   const bibliFini = () => { try { return JSON.parse(localStorage.getItem('taama.biblio.lus') || '[]').length >= 12; } catch (_) { return false; } };
   const lsv = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
-  const storyTarget = () => (lsv('taama.lab2') === 'done' || lsv('taama.chapitre1') === 'done') ? null
-    : ls('taama.dispositif2') ? 'deuxieme' : ls('taama.tombe') ? (bibliFini() ? 'deuxieme' : 'bibliotheque') : ls('taama.vol') ? 'tombe' : lsv('taama.lab1') === 'done' ? (ls('taama.vol') ? null : 'mosquee') : ls('taama.dispositif1') ? 'deuxieme' : null;   // labo 1 fait : retour à la mosquée (S7)
+  // destination de l'histoire : tombe (après le labo 1) -> bibliothèque (après le dispositif de la tombe, étape « 3:biblio ») -> labo 2
+  const acte = () => lsv('taama.acte');
+  const storyTarget = () => {
+    if (lsv('taama.lab2') === 'done' || lsv('taama.chapitre1') === 'done') return null;
+    if (ls('taama.dispositif2')) return 'deuxieme';
+    if (ls('taama.tombe') && acte() === '3:biblio') return bibliFini() ? 'deuxieme' : 'bibliotheque';
+    if (ls('taama.vol') || acte() === '3:tombe') return ls('taama.tombe') ? null : 'tombe';
+    if (lsv('taama.lab1') === 'done') return 'mosquee';
+    if (ls('taama.dispositif1')) return 'deuxieme';
+    return null;
+  };
   const sel = { id: null, route: null, from: null };               // lieu choisi + itinéraire calculé depuis `from`
   let hits = [];                                                   // pastilles cliquables à l'écran : { id, x, y, r } (px canvas)
   const places = () => {
