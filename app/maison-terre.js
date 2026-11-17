@@ -63,7 +63,7 @@ function solve3(A, B) {                             // système 3×3 par élimin
 const SOLID = /^(Maison_Terre|Interieur_Terre|Escalier_Marches|Dalle|Mobilier|Etageres)/;
 function registerColliders(root) {
   const todo = [];
-  root.traverse((o) => { if (!o.isMesh) return; for (let p = o; p; p = p.parent) if (SOLID.test(p.name || '')) { todo.push(o); return; } });
+  root.traverse((o) => { if (!o.isMesh) return; for (let p = o; p; p = p.parent) if (SOLID.test(p.name || '')) { o.userData.solidHouse = true; todo.push(o); return; } });
   let tries = 0;
   const go = () => {
     const sm = window.SanctuaryMode && window.SanctuaryMode.vehicle;

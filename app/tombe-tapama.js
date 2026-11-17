@@ -74,7 +74,7 @@ function buildDevice(root) {
 /* ---------- collisions : murs et créneaux de l'enclos ---------- */
 function registerColliders(root) {
   const todo = [];
-  root.traverse((o) => { if (o.isMesh && /^TD_(Murs|Creneaux)/.test(o.name || o.parent?.name || '')) todo.push(o); });
+  root.traverse((o) => { if (o.isMesh && /^TD_(Murs|Creneaux)/.test(o.name || o.parent?.name || '')) { o.userData.solidHouse = true; todo.push(o); } });
   let tries = 0;
   const go = () => {
     const sm = window.SanctuaryMode && window.SanctuaryMode.vehicle;
