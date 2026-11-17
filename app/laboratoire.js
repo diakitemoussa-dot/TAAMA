@@ -28,6 +28,8 @@
 import { fillName } from './player-profile.js?v=1';
 import { mediaUrl } from './device-quality.js?v=6';
 import { t, translateTree } from './i18n.js?v=1';
+import { BOOKS } from './bibliotheque-textes.js?v=2';
+import { EXPLICATIONS } from './phrases-tapama.js?v=1';
 
 /* ==========================================================
    1. LOGIQUE PURE DES ÉNIGMES (aucun DOM)
@@ -209,7 +211,7 @@ const LIGNES = {
     { who: 'tapama', mood: 'attentive', text: 'Il est verrouillé. Trois mots de passe, et ils parlent tous de la mosquée. On les trouve ensemble : tu observes, je cherche dans mes notes.' },
   ],
   intro2: [
-    { who: 'tapama', mood: 'surprise', text: 'Tu l’as ! {nom}, tu es incroyable. Pose-le dans la machine, à côté du premier.' },
+    { who: 'tapama', mood: 'surprise', text: 'Tu l’as ! Tu es incroyable. Pose-le dans la machine, à côté du premier.' },
     { who: 'tapama', mood: 'attentive', text: 'Il est verrouillé, et je n’ai aucun mot de passe cette fois. Mais tu as lu les livres de Barey So : les phrases que tu as retenues sont nos clés.' },
   ],
   proj1: { who: 'tapama', mood: 'surprise', text: 'Regarde ! Ce n’est pas un écran, ça sort de l’objet lui-même… {nom}, tu vois cette scène ?' },
@@ -233,6 +235,9 @@ const LIGNES = {
 };
 
 const MSG = {
+  tableauIntro: { mood: 'attentive', text: 'Avant de te lancer, regardons ensemble les phrases que tu as sélectionnées dans les livres. Je te les explique une par une, pour que tu comprennes bien.' },
+  aucunePhrase: { mood: 'curieuse', text: 'Tu n’as sélectionné aucune phrase dans les livres. Pas de souci : je te montre quelques phrases importantes, et je te les explique.' },
+  tableauFin: { mood: 'souriante', text: 'Voilà, on a fait le tour de tes phrases. Tu en comprends maintenant le sens.' },
   noteDemande: { mood: 'attentive', text: 'Maintenant, {nom}, dis-moi ce que tu as retenu de ton aventure dans ce jeu. Écris une phrase qui t’a marqué : c’est elle qui déverrouille le dispositif.' },
   noteCourte: { mood: 'curieuse', text: 'C’est un peu court, {nom}. Écris une vraie phrase, avec tes mots, pour que je puisse la garder.' },
   noteMerci: { mood: 'souriante', text: 'Merci, {nom}. Voilà une phrase qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.' },
@@ -554,7 +559,7 @@ class Annule extends Error {}
 function ensureCss() {
   if (cssPromise) return cssPromise;
   cssPromise = new Promise((resolve) => {
-    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=9';
+    const href = new URL('../styles/laboratoire.css', import.meta.url).href + '?v=10';
     let link = [...document.querySelectorAll('link[rel="stylesheet"]')].find((l) => /laboratoire\.css/.test(l.getAttribute('href') || ''));
     if (link) { resolve(); return; }
     link = document.createElement('link');
@@ -1086,6 +1091,71 @@ function coupure(stopNoise, stopHum, ms) {
   setTimeout(() => { if (ui) ui.black.classList.remove('on'); }, ms);
 }
 
+/* Stade 2, première partie : un tableau montre les phrases que le joueur a sélectionnées dans les livres ; Tapama les décortique une par une
+   (explications dans app/phrases-tapama.js : elle connaît toutes les phrases de tous les livres). */
+function phrasesChoisies() {
+  let ids = [];
+  try { ids = (JSON.parse(localStorage.getItem('taama.drone.phrases')) || []).map((p) => p.id); } catch (_) {}
+  const out = [];
+  for (const b of BOOKS) b.phrases.forEach((texte, i) => { if (ids.includes(b.id + ':' + i)) out.push({ id: b.id + ':' + i, livre: b.titre, texte }); });
+  return out;
+}
+
+async function phaseTableau() {
+  S.phase = 'tableau';
+  let rows = phrasesChoisies();
+  const aucune = !rows.length;
+  if (aucune) rows = BOOKS.slice(0, 3).map((b) => ({ id: b.id + ':0', livre: b.titre, texte: b.phrases[0] }));
+  ui.panel.hidden = true;
+  const intro = aucune ? MSG.aucunePhrase : MSG.tableauIntro;
+  say(intro.mood, intro.text);
+  await pause(300);
+  const panel = ui.panel;
+  panel.hidden = false;
+  panel.className = 'lab-panel lab-tableau';
+  panel.replaceChildren();
+  const top = el('div', 'lab-p-top');
+  const chip = el('span', 'lab-chip', '');
+  top.append(el('span', 'lab-kicker', 'Tableau des phrases'), chip);
+  const table = el('ol', 'lab-tab');
+  const lis = rows.map((r, i) => {
+    const li = el('li', 'lab-tab-row');
+    li.append(el('span', 'lab-tab-n', String(i + 1)), el('span', 'lab-tab-liv', t(r.livre)), el('span', 'lab-tab-txt', t(r.texte)), el('span', 'lab-tab-ok', ''));
+    table.appendChild(li);
+    return li;
+  });
+  const expli = el('div', 'lab-expli', '');
+  expli.setAttribute('aria-live', 'polite');
+  const next = el('button', 'lab-btn lab-gold lab-valider', 'Commencer');
+  next.type = 'button'; next.append(el('kbd', null, 'Entrée'));
+  panel.append(top, table, expli, next);
+  translateTree(panel);
+  const label = (txt) => { next.firstChild.nodeValue = t(txt); };
+  const wait = () => new Promise((resolve) => {
+    S.cur = { tableau: true, next: () => resolve() };
+    next.onclick = () => resolve();
+    setTimeout(() => next.focus({ preventScroll: true }), 40);
+  });
+  chip.textContent = `0 / ${rows.length}`;
+  label(aucune ? 'Voir les phrases' : 'Commencer');
+  await wait(); guard();
+  for (let i = 0; i < rows.length; i++) {
+    lis.forEach((li, j) => { li.classList.toggle('is-cur', j === i); li.classList.toggle('is-done', j < i); });
+    lis[i].scrollIntoView({ block: 'nearest' });
+    chip.textContent = `${i + 1} / ${rows.length}`;
+    const ex = EXPLICATIONS[rows[i].id];
+    expli.textContent = ex ? t(ex.text) : '';
+    if (ex) say(ex.mood, ex.text);
+    label(i === rows.length - 1 ? 'J’ai compris' : 'Phrase suivante');
+    await wait(); guard();
+  }
+  lis.forEach((li) => { li.classList.remove('is-cur'); li.classList.add('is-done'); });
+  S.cur = null;
+  say(MSG.tableauFin.mood, MSG.tableauFin.text);
+  await pause(2800);
+  guard();
+}
+
 /* Stade 2 : le joueur écrit, avec ses mots, une phrase qu'il a retenue dans le jeu. Tapama la range dans son carnet (menu pause, app/notes.js),
    elle part dans la feuille du jeu, et c'est elle qui déverrouille le dispositif 2. Clavier à l'écran : manette et tactile. */
 const NOTE_MIN_CARS = 12, NOTE_MIN_MOTS = 3;
@@ -1165,6 +1235,7 @@ function submitNote() {
 }
 
 async function phaseNote() {
+  await phaseTableau();
   S.phase = 'note';
   ui.panel.hidden = true;
   say(MSG.noteDemande.mood, MSG.noteDemande.text);
@@ -1382,7 +1453,7 @@ function refocus() {
 function padNav(dir) {
   const scope = !ui.history.hidden ? ui.history : root;
   let cands = [...scope.querySelectorAll('button:not([disabled]), input:not([disabled])')].filter((n) => n.offsetParent !== null && !n.closest('[hidden]'));
-  if (scope === root && S && (S.phase === 'enigme' || S.phase === 'note')) {            // pendant une énigme, la croix ne parcourt que le pavé, « valider » et « indice » (Relire = bouton Y)
+  if (scope === root && S && (S.phase === 'enigme' || S.phase === 'note' || S.phase === 'tableau')) {            // pendant une énigme, la croix ne parcourt que le pavé, « valider » et « indice » (Relire = bouton Y)
     const only = cands.filter((n) => n.classList.contains('lab-key') || n.classList.contains('lab-btn') && n !== (ui && ui.relire) || n.tagName === 'INPUT');
     if (only.length) cands = only;
   }
@@ -1437,6 +1508,7 @@ function startPadLoop() {
       else if (S.phase === 'placement' && S.placeNow) S.placeNow();
       else if (S.phase === 'enigme') submit();
       else if (S.phase === 'note') submitNote();
+      else if (S.phase === 'tableau' && S.cur && S.cur.next) S.cur.next();
     } else if (p.justPressed('B')) {
       if ((S.phase === 'enigme' || S.phase === 'note') && S.cur && !S.cur.busy) S.cur.input.value = S.cur.input.value.slice(0, -1);
     } else if (p.justPressed('X')) askHint();

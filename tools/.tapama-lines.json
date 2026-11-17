@@ -235,8 +235,8 @@
   "mood": "attentive"
  },
  {
-  "key": "ef775829",
-  "text": "Tu l’as ! {nom}, tu es incroyable. Pose-le dans la machine, à côté du premier.",
+  "key": "da855a99",
+  "text": "Tu l’as ! Tu es incroyable. Pose-le dans la machine, à côté du premier.",
   "mood": "surprise"
  },
  {
@@ -282,6 +282,21 @@
  {
   "key": "e4bbba8f",
   "text": "Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac, {nom} !",
+  "mood": "souriante"
+ },
+ {
+  "key": "41d9b48c",
+  "text": "Avant de te lancer, regardons ensemble les phrases que tu as sélectionnées dans les livres. Je te les explique une par une, pour que tu comprennes bien.",
+  "mood": "attentive"
+ },
+ {
+  "key": "4d568c71",
+  "text": "Tu n’as sélectionné aucune phrase dans les livres. Pas de souci : je te montre quelques phrases importantes, et je te les explique.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "b80754ab",
+  "text": "Voilà, on a fait le tour de tes phrases. Tu en comprends maintenant le sens.",
   "mood": "souriante"
  },
  {
@@ -347,6 +362,156 @@
  {
   "key": "e42f22c5",
   "text": "Je n’ai plus d’indice à te donner, mais je peux te dire la réponse si tu veux.",
+  "mood": "attentive"
+ },
+ {
+  "key": "2351e59a",
+  "text": "Les torons, ce sont ces poutres de bois qui dépassent des murs. Elles restent en place pour toujours : les maçons grimpent dessus pour réparer et enduire la mosquée, sans échafaudage.",
+  "mood": "attentive"
+ },
+ {
+  "key": "bbc48418",
+  "text": "Les torons dépassent du mur, donc ils font de petites ombres sur la terre. L’ombre protège l’enduit du soleil brûlant, et il craque moins vite.",
+  "mood": "attentive"
+ },
+ {
+  "key": "c1994e19",
+  "text": "Un canari, c’est une jarre en céramique, faite à la main par des potiers de la région. Il y en a 104 sur la mosquée, posés dans le toit.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "c4dd7bbb",
+  "text": "La céramique laisse passer l’air, mais retient la chaleur dehors. À l’intérieur il fait plus frais, et la lumière arrive douce, sans éblouir ceux qui prient.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "04f116a4",
+  "text": "L’œuf d’autruche est un très vieux symbole en Afrique. Il rappelle que la vie commence, qu’elle peut donner d’autres vies, et qu’elle se renouvelle toujours.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f150a212",
+  "text": "Les œufs sont posés tout en haut des tours, là où on les voit de loin. C’est une manière de dire que la mosquée veille sur la vie de la ville.",
+  "mood": "souriante"
+ },
+ {
+  "key": "ebe8a4f0",
+  "text": "Les piliers portent le toit de la salle de prière. Ils sont épais et serrés, parce que la terre est lourde et ne supporte pas de grandes portées.",
+  "mood": "attentive"
+ },
+ {
+  "key": "2bd64179",
+  "text": "Les piliers rappellent aussi la communauté : tous ensemble, chacun porte un peu du poids. La mosquée tient parce que les gens s’organisent autour d’elle.",
+  "mood": "attentive"
+ },
+ {
+  "key": "5ff31062",
+  "text": "Chaque année, avant la saison des pluies, tout Djenné se retrouve pour recouvrir la mosquée d’une nouvelle couche de terre. Sans ça, la pluie la dissoudrait peu à peu.",
+  "mood": "souriante"
+ },
+ {
+  "key": "b90ed0b1",
+  "text": "Pour les jeunes, apporter le premier mortier est un honneur. La fête transmet le métier d’une génération à la suivante, et c’est ça qui garde la mosquée vivante.",
+  "mood": "souriante"
+ },
+ {
+  "key": "4923818d",
+  "text": "Au Sahel, on trouve de la terre partout, alors que le bois et la pierre sont rares. C’est pour ça qu’on sait bâtir avec elle depuis des siècles.",
+  "mood": "attentive"
+ },
+ {
+  "key": "b6a2fd9b",
+  "text": "Les savoir-faire d’ici, comme les murs épais et la terre crue, gardent la fraîcheur. Ils inspirent aujourd’hui des logements adaptés à la chaleur, sans dépendre de machines.",
+  "mood": "attentive"
+ },
+ {
+  "key": "de5767f0",
+  "text": "Un joyau, c’est un trésor. Cette mosquée est bâtie en terre, et pourtant elle est magnifique et solide, au cœur de la ville de Djenné.",
+  "mood": "souriante"
+ },
+ {
+  "key": "7f2aeacf",
+  "text": "Elle a été reconstruite en 1907, sur les traces d’anciennes mosquées. Elle sert de lieu de prière, mais aussi de rencontre et de fêtes pour toute la ville.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f798f086",
+  "text": "L’UNESCO protège les lieux qui comptent pour toute l’humanité. Depuis 1988, la mosquée et la vieille ville de Djenné en font partie, et elle compte parmi les plus grands édifices en terre crue.",
+  "mood": "souriante"
+ },
+ {
+  "key": "1c72c35b",
+  "text": "Sur la terrasse, devant le mur de prière, reposent deux personnes importantes de la ville. Leurs tombes sont très simples, sans décor.",
+  "mood": "attentive"
+ },
+ {
+  "key": "45db6a24",
+  "text": "La baraka, c’est une bénédiction, une force bienfaisante. Les gens viennent la demander près de ces tombes, avec respect et en silence.",
+  "mood": "attentive"
+ },
+ {
+  "key": "f1be5c5a",
+  "text": "Ces tombes sont en terre, comme la mosquée. On les entretient comme les murs : avec de la terre, de l’eau et beaucoup de patience.",
+  "mood": "attentive"
+ },
+ {
+  "key": "40c113ae",
+  "text": "Le mihrab est une niche dans le mur. Elle indique la direction de La Mecque, vers laquelle tous les fidèles se tournent pour prier.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "680502a6",
+  "text": "L’imam se place près du mihrab pour diriger la prière, surtout celle du vendredi, quand les fidèles sont les plus nombreux.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "054ee733",
+  "text": "Les jours de fête, la salle ne suffit plus. Les gens s’installent dans la cour, et toute la ville prie ensemble.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "b8159668",
+  "text": "Des trous dans le toit laissent sortir l’air chaud. L’air frais entre alors par d’autres ouvertures : la mosquée respire.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "788932b9",
+  "text": "Quand il pleut, on pose un canari sur chaque ouverture pour la boucher. Quand le soleil revient, on les retire pour aérer de nouveau.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "5d46ed10",
+  "text": "Pas de climatiseur ici : seuls les murs épais, l’ombre et la circulation de l’air gardent la fraîcheur. C’est une idée très ancienne, et très moderne.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "0a4b3a56",
+  "text": "Le Bani est le fleuve qui entoure Djenné. Pendant les pluies, il monte, et la ville ressemble à une île.",
+  "mood": "souriante"
+ },
+ {
+  "key": "a7ef4979",
+  "text": "Chaque lundi, le grand marché se tient devant la mosquée. Des marchands viennent de tout le Sahel pour acheter et vendre.",
+  "mood": "souriante"
+ },
+ {
+  "key": "2c38f410",
+  "text": "Le fleuve transportait les marchandises en pirogue. C’est grâce à ce commerce que Djenné est devenue riche et célèbre.",
+  "mood": "souriante"
+ },
+ {
+  "key": "fa8d9b60",
+  "text": "Cette phrase résume tout : la mosquée a traversé les siècles parce que des gens ont gardé le savoir de construire en terre, et se le sont transmis ensemble.",
+  "mood": "attentive"
+ },
+ {
+  "key": "dae96a51",
+  "text": "Régénératif veut dire qui répare au lieu d’abîmer. Highdigenous, c’est puiser dans les savoirs d’ici pour inventer demain. C’est l’idée de tout ce jeu.",
+  "mood": "attentive"
+ },
+ {
+  "key": "a33ee0fb",
+  "text": "C’est une invitation, pour toi. Ce que tu as appris ici peut servir à bâtir le futur. À toi de choisir ce que tu en feras.",
   "mood": "attentive"
  },
  {
@@ -578,16 +743,6 @@
   "key": "d803827b",
   "text": "! Pose le dispositif dans la machine, là, au centre. Doucement…",
   "mood": "souriante"
- },
- {
-  "key": "33fe3ac2",
-  "text": "Tu l’as !",
-  "mood": "surprise"
- },
- {
-  "key": "2e8b88c4",
-  "text": ", tu es incroyable. Pose-le dans la machine, à côté du premier.",
-  "mood": "surprise"
  },
  {
   "key": "5b1631b9",
