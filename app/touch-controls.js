@@ -95,7 +95,7 @@ const enabled = () => L.shouldShow({ show: state.show, param: urlParam, coarse: 
 const sideBtnOn = () => { try { return localStorage.getItem('taama.touch.sidebtn') === '1'; } catch (_) { return false; } };
 const gadgetOn = () => { try { return localStorage.getItem('taama.gadget') === '1'; } catch (_) { return false; } };
 const portrait = () => window.innerHeight > window.innerWidth * 1.05;
-const devScale = () => Math.max(1, Math.min(1.5, Math.min(window.innerWidth, window.innerHeight) / 390));
+const devScale = () => Math.max(0.6, Math.min(1.5, Math.min(window.innerWidth, window.innerHeight) / 390));   // plus l’écran est petit, plus les boutons rétrécissent (jusqu’à 60 %)
 const $ = (s, r = document) => r.querySelector(s);
 
 /* ---------- Émission d'entrées ---------- */
