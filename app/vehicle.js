@@ -10,7 +10,7 @@
        la caméra passe derrière — descente : même séquence à l'envers ;
      • conduite tout-terrain : RT/↑/W accélère, LT/↓/S freine puis recule, stick gauche/←→/A D braque, A/Espace frein à main,
        ▲/F descend ; suspension (4 rayons au sol), tangage/roulis, poussière, phares la nuit, moteur ;
-     • collisions : mêmes colliders que le sanctuaire (Sol_*, Bat_*).
+     • collisions : mêmes colliders que le sanctuaire (Sol_*, Bat_*, Neantis_*, portes comprises).
    Le contrôleur remplace tickFPS du sanctuaire tant qu'il est actif (window.SanctuaryMode.vehicle).
    ========================================================== */
 import * as THREE from 'three';
@@ -509,7 +509,7 @@ function fadeSet(alpha) {
   const root = SM().root(); if (root) root.visible = alpha > 0.01;
 }
 function fadeEnd() { fadeSet(1); _fadeMats = null; }
-function gadgetShow(on) { const g = SM().model()?.getObjectByName('Pistol'); if (g) g.visible = false; }   // plus d'arme à feu : on ne l'affiche jamais
+function gadgetShow(on) { const g = SM().model()?.getObjectByName('Pistol'); if (g) g.visible = on; }
 
 /* ---------- séquences monter / descendre ---------- */
 const ease = (x) => x * x * (3 - 2 * x);
@@ -834,12 +834,16 @@ function drive(dt) {
   // tableau de bord à l'écran (remplace l'ancienne barre de touches) : vitesse, cadran de guidage, clignotants, rapport, voyants
   dash.update(dt, { speed: S.speed, steer: S.steer, hazard: S.hazard, beams: beamsWanted(), drowned: !!S.drowned, wet: !!S.wet, phase: _blinkPhase,
     heading: Math.PI / 2 - S.yaw, guide: window.CityMap && window.CityMap.guide });
-  dustTick(dt, !wet && Math.abs(S.speed) > 1.5 ? Math.min(1, (Math.abs(S.speed) - 1.5) / 7) : 0);   // dans l'eau : gerbes à la place de la poussière
+  dustTick(dt, !wet && !onPlatform() && Math.abs(S.speed) > 1.5 ? Math.min(1, (Math.abs(S.speed) - 1.5) / 7) : 0);   // dans l'eau : gerbes à la place de la poussière
   if (wet) WFX.vehicleFx(dt, { x: pos.x, z: pos.z, yaw: S.yaw, speed: S.speed, surface: wsurf, depth: wdepth });
   engineUpdate(!drowned);
 }
 
 /* ---------- poussière ---------- */
+function onPlatform() {            // sur la dalle de la base NÉANTIS : pas de poussière
+  const nb = window.NeantisBase; if (!nb || !nb.loaded) return false;
+  const c = nb.center; return Math.hypot(pos.x - c.x, pos.z - c.z) < 108;
+}
 const _dp = new THREE.Vector3();
 function dustClear() {
   const d = car.dust; if (!d) return;

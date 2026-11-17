@@ -22,7 +22,7 @@
      → « Joueur suivant » termine la session, l'envoie, remet le jeu à zéro.
    ========================================================== */
 
-import * as T from './playtest-core.js?v=5';
+import * as T from './playtest-core.js?v=3';
 
 const ON = !!window.__TAAMA_TEST;
 const SEND_EVERY_MS = 60000;
@@ -36,7 +36,7 @@ const GAME_EVENTS = [
   'taama:ouverture-fin', 'taama:carte-labo', 'taama:reset', 'taama:chapitre1-fin',
   'dispositif1:spotted', 'dispositif1:active', 'dispositif1:taken',
   'lab:open', 'lab:enigme-resolue', 'lab:enigme-erreur', 'lab:indice', 'lab:done',
-  'dossier:open', 'dossier:done', 'bibliotheque:fini',
+  'dossier:open', 'dossier:done', 'neantis:dispositif',
   'explore:start', 'explore:stop', 'sanctuary:exit', 'player:swim',
   'mosque:loaded', 'tapama:journal', 'settings:changed',
 ];

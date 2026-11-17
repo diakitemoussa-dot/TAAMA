@@ -12,7 +12,7 @@
      mémorisée dans le navigateur) — le joueur repart avec ;
    • API : window.Dispositif1 { position, active, taken, activate(), take(), reset(), radioThen() } · événements window « dispositif1:active » et « dispositif1:taken ».
    • CHEF D'ORCHESTRE de l'histoire (bible docs/scenario-chapitre1.md, S2 → S14), en bas de ce fichier : radio de récupération -> carte vers le
-     laboratoire (cercle jaune) -> labo stade 1 -> radio de Tapama -> carte vers sa tombe (tombe-tapama.js) -> bibliothèque (bibliotheque.js) -> labo stade 2
+     laboratoire (cercle jaune) -> labo stade 1 -> vol hors-champ devant la mosquée + dossier -> gadget + carte vers la base -> (base : neantis-base.js)
      -> carte vers le labo -> labo stade 2 -> fin du chapitre. État dans localStorage (clés taama.*), reprise de partie incluse.
    ========================================================== */
 import * as THREE from 'three';
@@ -174,7 +174,7 @@ function finishTake() {
     openMapTo('deuxieme'); window.dispatchEvent(new CustomEvent('taama:carte-labo'));
   }), 900);
 }
-window.addEventListener('bibliotheque:fini', () => badge(2, 'Dispositif 2'));
+window.addEventListener('neantis:dispositif', () => badge(2, 'Dispositif 2'));
 
 /* ==========================================================
    CHEF D'ORCHESTRE — enchaînement des scènes S2 → S14 (bible : docs/scenario-chapitre1.md)
@@ -182,7 +182,7 @@ window.addEventListener('bibliotheque:fini', () => badge(2, 'Dispositif 2'));
    ========================================================== */
 const ACTE = 'taama.acte', LAB1 = 'taama.lab1', LAB2 = 'taama.lab2', DEV2 = 'taama.dispositif2', DOSSIER = 'taama.dossier', GADGET = 'taama.gadget';
 const VOL_KEY = 'taama.vol', REV_KEY = 'taama.revelation', GADGET_PENDING = 'taama.gadget.pending', INTRO_CAM = 'taama.intro.cam';
-const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
+const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', REV_KEY, 'taama.chapitre1', 'taama.next'];
 const CIRCLE = { x: -175.012, z: -219.890, r: 1.8, away: 6 };      // cercle jaune = labo de Tapama (même rayon que PORTAL_RADIUS) ; verrou levé à 6 m
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
@@ -256,15 +256,14 @@ function leaveLab(stage) {
     if (stage === 1) {
       lsSet(LAB1, 'done'); lsSet('taama.piste', '1'); lsSet(ACTE, '2:fin');
       seq(5, 6); emit('dispositif1:piste');
-      // Tapama a dit au labo que le second dispositif est caché à côté de la tombe de Djenépo : la carte s'ouvre sur cet itinéraire
-      // (on réessaie tant que Tapama parle, au lieu d'abandonner)
-      lsSet(VOL_KEY, '1'); lsSet(ACTE, '3:tombe'); seq(7);
-      const showTombRoute = (n = 0) => {
-        if (lsGet(LAB1) !== 'done' || lsGet('taama.tombe') === '1') return;
-        if (window.Tapama?.isBusy?.() || window.__storyFreeze) { if (n < 40) setTimeout(() => showTombRoute(n + 1), 750); return; }
-        openMapTo('tombe');
+      // séance de test : sans itinéraire, une joueuse a erré 8 min (2 passages dans le fleuve) puis abandonné -> on trace le retour vers la mosquée
+      // (la carte s'ouvre sur l'itinéraire « Grande Mosquée » pour aller récupérer le 2e dispositif ; on réessaie tant que Tapama parle, au lieu d'abandonner)
+      const showReturnRoute = (n = 0) => {
+        if (lsGet(VOL_KEY) === '1' || lsGet(LAB1) !== 'done') return;
+        if (window.Tapama?.isBusy?.() || window.__storyFreeze) { if (n < 40) setTimeout(() => showReturnRoute(n + 1), 750); return; }
+        openMapTo('mosquee');
       };
-      setTimeout(showTombRoute, 1500);
+      setTimeout(showReturnRoute, 1500);
     } else {
       lsSet(LAB2, 'done'); lsSet(REV_KEY, '1'); lsSet('taama.chapitre1', 'done'); lsSet('taama.next', 'bandiagara');
       seq(11, 12, 13); emit('taama:chapitre1-fin');   // la séquence 12 (« La menace demeure ») est facultative dans le scénario : on la clôt avec la fin du chapitre
@@ -286,6 +285,42 @@ M?.addFrameHook(() => {
   tryEnterLab();
 });
 
+/* S7 — retour devant la mosquée après le labo 1 : le vol a eu lieu « hors-champ » ; radio, puis dossier NÉANTIS (S8), gadget et carte vers la base.
+   Reprise : si le vol est fait mais pas le dossier (rechargement), le dossier est rouvert. API : Dispositif1.stealDevice2() = doVol(). */
+function doVol() {
+  if (lsGet(VOL_KEY) === '1' || S.volBusy) return;
+  S.volBusy = true; lsSet(VOL_KEY, '1'); lsSet(ACTE, '3:vol');
+  window.GamepadKit?.rumble?.(160, 0.5);
+  toast('⚠️ NÉANTIS a emporté le deuxième dispositif !');
+  emit('neantis:vol'); seq(7);
+  setTimeout(() => radioThen({ text: '{nom}… un groupe est passé juste avant toi. Ils ont emporté le second dispositif. J’ai vu leurs images sur mon écran.', mood: 'inquiete', duration: 10 }, openDossier), 1200);
+}
+function openDossier() {
+  S.volBusy = true; freeze(true);
+  let fin = false;
+  const done = () => {
+    if (fin) return; fin = true;
+    // le gadget n'est PAS encore donné : il apparaît dans le monde à ≈ 3 m du joueur (sanctuary-mode.js : _tickGadgetPickup) ;
+    // taama.gadget = '1' n'est écrit qu'au moment où le personnage marche dessus
+    lsSet(DOSSIER, '1'); lsSet(GADGET_PENDING, '1'); lsSet(ACTE, '3:base');
+    freeze(false); S.volBusy = false;
+    // le gadget n'apparaît qu'une fois la carte de la base (itinéraire que Tapama vient d'envoyer) refermée : sinon il surgit derrière la carte et le joueur ne le voit pas
+    window.__gadgetHold = true;
+    setTimeout(() => {
+      openMapTo('neantis'); emit('taama:carte-base');
+      let wasOpen = false; const t0 = performance.now();
+      const iv = setInterval(() => {
+        const o = !!window.CityMap?.isOpen; if (o) wasOpen = true;
+        if ((wasOpen && !o) || performance.now() - t0 > 30000) {                                                    // repli à 30 s si la carte ne s'ouvre pas
+          clearInterval(iv); window.__gadgetHold = false;
+          setTimeout(() => toast('Un gadget t’attend juste à côté : marche dessus pour le ramasser'), 400);       // il vient d'apparaître devant le joueur
+        }
+      }, 300);
+    }, 500);
+  };
+  if (window.Dossier?.open) { try { window.Dossier.open({ onDone: done }); } catch (e) { console.warn('[Dossier]', e); done(); } }
+  else { toast('Dossier NÉANTIS indisponible : scène ignorée.'); setTimeout(done, 700); }
+}
 /* Plan de caméra d'ouverture (sanctuary-mode.js : showDeviceIntro) : une fois les tutos du début faits (marche, carte), dès que la carte se referme, la caméra survole la mosquée
    et se pose sur le dispositif 1 (toit) ; le bouton « Commencer » la ramène à sa position normale. Une seule fois par partie (taama.intro.cam, posé à la fin du plan). */
 const INTRO_KEY = 'taama.intro.cam';
@@ -316,6 +351,24 @@ setInterval(() => {
   };
   go();
 }, 300);
+
+/* Zone du vol : tout le tour de la mosquée (enceinte « Mosquee_Cloture » + 15 m), à pied, en voiture ou en drone, à toute hauteur.
+   Repères : x de −57,4 à 31,4 ; z de −48,6 à 46,1 (mètres du jeu), élargis de 10 m. */
+const MOSQUE_ZONE = { x0: -57.4 - 10, x1: 31.4 + 10, z0: -48.6 - 10, z1: 46.1 + 10 };   // marge de 10 m (le point de départ, à 14 m au sud, reste hors zone)
+function _zoneWatcherPos() {
+  const dg = window.DroneGame;
+  if (dg && dg.isActive && dg.isActive()) { const pl = dg.debugPilot && dg.debugPilot(); if (pl && pl.pos) return { x: pl.pos[0], z: pl.pos[2] }; }
+  const sm = window.SanctuaryMode, pp = sm && sm.playerPosition && sm.playerPosition();   // à pied ou en voiture (la voiture déplace le personnage)
+  return pp ? { x: pp.x, z: pp.z } : null;
+}
+setInterval(() => {
+  if (lsGet(LAB1) !== 'done' || S.volBusy || S.labBusy || lsGet(DOSSIER) === '1') return;
+  const sm = window.SanctuaryMode;
+  if (!(sm && sm.isActive && sm.isActive()) || window.Tapama?.isBusy?.() || window.CityMap?.isOpen) return;
+  if (lsGet(VOL_KEY) === '1') { openDossier(); return; }            // reprise de partie
+  const p = _zoneWatcherPos();
+  if (p && p.x >= MOSQUE_ZONE.x0 && p.x <= MOSQUE_ZONE.x1 && p.z >= MOSQUE_ZONE.z0 && p.z <= MOSQUE_ZONE.z1) doVol();
+}, 700);
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyE' && !e.repeat && S.prompt && S.prompt.style.display === 'block' && S.lock <= 0 && S.act) { S.lock = 0.6; S.act(); e.stopImmediatePropagation(); }
@@ -363,7 +416,7 @@ M?.addFrameHook((dt) => {
 
 window.Dispositif1 = {
   get position() { return POS; }, get built() { return S.built; }, get active() { return S.active; },
-  activate, take, radioThen,
+  activate, take, stealDevice2: doVol, radioThen,
   debugLeaveLab: (stage = 1) => leaveLab(stage),            // diagnostic : joue la sortie du labo (S6) sans refaire les énigmes
   get taken() { return S.taken; },
   get busy() { return S.labBusy || S.volBusy; },

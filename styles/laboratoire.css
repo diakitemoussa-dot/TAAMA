@@ -204,9 +204,6 @@
 .lab-key.enter{ background: linear-gradient(180deg, #f9d58b, #c9a24b); color: var(--lab-violet); border-color: #f9d58b; }
 .lab-key.back{ background: linear-gradient(180deg, #5a3a34, #3a2420); }
 .lab-keypad.is-abc .enter, .lab-keypad.is-abc .back{ grid-column: span 2; }
-.lab-keypad.is-note .space{ grid-column: span 4; text-transform: none; }
-.lab-note .lab-answer input{ font-size: 1.05rem; }
-.lab-keypad.is-note .lab-key{ text-transform: none; }
 
 .lab-status{ min-height: 1.3em; font-weight: 700; font-size: .92rem; margin-bottom: 8px; }
 .lab-status.is-bad{ color: #ff9a8c; }
@@ -451,7 +448,7 @@
   /* énigme : ligne d'en-tête (n°, message, indice) / question / saisie / pavé */
   .lab-panel.lab-enigme{
     display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 8px; align-items: center;
-    grid-template-areas: "top status status" "q q q" "row row row" "pad pad pad" "help help help";
+    grid-template-areas: "top status help" "q q q" "row row row" "pad pad pad";
   }
   .lab-p-top{ grid-area: top; margin: 0; flex-wrap: nowrap; }
   .lab-p-top .lab-chip{ display: none; }
@@ -459,9 +456,8 @@
   .lab-panel:has(.lab-status.is-bad) .lab-p-top .lab-kicker{ display: none; }
   .lab-panel .lab-q{ grid-area: q; }
   .lab-status{ grid-area: status; min-height: 0; margin: 0; font-size: .74rem; line-height: 1.2; }
-  .lab-p-foot{ grid-area: help; margin-top: 6px; }                       /* indice : tout en bas du panneau, sous le clavier */
-  .lab-panel.lab-enigme .lab-indice{ width: 100%; min-height: 40px; padding: 0 12px; font-size: .8rem; gap: 8px; border-radius: 12px; justify-content: center; }
-  .lab-panel.lab-enigme .lab-indice .lab-ico{ font-size: 1.1rem; }
+  .lab-p-foot{ grid-area: help; }
+  .lab-indice{ width: auto; min-height: 44px; padding: 0 10px; font-size: .76rem; gap: 6px; border-radius: 12px; }
   .lab-indice .lab-l-long{ display: none; }
   .lab-indice .lab-l-short, .lab-indice .lab-ico{ display: inline; }
   .lab-hdots i{ width: 7px; height: 7px; }
@@ -572,16 +568,3 @@
   .lab-panel .lab-indice, .lab-panel .lab-indice.call{ animation: none; }
   .lab-bubble.pop{ animation: labBubble .35s ease; }
 }
-
-/* ---------- Stade 2 : tableau des phrases décortiquées par Tapama ---------- */
-.lab-tab{ list-style: none; margin: 0 0 12px; padding: 0; max-height: 34vh; overflow: auto; display: grid; gap: 6px; overscroll-behavior: contain; }
-.lab-tab-row{ display: grid; grid-template-columns: 28px minmax(70px, 130px) 1fr 22px; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(248,243,234,.06); border: 1px solid rgba(248,243,234,.14); opacity: .6; transition: opacity .3s, background .3s, border-color .3s; }
-.lab-tab-n{ font: 800 .9rem 'Rubik', sans-serif; color: var(--lab-gold); }
-.lab-tab-liv{ font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .85; }
-.lab-tab-txt{ font-size: .95rem; line-height: 1.35; }
-.lab-tab-row.is-cur{ opacity: 1; background: rgba(249,213,139,.2); border-color: var(--lab-gold); box-shadow: 0 0 14px rgba(249,213,139,.35); }
-.lab-tab-row.is-done{ opacity: .85; }
-.lab-tab-row.is-done .lab-tab-ok::before{ content: '✓'; color: #62e08a; font-weight: 800; }
-.lab-expli{ min-height: 3.6em; margin-bottom: 12px; padding: 10px 14px; border-left: 4px solid var(--lab-gold); background: rgba(249,213,139,.1); border-radius: 8px; font-size: .98rem; line-height: 1.45; }
-.lab-expli:empty{ display: none; }
-@media (max-width: 860px){ .lab-tab-row{ grid-template-columns: 22px 1fr 18px; } .lab-tab-liv{ display: none; } .lab-tab{ max-height: 28vh; } }

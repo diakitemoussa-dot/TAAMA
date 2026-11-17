@@ -21,19 +21,19 @@
    API : window.GameUI = { show, isOpen, openPause, settings, save, … }
    ========================================================== */
 
-import { SCREENS } from './game-screens.js?v=14';
+import { SCREENS } from './game-screens.js?v=13';
 import { applyTaamaLogo } from './taama-logo.js?v=3';
-import * as G from './game-save.js?v=2';
+import * as G from './game-save.js?v=1';
 import { detectQuality } from './device-quality.js?v=6';
 import { CINE, cinematicUrl, preloadCinematic, introPre } from './intro-video.js?v=1';
-import { blackTransition, isMenuScreen, BLACK_MS } from './screen-fx.js?v=2';
+import { fadeToBlack, blackTransition, isMenuScreen, FLYER_HOLD_MS, FADE_MS, BLACK_MS } from './screen-fx.js?v=2';
 import * as P from './player-profile.js?v=1';
 import * as I18n from './i18n.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=19';
-import { sendProfile, deviceLabel } from './player-sync.js?v=5';
-import { SEQUENCES } from './tapama-core.js?v=3';
-import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
+import { EN } from './i18n-en.js?v=3';
+import { sendProfile, deviceLabel } from './player-sync.js?v=4';
+import { SEQUENCES } from './tapama-core.js?v=2';
+import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=11';
 
 const NEW_UI = window.__NEW_UI !== false;
 const STAGE_W = 1440;
@@ -458,6 +458,7 @@ const SWITCH_KEYS = {
   'Afficher le compteur d’images par seconde': 'showFps',
   'Cinématiques passables': 'skippableCutscenes',
   'Rappel de l’objectif en cours': 'objectiveReminder',
+  'Aide à la visée du gadget': 'aimAssist',
   'Sous-titres': 'subtitles',
   'Réduire les secousses de la caméra': 'reduceShake',
   'Contraste renforcé des textes': 'highContrast',
@@ -723,7 +724,6 @@ function act(name) {
     case 'explore': return startExplore();
     case 'credits': return show('credits', { push: true });
     case 'journal': return openJournal();
-    case 'notes': return window.Notes && window.Notes.openPanel();     // Pause › « Mes notes » (app/notes.js)
     case 'delete-save': return deleteSave();
     case 'cine-skip': return skipCinematic();
     case 'cine-pause': return toggleCinePause();
@@ -806,7 +806,7 @@ function deleteSave() {
    ========================================================== */
 
 const TIPS = [
-  'Appuie sur Échap pour ouvrir le menu pause et revoir les commandes.',
+  'Maintiens le clic droit pour viser avec précision, puis clique pour tirer avec ton gadget.',
   'Appuie sur H à tout moment pour demander de l’aide à Tapama.',
   'Maj pour courir, X pour sauter, K pour t’agenouiller et te cacher.',
   'À la manette, ✕ prend une photo avec le drone et R1 filme.',
@@ -962,7 +962,7 @@ function playCinematic(then) {
   // Vidéo déjà en mémoire (téléchargée pendant la barre de chargement) : lecture immédiate, sans réseau. Sinon : streaming du bon fichier (AV1 / mobile / H.264).
   v.src = introPre.state === 'ready' ? introPre.blobUrl : cinematicUrl();
   // En boucle tant que le joueur peut la passer (bouton PASSER). S'il a désactivé « Cinématiques passables », elle se joue une seule fois puis la partie continue : jamais de joueur bloqué.
-  v.loop = false;                  // lue une seule fois, puis la partie continue (plus de flyer en fin de cinématique)
+  v.loop = false;                  // lue une seule fois, puis le flyer s'affiche (voir showEndFlyer)
   v.style.cssText = bg ? bg.getAttribute('style') : 'position:absolute;left:0;top:0;width:1440px;height:810px;object-fit:cover';
   v.volume = clamp((settings.muteAll ? 0 : settings.volume / 100), 0, 1);
   if (bg) bg.replaceWith(v); else r.firstElementChild.prepend(v);
@@ -982,7 +982,7 @@ function playCinematic(then) {
     if (capBox) capBox.style.display = settings.subtitles ? '' : 'none';
   };
   v.addEventListener('timeupdate', paint);
-  v.addEventListener('ended', () => finishCinematic());
+  v.addEventListener('ended', () => showEndFlyer());
   let fallbackTried = false;
   v.addEventListener('error', () => {
     // décodage impossible (ex. AV1 annoncé mais refusé) : on retente une fois avec le H.264 avant de renoncer à la cinématique
@@ -998,6 +998,25 @@ function playCinematic(then) {
 function skipCinematic() {
   if (!settings.skippableCutscenes) { toast('Cette cinématique ne peut pas être passée (Options › Jeu et langue).'); return; }
   finishCinematic();
+}
+
+/* Fin de la cinématique : le flyer reste FLYER_HOLD_MS, puis fondu au noir (app/screen-fx.js), sans bouton */
+function showEndFlyer() {
+  if (!cine || cine.ended || document.getElementById('endFlyer')) return;
+  const box = document.createElement('div');
+  box.id = 'endFlyer';
+  box.setAttribute('role', 'img');
+  box.setAttribute('aria-label', 'TAAMA');
+  box.style.cssText = 'position:fixed;inset:0;z-index:9000;overflow:hidden;background:#3A2D42;';
+  const img = document.createElement('img');
+  img.src = 'assets/images/taama-flyer.png';
+  img.alt = 'TAAMA : un jeu d’aventure au cœur de la Grande Mosquée de Djenné';
+  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center';
+  box.appendChild(img);
+  document.body.appendChild(box);
+  const go = () => fadeToBlack(FADE_MS).then(() => { box.remove(); finishCinematic(); });
+  const hold = () => setTimeout(go, FLYER_HOLD_MS);
+  if (img.decode) img.decode().then(hold, hold); else hold();
 }
 
 function finishCinematic() {
@@ -1028,7 +1047,7 @@ function toggleSubtitles() {
 
 /* Nouvelle partie : clés de progression de l'histoire à effacer (hors profil joueur taama.player.v1) */
 const NEW_GAME_KEYS = ['taama.dispositif1', 'taama.dispositif2', 'taama.vol', 'taama.piste', 'taama.revelation', 'taama.acte', 'taama.d1.spotted',
-  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
+  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.chapitre1', 'taama.next'];
 
 let playClock = 0;
 let progressTick = 0;
@@ -1088,7 +1107,22 @@ function hintDroneLaunch(tries = 0) {
    Tant que le dispositif n'est ni repéré ni récupéré, si le joueur reste à pied plus de 75 s, on lui rappelle (3 fois au plus)
    que le dispositif se repère d'en haut, avec le drone. */
 let footHintTimer = 0;
-function watchDroneOnFoot() { /* rappel « le drone repère le dispositif » après une attente à pied : supprimé */ }
+function watchDroneOnFoot() {
+  clearInterval(footHintTimer);
+  let onFootSince = performance.now(), shown = 0, lastShown = 0;
+  footHintTimer = setInterval(() => {
+    let spotted = false, taken = false;
+    try { spotted = localStorage.getItem('taama.d1.spotted') === '1'; taken = localStorage.getItem('taama.dispositif1') === '1'; } catch (_) {}
+    if (!inGame || spotted || taken || shown >= 3) { if (!inGame || spotted || taken) clearInterval(footHintTimer); return; }
+    const flying = !!window.DroneGame?.isActive?.();
+    const now = performance.now();
+    if (flying || open || window.__storyFreeze || window.Tapama?.isBusy?.()) { onFootSince = now; return; }
+    if (now - onFootSince > 75000 && now - lastShown > 90000) {
+      shown++; lastShown = now;
+      window.GamepadKit?.toast?.(t('🚁 Le dispositif se repère d’en haut : relance ton drone (R · L1 à la manette · bouton Drone sur mobile)'));
+    }
+  }, 5000);
+}
 
 function takeoffWhenReady(tries = 0) {
   if (!inGame || window.__storyFreeze || window.Dispositif1?.busy) return;
@@ -1135,7 +1169,7 @@ function beginGame() {
   persistSave();
   track('nouvelle-partie', {});
   // Nouvelle partie : on repart de zéro — ni voiture ni gadget (débloqués au premier dispositif), dispositifs à retrouver, questions de Tapama remises à zéro
-  try { window.Dispositif1?.reset?.(); } catch (_) {}
+  try { window.Dispositif1?.reset?.(); window.NeantisBase?.resetDevice?.(); } catch (_) {}
   try { NEW_GAME_KEYS.forEach((k) => localStorage.removeItem(k)); } catch (_) {}
   playOpening();                              // pas de deuxième vidéo : la cinématique a déjà été jouée après « Appuie pour commencer »
 }
@@ -1164,7 +1198,7 @@ function startExplore() {
   const go = () => {
     hideUI();
     window.MosqueScene?.resumeLoop?.();
-    import('./explore.js?v=4').then((m) => m.start()).catch((e) => { console.warn('[Exploration]', e && e.message); fail(); });
+    import('./explore.js?v=2').then((m) => m.start()).catch((e) => { console.warn('[Exploration]', e && e.message); fail(); });
   };
   if (window.MosqueScene && window.MosqueScene.loaded) go();
   else {
@@ -1319,7 +1353,6 @@ function setupScreen(scr) {
 
   injectGuideButton(root, id);
   injectSideButton(root, id);
-  injectNotesButton(root, id);
   if (scr.bgRoot) translateTree(scr.bgRoot);
   translateTree(root);                    // dernier : les repérages par texte français ci-dessus sont déjà faits
 
@@ -1367,16 +1400,6 @@ function injectSideButton(root, id) {
   const b = src.cloneNode(true); b.dataset.act = 'side-btn';
   const ic = $(b, 'svg'); if (ic) ic.innerHTML = '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>';
   const lab = $(b, 'span'); (lab || b).textContent = sideLabel();
-  src.insertAdjacentElement('afterend', b);
-}
-/* Pause › « Mes notes » : le carnet du joueur (app/notes.js). Cloné du bouton « Commandes », comme « Comment jouer ? ». */
-EN['Mes notes'] = EN['Mes notes'] || 'My notes';
-function injectNotesButton(root, id) {
-  if (id !== 'pause' || $(root, '[data-act="notes"]')) return;
-  const src = $(root, '[data-act="journal"]'); if (!src) return;
-  const b = src.cloneNode(true); b.dataset.act = 'notes';
-  const ic = $(b, 'svg'); if (ic) ic.innerHTML = '<path d="M4 20l4-1 11-11a2.1 2.1 0 0 0-3-3L5 16z"/><line x1="14" y1="7" x2="17" y2="10"/>';
-  const lab = $(b, 'span'); (lab || b).textContent = t('Mes notes');
   src.insertAdjacentElement('afterend', b);
 }
 function toggleSideBtn() {

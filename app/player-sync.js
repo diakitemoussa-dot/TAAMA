@@ -26,7 +26,7 @@ export function isAppsScript(url) {
 }
 
 /** @returns {Promise<boolean>} true si le serveur a bien enregistré le joueur */
-export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = resolveEndpoint(), timeoutMs = 8000, progress = null, note = null } = {}) {
+export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = resolveEndpoint(), timeoutMs = 8000, progress = null } = {}) {
   if (!profile || typeof fetchFn !== 'function') return false;
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
@@ -34,7 +34,7 @@ export async function sendProfile(profile, { fetchFn = globalThis.fetch, url = r
     const script = isAppsScript(url);
     // Script Google : texte simple (pas de requête de contrôle CORS, que Google refuse) ; sinon JSON comme avant
     const headers = { 'Content-Type': script ? 'text/plain;charset=utf-8' : 'application/json' };
-    const body = JSON.stringify(note ? { ...toPayload(profile), note } : progress ? { ...toPayload(profile), progress } : toPayload(profile));
+    const body = JSON.stringify(progress ? { ...toPayload(profile), progress } : toPayload(profile));
     try {
       const res = await fetchFn(url, { method: 'POST', headers, body, signal: ctrl ? ctrl.signal : undefined, keepalive: true });
       if (!res.ok) return false;

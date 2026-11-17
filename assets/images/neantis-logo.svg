@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300" role="img" aria-label="NÉANTIS">
+  <defs>
+    <linearGradient id="nl-steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EDEFF2"/><stop offset=".5" stop-color="#9AA3AF"/><stop offset="1" stop-color="#5B6572"/>
+    </linearGradient>
+    <linearGradient id="nl-blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5FB4FF"/><stop offset="1" stop-color="#1E90FF"/>
+    </linearGradient>
+    <linearGradient id="nl-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F3D98A"/><stop offset="1" stop-color="#C9A24B"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="300" fill="#0A0E14"/>
+  <path d="M196 56 A86 86 0 1 0 206 120" fill="none" stroke="url(#nl-steel)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M206 120 A86 86 0 0 0 196 56" fill="none" stroke="url(#nl-gold)" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 12"/>
+  <polygon points="70,172 70,66 98,66 98,172" fill="url(#nl-steel)"/>
+  <polygon points="70,66 100,66 170,172 140,172" fill="url(#nl-steel)"/>
+  <polygon points="98,120 98,172 126,172" fill="#0A0E14" opacity=".35"/>
+  <polygon points="142,66 170,48 170,172 142,172" fill="url(#nl-blue)"/>
+  <rect x="104" y="114" width="26" height="4" fill="url(#nl-gold)" transform="rotate(48 117 116)"/>
+  <text x="125" y="258" text-anchor="middle" font-family="Rajdhani, Orbitron, Arial, sans-serif" font-weight="700" font-size="34" letter-spacing="9" fill="#EDEFF2">NÉANTIS</text>
+  <rect x="62" y="272" width="116" height="2" fill="url(#nl-gold)"/>
+</svg>

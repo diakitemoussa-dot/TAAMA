@@ -81,9 +81,6 @@ const SVG = `
 </svg>`;
 
 /** Crée l'incrustation (une seule fois). renderer/scene : pour le rendu de la vue du drone. */
-/** Téléphone tactile (commandes tactiles actives) : pas de télécommande ni de mini-écran en incrustation, l'écran est déjà petit et les doigts sont sur les boutons. */
-const onTouchDevice = () => !!(typeof window !== 'undefined' && window.TouchControls && window.TouchControls.enabled && window.TouchControls.enabled());
-
 export function createRemote() {
   let el = null, screen = null, cv = null, ctx2d = null, rt = null, cam = null, buf = null, img = null, frameT = 0, shown = false;
   const W = 256, H = 144;
@@ -102,10 +99,10 @@ export function createRemote() {
   }
   return {
     get visible() { return shown; },
-    show(on) { ensure(); shown = on; el.classList.toggle('on', on && !onTouchDevice()); },
+    show(on) { ensure(); shown = on; el.classList.toggle('on', on); },
     /** data : { lx, ly, rx, ry (commandes -1..1), altM, speedMs, headingDeg, battery }. live : { renderer, scene, droneCam } pour l'écran du téléphone (facultatif). */
     update(dt, data, live) {
-      if (!shown || onTouchDevice()) return;
+      if (!shown) return;
       const T = formatTelemetry(data);
       refs.h.textContent = T.alt; refs.s.textContent = T.speed; refs.a.textContent = T.heading; refs.b.textContent = T.battery;
       const [lx, ly] = stickOffset(data.lx, -data.ly), [rx, ry] = stickOffset(data.rx, -data.ry);

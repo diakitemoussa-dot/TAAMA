@@ -11,16 +11,16 @@
    Chargé à la demande par app/guide.js.
    ========================================================== */
 
-import * as LG from './guide-logic.js?v=52';
-import { PAGES, OBJECTIVES, UI } from './guide-content.js?v=52';
-import * as A from './guide-icons.js?v=52';
+import * as LG from './guide-logic.js?v=48';
+import { PAGES, OBJECTIVES, UI } from './guide-content.js?v=48';
+import * as A from './guide-icons.js?v=48';
 import { t, getLang, onLangChange } from './i18n.js?v=1';
 import { fillName } from './player-profile.js?v=1';
 
 /* ---------- feuille de style (chargée avec le module) ---------- */
 if (!document.getElementById('gdCss')) {
   const l = document.createElement('link');
-  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=52';
+  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=48';
   document.head.appendChild(l);
   await new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 }
@@ -43,7 +43,7 @@ const sysReduce = () => !!(window.matchMedia && window.matchMedia('(prefers-redu
 const still = () => LG.reducedMotion(S, sysReduce());
 const gs = () => window.GameSettings || {};
 const flags = () => ({ drone: droneSeen, acte: ls('taama.acte'), spotted: ls('taama.d1.spotted'), dispositif1: ls('taama.dispositif1'), lab1: ls('taama.lab1'), vol: ls('taama.vol'),
-  gadget: ls('taama.gadget'), tombe: ls('taama.tombe'), dispositif2: ls('taama.dispositif2'), lab2: ls('taama.lab2'), chapitre1: ls('taama.chapitre1') });
+  gadget: ls('taama.gadget'), dispositif2: ls('taama.dispositif2'), lab2: ls('taama.lab2'), chapitre1: ls('taama.chapitre1') });
 
 /** Classes d'apparence communes : animations réduites, grand texte, contraste renforcé (réglages du jeu inclus). */
 function look(el) {
@@ -94,7 +94,7 @@ detect();
    ÉCRAN « COMMENT JOUER » : module séparé (guide-screen.js), chargé seulement à l'ouverture
    ========================================================== */
 let scr = null;
-const loadScreen = () => scr || (scr = import('./guide-screen.js?v=52').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
+const loadScreen = () => scr || (scr = import('./guide-screen.js?v=48').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
 const setOpen = (b) => { isOpen = b; };
 const open = (topic) => loadScreen().then((s) => s.open(topic));
 const start = () => loadScreen().then((s) => s.start());
@@ -119,7 +119,7 @@ let artMod = null, artP = null;
 const screenCss = () => {
   if (document.getElementById('gdCss2')) return Promise.resolve();
   const l = document.createElement('link');
-  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=52';
+  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=48';
   document.head.appendChild(l);
   return new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 };
@@ -131,7 +131,7 @@ const lowData = () => {
     return !!(g.saveData || c.saveData || /^(slow-)?2g$/.test(c.effectiveType || '') || ls('taama.saveData') === '1');
   } catch (_) { return false; }
 };
-const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=52'), screenCss()]).then(([m]) => (artMod = m)));
+const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=48'), screenCss()]).then(([m]) => (artMod = m)));
 
 const coachRoot = () => {
   if (cRoot) return cRoot;
@@ -289,6 +289,7 @@ const HINTS = [
     st('photo', (w, m) => (m === 'touch' ? tcEl('photo') : q('#dgPhoto')), 'photo'), st('dback', (w, m) => (m === 'touch' ? tcEl('back') : q('#dgQuit')), 'back')] },
   { id: 'car', when: (w) => w.car, steps: [st('car', (w, m) => (m === 'touch' ? tcEl('gas') : null), null, () => acts.has('move')), st('caraux', (w, m) => (m === 'touch' ? tcEl('lights') : null), null, () => acts.has('lights'))] },
   { id: 'swim', when: (w) => w.swim, steps: [st('swim', null, null, () => acts.has('move'))] },
+  { id: 'gadget', when: (w) => w.foot && ls('taama.gadget') === '1', steps: [st('gadget', (w, m) => (m === 'touch' ? tcEl('aim') : null), null, (w) => w.aiming)] },
   { id: 'dash', when: (w) => w.foot && has('walk') && !takingOff(), steps: [st('dash', (w, m) => (m === 'touch' ? tcEl('dash') : null), null, () => acts.has('dash'))] },
   { id: 'drone', essential: 1, fast: 1, when: (w) => w.foot && ls('taama.dispositif1') !== '1' && !droneUsed && !takingOff(), steps: [st('drone', (w, m) => (m === 'touch' ? tcEl('drone') : null))] },
   { id: 'walk', essential: 1, when: (w) => w.foot && (has('drone') || droneUsed) && !takingOff(), steps: [st('move', (w, m) => (m === 'touch' ? tcEl('move') : null), 'move'), st('look', (w, m) => (m === 'touch' ? q('#tcRoot .tc-look') : null), 'look')] },

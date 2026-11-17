@@ -244,8 +244,3 @@ body.has-citymap .dg-compass{ left: 200px; }
   .cm-title{ font-size: 15px; }
   .cm-tg{ padding: 0 9px; font-size: 13px; }
 }
-
-/* mini-carte : rotation vers l'itinéraire (animée) et cadre coloré comme la boussole (doré = sur l'itinéraire, orange = hors trajet) */
-.cm canvas{ transition: transform .35s ease-out; }
-.cm.is-route{ box-shadow: 0 0 0 3px #f4cf5a, 0 4px 14px rgba(0,0,0,.35); }
-.cm.is-route.is-off{ box-shadow: 0 0 0 3px #ffb066, 0 4px 14px rgba(0,0,0,.35); }

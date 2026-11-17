@@ -62,7 +62,7 @@ function init() {
     '<span><i style="background:#d6be96;border:2px solid #785c3c"></i>Grande Mosquée</span>' +
     '<span><i style="background:#966c4e"></i>Maisons</span><span><i style="background:#4a808e"></i>Fleuve</span>' +
     '<span><i style="background:#f0deba"></i>Routes</span>' +
-    '<span><i style="background:#fff3c9;border:2px solid #3a2a46"></i>Barey So</span>' +
+    '<span><i style="background:#10131c;border:2px solid #37a3ff"></i>Zone NÉANTIS</span>' +
     '<span><i style="background:#ffd34d;border-radius:2px;height:5px;vertical-align:2px"></i>Itinéraire</span></div>' +
     '<div class="cm-places"><div class="cm-places-t">Lieux · clic : itinéraire</div><div class="cm-places-l"></div></div>' +
     '<div class="cm-route"><b class="cm-route-name"></b><span class="cm-route-info"></span><button type="button" class="cm-route-x">Effacer</button></div>' +
@@ -101,30 +101,17 @@ function init() {
   let autoOpened = false;   // carte ouverte PAR L'HISTOIRE (openTo) : les sticks sont bloqués tant qu'elle reste ouverte ; ouverte à la main : ils déplacent la carte
   const ls = (k) => { try { return localStorage.getItem(k) === '1'; } catch (_) { return false; } };
   // destination suggérée selon l'avancement de l'histoire (bible chapitre 1) : dispositif 1 -> labo ; labo 1 fait -> aucune ;
-  // véhicule/labo 1 fait -> tombe de Tapama ; tombe faite -> bibliothèque ; dispositif 2 -> labo ; labo 2 fait -> aucune
-  const bibliFini = () => { try { return JSON.parse(localStorage.getItem('taama.biblio.lus') || '[]').length >= 12; } catch (_) { return false; } };
+  // gadget -> base NÉANTIS ; dispositif 2 -> labo ; labo 2 fait -> aucune
   const lsv = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
-  // destination de l'histoire : tombe (après le labo 1) -> bibliothèque (après le dispositif de la tombe, étape « 3:biblio ») -> labo 2
-  const acte = () => lsv('taama.acte');
-  const storyTarget = () => {
-    if (lsv('taama.lab2') === 'done' || lsv('taama.chapitre1') === 'done') return null;
-    if (ls('taama.dispositif2')) return 'deuxieme';
-    if (ls('taama.tombe') && acte() === '3:biblio') return bibliFini() ? 'deuxieme' : 'bibliotheque';
-    if (ls('taama.vol') || acte() === '3:tombe') return ls('taama.tombe') ? null : 'tombe';
-    if (lsv('taama.lab1') === 'done') return 'mosquee';
-    if (ls('taama.dispositif1')) return 'deuxieme';
-    return null;
-  };
+  const storyTarget = () => (lsv('taama.lab2') === 'done' || lsv('taama.chapitre1') === 'done') ? null
+    : ls('taama.dispositif2') ? 'deuxieme' : ls('taama.gadget') ? 'neantis' : lsv('taama.lab1') === 'done' ? (ls('taama.vol') ? null : 'mosquee') : ls('taama.dispositif1') ? 'deuxieme' : null;   // labo 1 fait : retour à la mosquée (S7)
   const sel = { id: null, route: null, from: null };               // lieu choisi + itinéraire calculé depuis `from`
   let hits = [];                                                   // pastilles cliquables à l'écran : { id, x, y, r } (px canvas)
   const places = () => {
     const l = PLACES.map((p) => ({ ...p }));
-    // Barey So : la bibliothèque de terre (remplace la base NÉANTIS)
-    const mt = window.MaisonTerre;
-    if (mt && mt.loaded) { const r = gameToReal(mt.position.x, mt.position.z); l.push({ id: 'bibliotheque', name: 'Barey So', short: 'Barey So', e: r.e, n: r.n, kind: 'biblio', info: 'La bibliothèque de terre : les livres gardent les mots qui ouvrent le dispositif.' }); }
+    const nb = window.NeantisBase;
+    if (nb && nb.loaded) { const r = gameToReal(nb.center.x, nb.center.z); l.push({ id: 'neantis', name: 'Base NÉANTIS', short: 'NÉANTIS', e: r.e, n: r.n, kind: 'neantis', info: 'Complexe du groupe NÉANTIS : le dispositif y est gardé.' }); }
     // cercle jaune = laboratoire de Tapama (visible dès que le dispositif 1 est récupéré)
-    // tombe de Tapama Djenepo : lieu du dispositif 2 (visible après le dispositif 1, tant qu'il n'est pas récupéré)
-    if (!ls('taama.tombe')) { const r = gameToReal(-310.5, -476.4); l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', short: 'Tombe Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Tapama t’a parlé d’un dispositif caché à côté de la tombe de Djenépo.' }); }
     if (ls('taama.dispositif1')) { const r = gameToReal(-175.012, -219.890); l.push({ id: 'deuxieme', name: 'Laboratoire de Tapama', short: 'Labo Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Le cercle jaune : Tapama t’y attend avec son établi et ses écrans.' }); }
     return l;
   };
@@ -398,24 +385,6 @@ function init() {
       return [cx + c * t, cy + sn * t, cx, cy];
     };
     const pl = playerReal();
-    // mini-carte : elle tourne pour que la direction de l'itinéraire pointe vers le haut (comme la boussole) ; cadre doré sur l'itinéraire, orange si on s'en écarte
-    if (!open) {
-      const rt = sel.id && sel.route && sel.route.pts && sel.route.pts.length > 1 ? sel.route.pts : null;
-      if (rt) {
-        let bi = 0, bd = Infinity;
-        for (let i = 0; i < rt.length; i++) { const d = Math.hypot(rt[i][0] - pl.e, rt[i][1] - pl.n); if (d < bd) { bd = d; bi = i; } }
-        let j = bi; while (j < rt.length - 1 && Math.hypot(rt[j][0] - rt[bi][0], rt[j][1] - rt[bi][1]) < 30) j++;
-        const de = rt[j][0] - pl.e, dn = rt[j][1] - pl.n;
-        const bear = Math.atan2(de, dn) * 180 / Math.PI;                 // cap du prochain tronçon, depuis le nord, sens horaire
-        const off = bd > 40;
-        cv.style.transform = `rotate(${(-bear).toFixed(1)}deg)`;
-        nTag.style.display = 'none';
-        box.classList.add('is-route'); box.classList.toggle('is-off', off);
-      } else {
-        cv.style.transform = ''; nTag.style.display = '';
-        box.classList.remove('is-route', 'is-off');
-      }
-    } else if (cv.style.transform) { cv.style.transform = ''; nTag.style.display = ''; box.classList.remove('is-route', 'is-off'); }   // grande carte : orientation nord en haut
     const half = open ? view.half : MINI_HALF;
     const hx = half * W / S, hy = half * H / S;                      // demi-étendues (m) horizontale et verticale
     let ce = open ? view.ce : pl.e, cn = open ? view.cn : pl.n;
@@ -467,13 +436,57 @@ function init() {
       ctx.restore();
     }
 
+    // Zone NÉANTIS (base fictive) : pastille noire au N bleu
+    const nb = window.NeantisBase;
+    if (nb && nb.loaded) {
+      const r = gameToReal(nb.center.x, nb.center.z), [bx, by] = toC(r.e, r.n);
+      const sz = open ? Math.max(S * 0.03, 14, fl(11)) : Math.max(S * 0.07, 11);
+      if (bx > -sz && bx < W + sz && by > -sz && by < H + sz) {
+        ctx.save(); ctx.translate(bx, by);
+        ctx.fillStyle = '#10131c'; ctx.strokeStyle = '#37a3ff'; ctx.lineWidth = Math.max(2, S * 0.005);
+        ctx.beginPath(); ctx.roundRect(-sz, -sz, sz * 2, sz * 2, sz * 0.3); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#5db8ff'; ctx.font = `800 ${Math.round(sz * 1.5)}px Rajdhani, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('N', 0, sz * 0.06);
+        if (open) {
+          ctx.textBaseline = 'alphabetic'; ctx.font = `700 ${Math.max(Math.round(S * 0.02), fl(12))}px Rajdhani, sans-serif`;
+          ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(16,19,28,.95)'; ctx.fillStyle = '#9fd4ff';
+          ctx.strokeText('Zone NÉANTIS', 0, sz + S * 0.024); ctx.fillText('Zone NÉANTIS', 0, sz + S * 0.024);
+        }
+        ctx.restore();
+      } else {                                                      // base hors vue : repère sur le bord + distance
+        const k = open ? Math.max(S * 0.03, fl(11)) : S * 0.07;
+        let ex, ey, ang;
+        if (open) { const c0 = edgePt(0, 0); ang = Math.atan2(by - c0[3], bx - c0[2]); [ex, ey] = edgePt(ang, k * 2.2); }
+        else { ang = Math.atan2(by - H / 2, bx - W / 2); ex = W / 2 + Math.cos(ang) * S * 0.39; ey = H / 2 + Math.sin(ang) * S * 0.39; }
+        ctx.save(); ctx.translate(ex, ey);
+        ctx.save(); ctx.rotate(ang);                                // pointe vers la base
+        ctx.fillStyle = '#37a3ff'; ctx.strokeStyle = '#10131c'; ctx.lineWidth = Math.max(2, S * 0.004);
+        ctx.beginPath(); ctx.moveTo(k * 1.9, 0); ctx.lineTo(k * 1.05, -k * 0.6); ctx.lineTo(k * 1.05, k * 0.6); ctx.closePath(); ctx.stroke(); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = '#10131c'; ctx.strokeStyle = '#37a3ff'; ctx.lineWidth = Math.max(2, S * 0.005);
+        ctx.beginPath(); ctx.roundRect(-k, -k, k * 2, k * 2, k * 0.3); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#5db8ff'; ctx.font = `800 ${Math.round(k * 1.5)}px Rajdhani, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('N', 0, k * 0.06);
+        if (open) {
+          const dm = Math.round(Math.hypot(r.e - pl.e, r.n - pl.n) / 10) * 10;
+          ctx.textBaseline = 'alphabetic'; ctx.font = `700 ${Math.max(Math.round(S * 0.02), fl(12))}px Rajdhani, sans-serif`;
+          ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(16,19,28,.95)'; ctx.fillStyle = '#9fd4ff';
+          const txt = 'NÉANTIS · ' + (dm >= 1000 ? (dm / 1000).toFixed(1) + ' km' : dm + ' m');
+          const ty = ey > H / 2 ? -k - S * 0.012 : k + Math.max(S * 0.026, fl(14));
+          ctx.strokeText(txt, 0, ty); ctx.fillText(txt, 0, ty);
+        }
+        ctx.restore();
+      }
+    }
+
     // lieux célèbres : pastilles cliquables (grande carte) ; le lieu choisi est mis en avant, sinon repère sur le bord
     if (open) {
       const fs2 = Math.max(Math.round(S * 0.019), fl(12)), rr = Math.max(S * 0.013, 8, fl(7));
       for (const p of places()) {
         if (p.id === 'mosquee') { const [x, y] = toC(0, 0); hits.push({ id: p.id, x, y, r: Math.max(rs, rr) }); continue; }
         const [x, y] = toC(p.e, p.n), on = p.id === sel.id, inside = x > -rr && x < W + rr && y > -rr && y < H + rr;
-        if (inside) {
+        if (p.id === 'neantis') { if (inside) hits.push({ id: p.id, x, y, r: Math.max(S * 0.03, 14, fl(16)) }); }
+        else if (inside) {
           ctx.save(); ctx.translate(x, y);
           ctx.fillStyle = on ? '#ffd34d' : '#fff3c9'; ctx.strokeStyle = '#3a2a46'; ctx.lineWidth = Math.max(2, S * 0.004);
           ctx.beginPath(); ctx.arc(0, 0, rr * (on ? 1.25 : 1), 0, Math.PI * 2); ctx.fill(); ctx.stroke();

@@ -151,21 +151,3 @@ test('réponse d\'erreur propre pour une charge invalide', () => {
   const res = ctx.doPost({ postData: { contents: payload({ id: 'x' }) } });
   assert.deepEqual(JSON.parse(res.content), { ok: false, error: 'id_invalid' });
 });
-
-test('note du joueur : onglet « Notes », une ligne, renvoi ignoré, joueur non modifié', () => {
-  const { ctx, sheet } = makeEnv([]);
-  const body = payload({ progress: undefined, note: { id: 'n-1', texte: '  Le toron sert d’appui  ', source: 'labo2' } });
-  const r1 = JSON.parse(ctx.doPost({ postData: { contents: body } }).content);
-  assert.equal(r1.ok, true); assert.equal(r1.note, true); assert.equal(r1.duplicate, false);
-  assert.equal(sheet.rows[0][4], 'Note');
-  assert.equal(sheet.rows[1][1], 'Moussa');
-  assert.equal(sheet.rows[1][3], 'labo2');
-  assert.equal(sheet.rows[1][4], 'Le toron sert d’appui');
-  const r2 = JSON.parse(ctx.doPost({ postData: { contents: body } }).content);
-  assert.equal(r2.duplicate, true);
-  assert.equal(sheet.rows.length, 2, 'pas de doublon');
-  assert.equal(ctx.parsePayload(payload({ note: { texte: '' } })).error, 'note_invalid');
-  assert.equal(ctx.parsePayload(payload({ note: { texte: 'x'.repeat(301) } })).error, 'note_invalid');
-  const inj = ctx.parsePayload(payload({ note: { id: 'n-2', texte: '=SOMME(A1)', source: 'x y' } })).data.note;
-  assert.equal(inj.source, 'jeu');
-});

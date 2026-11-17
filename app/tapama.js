@@ -22,10 +22,10 @@ import {
   SEQUENCES, RADIO, HELP_LEVELS, PUZZLES, ANALYSES,
   PLAYER_NAME, TAPAMA_NAME,
   createSequence, createRadioQueue, helpFor, portraitUrl, safeMood, analysisSummary,
-} from './tapama-core.js?v=3';
+} from './tapama-core.js?v=2';
 import { fillName } from './player-profile.js?v=1';
 import { t, translateTree } from './i18n.js?v=1';
-import './tapama-voice.js?v=6';
+import './tapama-voice.js?v=5';
 import { attachTapamaFace } from './tapama-face.js?v=5';   // bouche animée au rythme de la voix + clignements des yeux                       // voix féminine de Tapama (synthèse vocale du navigateur, provisoire)
 
 const INPUT_LOCK_MS = 280;   // ignore l'appui qui vient d'ouvrir l'écran
@@ -338,13 +338,9 @@ function radio(callOrText, opts = {}) {
 let _radioLast = performance.now();
 function radioLoop(now) {
   requestAnimationFrame(radioLoop);
-  let dt = Math.min(0.1, (now - _radioLast) / 1000);
+  const dt = Math.min(0.1, (now - _radioLast) / 1000);
   _radioLast = now;
-  const cur = radioQueue.current();
-  if (!cur) return;
-  // la bulle reste à l'écran pendant que Tapama parle, et disparaît dès qu'elle a fini (la durée sert seulement si la réplique n'a pas d'audio)
-  const V = window.TapamaVoice;
-  if (V) { if (V.busy) { cur.voiced = true; dt = 0; } else if (cur.voiced) { cur.left = 0; } }
+  if (!radioQueue.current()) return;
   const ev = radioQueue.tick(dt);
   if (ev) paintRadio();
   else if (radioEl) radioEl.querySelector('.tp-r-bar span').style.width = (radioQueue.progress() * 100).toFixed(1) + '%';

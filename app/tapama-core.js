@@ -96,7 +96,7 @@ export const SEQUENCES = {
       { who: 'tapama', mood: 'surprise', text: 'Regarde cette carte, {nom}. Djenné n’est qu’un point parmi d’autres.' },
       { who: 'player', text: 'Bandiagara… Ségou… et cette piste vers Lomé.' },
       { who: 'tapama', mood: 'attentive', text: 'Nous pensions avoir trouvé deux objets isolés. Mais ils font partie d’un ensemble.' },
-      { who: 'player', text: 'Alors nous devons découvrir pourquoi ce dispositif est caché, et qui d’autre le cherche.' },
+      { who: 'player', text: 'Alors nous devons découvrir qui les a créés et pourquoi NÉANTIS les veut absolument.' },
     ],
   },
 };

@@ -10,7 +10,7 @@
    Testé : tests/guide.test.mjs (10 mots max, anglais présent partout).
    ========================================================== */
 
-import { EN } from './i18n-en.js?v=19';
+import { EN } from './i18n-en.js?v=3';
 import { norm } from './i18n.js?v=1';
 
 const reg = (fr, en) => { const k = norm(fr); if (!Object.prototype.hasOwnProperty.call(EN, k)) EN[k] = en; return fr; };
@@ -105,6 +105,12 @@ export const PAGES = [
   { id: 'labhint', ico: 'bulb', tm: 'foot', title: L('Un petit indice', 'A little hint'),
     line: M(L('Appuie sur I pour un indice.', 'Press I for a hint.'), L('Appuie sur X pour un indice.', 'Press X for a hint.'), L('Touche Indice pour demander de l’aide.', 'Tap Hint to ask for help.')),
     g: { kbd: { k: ['I'] }, pad: { b: ['X'] }, touch: { ui: 'hint' } } },
+  { id: 'dossier', ico: 'file', tm: 'foot', title: L('Le dossier NÉANTIS', 'The NÉANTIS file'),
+    line: M(L('Appuie sur Entrée pour tourner la page.', 'Press Enter to turn the page.'), L('Appuie sur ✕ pour tourner la page.', 'Press ✕ to turn the page.'), L('Touche l’écran pour tourner la page.', 'Tap the screen to turn the page.')),
+    g: { kbd: { k: [ENTER] }, pad: { b: ['A'] }, touch: { ui: 'page' } } },
+  { id: 'gadget', ico: 'aim', tm: 'aim', title: L('Arrêter un robot gardien', 'Stop a guard robot'),
+    line: M(L('Clic droit pour viser, clic gauche pour tirer.', 'Right-click to aim, left-click to shoot.'), L('Garde L2 pour viser, appuie sur R2.', 'Hold L2 to aim, press R2.'), L('Touche la lunette, puis touche Tirer. Retouche pour couper.', 'Tap the scope, then tap Fire. Tap again to stop.')),
+    g: { kbd: { m: 'rl' }, pad: { b: ['LT', 'RT'] }, touch: { b: ['aim', 'fire'] } } },
   { id: 'pause', ico: 'pause', tm: 'foot', title: L('Pause et menu', 'Pause and menu'),
     line: M(L('Appuie sur Échap pour faire une pause.', 'Press Esc to take a break.'), L('Appuie sur START, puis sur Quitter.', 'Press START, then Quit.'), L('Touche le bouton Pause.', 'Tap the Pause button.')),
     g: { kbd: { k: [ESC] }, pad: { b: ['START'] }, touch: { b: ['pause'] } } },
@@ -153,8 +159,7 @@ export const OBJECTIVES = {
   ramasser: L('Rapproche-toi du dispositif et ramasse-le !', 'Get close to the device and pick it up!'),
   labo: L('Va au cercle jaune : c’est mon labo !', 'Go to the yellow circle: it’s my lab!'),
   devant: L('Retourne devant la grande mosquée.', 'Go back to the big mosque.'),
-  tombe: L('Va à la tombe de Djenépo : cherche à côté.', 'Go to Djenépo’s tomb: look next to it.'),
-  biblio: L('Lis les livres de Barey So, retiens les phrases.', 'Read the books of Barey So, keep the sentences.'),
+  base: L('Va à la base des robots avec ton gadget !', 'Go to the robots’ base with your gadget!'),
   retour: L('Rapporte le dispositif au cercle jaune.', 'Bring the device back to the yellow circle.'),
   fin: L('Bravo {nom} ! Choisis ta prochaine aventure sur la carte.', 'Well done {nom}! Pick your next adventure on the map.'),
 };

@@ -129,7 +129,7 @@ export const MILESTONES = [
   { id: 'enigme', label: 'Première énigme résolue', match: (e) => e.k === 'evt' && e.d && e.d.n === 'lab:enigme-resolue' },
   { id: 'labofin', label: 'Laboratoire terminé', match: (e) => e.k === 'evt' && e.d && e.d.n === 'lab:done' },
   { id: 'dossier', label: 'Dossier terminé', match: (e) => e.k === 'evt' && e.d && e.d.n === 'dossier:done' },
-  { id: 'base', label: 'Dispositif 2 (bibliothèque)', match: (e) => e.k === 'evt' && e.d && e.d.n === 'bibliotheque:fini' },
+  { id: 'base', label: 'Dispositif 2 (base Néantis)', match: (e) => e.k === 'evt' && e.d && e.d.n === 'neantis:dispositif' },
   { id: 'fin', label: 'Fin du chapitre 1', match: (e) => (e.k === 'sequence' && e.d && e.d.n >= 13) || (e.k === 'evt' && e.d && e.d.n === 'taama:chapitre1-fin') },
 ];
 

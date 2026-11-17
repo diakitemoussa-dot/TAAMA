@@ -34,9 +34,8 @@ function placesList() {
     const g = realToGame(p.e, p.n);
     l.push({ id: p.id, name: p.id === 'mosquee' ? 'Grande Mosquée' : p.short, info: p.info, x: g.x, z: g.z, lift: p.id === 'mosquee' ? 30 : 8, key: p.id === 'mosquee' || p.id === 'marche' });
   }
-  const mt = window.MaisonTerre;
-  if (mt && mt.loaded) l.push({ id: 'bibliotheque', name: 'Barey So', info: 'La bibliothèque de terre : les livres gardent les mots qui ouvrent le dispositif.', x: mt.position.x, z: mt.position.z, lift: 14, key: false });
-  if (localStorage.getItem('taama.tombe') !== '1') l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', info: 'Tapama t’a parlé d’un dispositif caché à côté de la tombe de Djenépo.', x: -310.5, z: -476.4, lift: 10, key: false });
+  const nb = window.NeantisBase;
+  if (nb && nb.loaded) l.push({ id: 'neantis', name: 'Zone NÉANTIS', info: 'Complexe fictif du groupe NÉANTIS : le dispositif y est gardé.', x: nb.center.x, z: nb.center.z, lift: 14, key: false });
   return l;
 }
 

@@ -37,8 +37,8 @@ export function chooseObjective(f = {}) {
   const is = (v, x = '1') => v === x;
   if (is(f.chapitre1, 'done') || is(f.lab2, 'done')) return OBJ.fin;
   if (is(f.dispositif2)) return OBJ.retour;                              // le deuxième dispositif est récupéré : retour au labo
-  if (is(f.tombe)) return OBJ.biblio;                                    // dispositif de la tombe pris : les livres de Barey So
-  if (is(f.lab1, 'done')) return OBJ.tombe;                              // labo 1 fini : la tombe de Djenépo
+  if (is(f.gadget)) return OBJ.base;                                     // gadget débloqué : direction la base
+  if (is(f.lab1, 'done')) return OBJ.devant;                             // labo 1 fini : retour devant la mosquée
   if (is(f.dispositif1)) return OBJ.labo;                                // dispositif en poche : cercle jaune
   if (is(f.spotted)) return OBJ.ramasser;                                // repéré par le drone
   if (f.acte === '0:done' || f.acte === '1:vol') return f.drone ? OBJ.spot : OBJ.start;   // f.drone : le joueur a déjà piloté son drone
@@ -50,8 +50,7 @@ export const OBJ = {
   ramasser: { id: 'ramasser', topic: 'interact', action: 'interact' },
   labo: { id: 'labo', topic: 'circle', action: 'map' },
   devant: { id: 'devant', topic: 'map', action: 'map' },
-  tombe: { id: 'tombe', topic: 'map', action: 'map' },
-  biblio: { id: 'biblio', topic: 'interact', action: 'interact' },
+  base: { id: 'base', topic: 'gadget', action: 'gadget' },
   retour: { id: 'retour', topic: 'circle', action: 'map' },
   fin: { id: 'fin', topic: 'map', action: 'map' },
 };

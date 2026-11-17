@@ -16,7 +16,7 @@
    translateTree / observeDocument), donc testable sous Node.
    ========================================================== */
 
-import { EN } from './i18n-en.js?v=19';
+import { EN } from './i18n-en.js?v=3';
 
 export const LANGS = ['fr', 'en'];
 let lang = 'fr';

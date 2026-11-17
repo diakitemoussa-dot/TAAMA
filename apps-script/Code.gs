@@ -8,9 +8,6 @@
    ========================================================== */
 
 var SHEET_NAME = 'Joueurs';
-var NOTES_SHEET = 'Notes';
-var NOTES_COLUMNS = ['Date', 'Nom', 'ID appareil', 'Source', 'Note', 'ID note'];
-var NOTE_SOURCE_RE = /^[a-z0-9_\-]{1,20}$/i;
 var TZ = 'Africa/Bamako';
 var COLUMNS = ['Nom', 'ID appareil', 'Nombre de fois', 'Première visite', 'Dernière visite', 'Appareil',
   'Âge', 'Langue', 'Temps de jeu (min)', 'Chapitre', 'Séquence', 'Découvertes'];
@@ -35,20 +32,9 @@ function parsePayload(raw) {
   if (age === '') return { ok: false, error: 'age_invalid' };
   var p = body.progress && typeof body.progress === 'object' ? body.progress : {};
   var discoveries = Array.isArray(p.discoveries) ? Math.min(999, p.discoveries.length) : intIn(p.discoveries, 0, 999);
-  var note = null;
-  if (body.note && typeof body.note === 'object') {
-    var text = typeof body.note.texte === 'string' ? body.note.texte.replace(/\s+/g, ' ').trim() : '';
-    if (text.length < 1 || text.length > 300) return { ok: false, error: 'note_invalid' };
-    note = {
-      text: text,
-      id: typeof body.note.id === 'string' && body.note.id.length <= 60 ? body.note.id : '',
-      source: typeof body.note.source === 'string' && NOTE_SOURCE_RE.test(body.note.source) ? body.note.source : 'jeu'
-    };
-  }
   return {
     ok: true,
     data: {
-      note: note,
       id: body.id,
       name: name,
       age: age,
@@ -124,20 +110,6 @@ function upsertPlayer(d, now) {
   return { created: true };
 }
 
-/** Ajoute une note du joueur dans l'onglet « Notes » (une ligne par note ; un renvoi de la même note est ignoré). */
-function addNote(d, now) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(NOTES_SHEET) || ss.insertSheet(NOTES_SHEET);
-  if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, NOTES_COLUMNS.length).setValues([NOTES_COLUMNS]);
-  var last = sh.getLastRow();
-  if (d.note.id && last >= 2) {
-    var ids = sh.getRange(2, 6, last - 1, 1).getValues();
-    for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === d.note.id) return { duplicate: true };
-  }
-  sh.getRange(last + 1, 1, 1, NOTES_COLUMNS.length).setValues([[fmtDate(now), safeCell(d.name), d.id, d.note.source, safeCell(d.note.text), d.note.id]]);
-  return { duplicate: false };
-}
-
 function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -149,10 +121,6 @@ function doPost(e) {
     lock.waitLock(20000);
     var parsed = parsePayload(e && e.postData ? e.postData.contents : '');
     if (!parsed.ok) return json({ ok: false, error: parsed.error });
-    if (parsed.data.note) {
-      var n = addNote(parsed.data, new Date());
-      return json({ ok: true, note: true, duplicate: n.duplicate });
-    }
     var r = upsertPlayer(parsed.data, new Date());
     return json({ ok: true, created: r.created });
   } catch (err) {
