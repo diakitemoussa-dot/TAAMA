@@ -9,49 +9,24 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#1a0f24" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Ccircle cx='22' cy='22' r='20' fill='%2355415D'/%3E%3Cpolygon points='22,8 27,22 22,36 17,22' fill='%23F9D58B'/%3E%3C/svg%3E" />
   <title>Djenné · Survol du Drone</title>
-  <!-- Aperçu quand on envoie le lien du jeu (WhatsApp, Facebook…) : le flyer TAAMA -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="TAAMA — L’Aventure des trésors cachés de l’Afrique de l’Ouest">
-  <meta property="og:description" content="Un jeu d’aventure au cœur de la Grande Mosquée de Djenné, Mali. Explore la ville et trouve les indices.">
-  <meta property="og:image" content="https://diakitemoussa-dot.github.io/TAAMA/assets/images/taama-flyer.png">
-  <meta property="og:image:width" content="1920">
-  <meta property="og:image:height" content="1080">
-  <meta name="twitter:card" content="summary_large_image">
-  <!-- Enregistrement des joueurs : script Google Apps Script (feuille « Taama joueurs ») -->
-  <meta name="taama-players-endpoint" content="https://script.google.com/macros/s/AKfycbycSmwzMQ6J7r-w2qR7kOMI6KqK-e0rz7VUtgwrzSgdgLB4Lj4PIqcAxKq7RLVAUfEMxw/exec">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Open+Sans:wght@400;600;700&family=Rubik:wght@500;600;700;800&display=swap" />
   <link rel="stylesheet" href="styles/main.css?v=3" />
   <link rel="stylesheet" href="styles/mosque.css?v=3" />
-  <link rel="stylesheet" href="styles/drone-game.css?v=7" />
-  <link rel="stylesheet" href="styles/sanctuary.css?v=10" />
-  <link rel="stylesheet" href="styles/menu.css?v=1" />
-  <link rel="stylesheet" href="styles/daycycle.css?v=2" />
-  <link rel="stylesheet" href="styles/gamepad.css?v=1" />
-  <link rel="stylesheet" href="styles/tapama.css?v=6" />
-  <!-- Mode test (?test=1) : remet le jeu à zéro pour chaque nouveau joueur — doit rester AVANT tous les autres scripts -->
-  <script src="app/playtest-boot.js?v=1"></script>
-  <!-- Nouvelle interface (écrans du canvas). ?legacy=1 rétablit l'ancienne intro. -->
-  <script>
-    window.__NEW_UI = !/[?&]legacy=1/.test(location.search);
-    if (window.__NEW_UI) document.documentElement.classList.add('gu');
-  </script>
-  <link rel="stylesheet" href="styles/game-ui.css?v=7" />
-<link rel="stylesheet" href="styles/city-map.css?v=10" />
-  <link rel="stylesheet" href="styles/explore.css?v=2" />
-  <!-- three.js 0.165 et three-mesh-bvh 0.7.8 sont servis en local (assets/vendor) : plus de dépendance à un CDN pour démarrer le jeu (hors ligne, Wi-Fi filtré) -->
+  <link rel="stylesheet" href="styles/drone-game.css?v=3" />
+  <link rel="stylesheet" href="styles/sanctuary.css?v=1" />
   <script type="importmap">
     {
       "imports": {
-        "three": "./assets/vendor/three/build/three.module.js",
-        "three/addons/": "./assets/vendor/three/examples/jsm/",
-        "three-mesh-bvh": "./assets/vendor/three-mesh-bvh/index.module.js"
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/",
+        "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.8/build/index.module.js"
       }
     }
   </script>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 </head>
 
 <body>
@@ -271,29 +246,7 @@
 
           <!-- Colonne droite : badge -->
           <aside class="t-right">
-            <div class="t-badge">
-              <span class="t-badge-text">DRONE<br /><b id="droneMode">—</b></span>
-              <!-- BOUTON CTA "DÉCOLLE LE DRONE" -->
-              <div class="cta-wrap">
-                <span class="cta-rail left"></span>
-                <button id="launchBtn" class="cta-launch" type="button" aria-label="Décolle le drone">
-                  <span class="cta-ring"></span>
-                  <span class="cta-ring r2"></span>
-                  <span class="cta-core">
-                    <svg viewBox="0 0 24 24" class="cta-arrow" aria-hidden="true">
-                      <path d="M12 3 L18 11 L14 11 L14 21 L10 21 L10 11 L6 11 Z" fill="currentColor" />
-                    </svg>
-                  </span>
-                  <span class="cta-text">
-                    <em>// COMMANDE D'ENVOL</em>
-                    <strong>DÉCOLLE LE DRONE</strong>
-                  </span>
-                  <span class="cta-energy"><i></i></span>
-                  <span class="cta-chev">›</span>
-                </button>
-                <span class="cta-rail right"></span>
-              </div>
-            </div>
+            <div class="t-badge">DRONE<br /><b id="droneMode">—</b></div>
             <div class="t-mini">
               <span>ALT</span><b>00m</b>
               <span>SIG</span><b>98%</b>
@@ -326,6 +279,27 @@
           <p class="t-title">DJENNÉ <small>Patrimoine · Survol 3D</small></p>
           <p class="t-foot-stat"><span class="dot"></span>SYSTÈME PRÊT AU LANCEMENT</p>
         </footer>
+      </div>
+
+      <!-- BOUTON CTA "DÉCOLLE LE DRONE" -->
+      <div class="cta-wrap">
+        <span class="cta-rail left"></span>
+        <button id="launchBtn" class="cta-launch" type="button" aria-label="Décolle le drone">
+          <span class="cta-ring"></span>
+          <span class="cta-ring r2"></span>
+          <span class="cta-core">
+            <svg viewBox="0 0 24 24" class="cta-arrow" aria-hidden="true">
+              <path d="M12 3 L18 11 L14 11 L14 21 L10 21 L10 11 L6 11 Z" fill="currentColor" />
+            </svg>
+          </span>
+          <span class="cta-text">
+            <em>// COMMANDE D'ENVOL</em>
+            <strong>DÉCOLLE LE DRONE</strong>
+          </span>
+          <span class="cta-energy"><i></i></span>
+          <span class="cta-chev">›</span>
+        </button>
+        <span class="cta-rail right"></span>
       </div>
 
       <!-- Reflet au sol -->
@@ -425,10 +399,7 @@
       <div class="mosque-title" aria-hidden="true">
         <em>// SURVOL TERMINÉ</em>
         <strong>GRANDE MOSQUÉE DE DJENNÉ</strong>
-        <span class="mq-sub">
-          <span class="mq-sub-desktop">Glissez pour explorer · molette pour zoomer</span>
-          <span class="mq-sub-mobile">Glissez pour explorer · pincez pour zoomer</span>
-        </span>
+        <span class="mq-sub">Glissez pour explorer · molette pour zoomer</span>
       </div>
 
       <!-- Panneau d'informations (haut de l'écran, texte blanc, sans fond) -->
@@ -556,10 +527,7 @@
           <span class="dg-compass-deg" id="dgHeading">0°</span>
           <span class="dg-compass-eye" aria-hidden="true">◉</span>
           <i class="dg-compass-fan" id="dgFan"></i>
-          <svg class="dg-needle" id="dgNeedle" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 L26 21 L20 18 L14 21 Z" fill="#ff5a48"/><path d="M20 36 L14 21 L20 18 L26 21 Z" fill="#f8f3ea"/><circle cx="20" cy="20" r="2.4" fill="#3c2a42"/></svg>
         </div>
-        <!-- vue du pilote : pastille « CARTE » à côté de la mini-carte -->
-        <button type="button" class="dg-mappill" id="dgMapPill" aria-label="Ouvrir la carte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z M9 4v14 M15 6v14"/></svg>CARTE</button>
 
         <!-- Coin haut-droit : batterie + signal + quitter -->
         <div class="dg-status">
@@ -594,7 +562,6 @@
           <button type="button" class="dg-tool" id="dgGallery" aria-label="Galerie">⭕</button>
           <button type="button" class="dg-tool" id="dgPhoto" aria-label="Photo">📷</button>
           <button type="button" class="dg-tool" id="dgList" aria-label="Points d'intérêt">☰</button>
-          <button type="button" class="dg-tool" id="dgModel" aria-label="Changer de drone">🚁</button>
           <button type="button" class="dg-tool" id="dgVideo" aria-label="Enregistrer une vidéo">🎥</button>
         </div>
 
@@ -636,25 +603,10 @@
           <i id="snFan" class="sn-compass-needle" aria-hidden="true"></i>
         </div>
 
-        <!-- Aide contrôles (disparaît après quelques secondes) -->
-        <p class="sn-hint" id="snHint">ZQSD · Maj courir · X/○ sauter · ✕ valider · clic/F tir · V tir latéral · glisser pour la caméra</p>
-
-        <!-- Viseur et cible du gadget -->
-        <div class="sn-reticle" id="snReticle" aria-hidden="true"></div>
-        <div class="sn-target" id="snTarget" aria-hidden="true">
-          <span class="sn-target-kicker">CIBLE</span>
-          <div class="sn-target-line">
-            <b id="snTargetState">DRONE HOSTILE</b>
-            <em id="snTargetDist">-- m</em>
-          </div>
-          <div class="sn-target-bar"><i id="snTargetFill"></i></div>
-        </div>
-
         <!-- Panneau lieux (s'ouvre avec ☰) -->
         <div id="snPoiPanel" class="sn-poi" hidden>
           <button type="button" data-sn-poi="exterior">🚪 Extérieur</button>
           <button type="button" data-sn-poi="interior">🕌 Intérieur</button>
-          <button type="button" data-sn-action="quit">↩ Quitter</button>
         </div>
 
         <!-- Haut droit : bouton quitter -->
@@ -672,16 +624,6 @@
           <button type="button" class="sn-tool" id="snVideo"   aria-label="Vidéo">🎥</button>
         </div>
 
-        <!-- Boutons de tir (clavier / tactile) -->
-        <div class="sn-combat">
-          <button type="button" class="sn-fire" id="snFire" aria-label="Tirer avec le gadget">
-            <span>⚡</span>TIR
-          </button>
-          <button type="button" class="sn-fire sn-fire-side" id="snFireSide" aria-label="Tir latéral au gadget">
-            <span>↔</span>CÔTÉ
-          </button>
-        </div>
-
       </div>
 
       <!-- ===== Overlay du mode AR (caché par défaut) ===== -->
@@ -693,7 +635,7 @@
       <!-- model-viewer caché — gère AR Android (WebXR/Scene Viewer) + iOS (Quick Look) -->
       <model-viewer
         id="mosqueArViewer"
-        data-src="assets/models/djenne-mosque-only.glb"
+        src="assets/models/djenne-mosque-only.glb"
         ar
         ar-modes="scene-viewer webxr quick-look"
         ar-placement="floor"
@@ -706,37 +648,11 @@
 
   </main>
 
-  <script src="app/game-audio.js?v=1"></script>
-  <script src="app/main.js?v=7"></script>
-  <script type="module" src="app/guide.js?v=48"></script>   <!-- avant les autres modules : son écouteur de touches passe en premier quand « Comment jouer » est ouvert -->
-  <script type="module" src="app/drone-viewer.js?v=4"></script>
-  <script type="module" src="app/mosque-viewer.js?v=30"></script>
-  <script type="module" src="app/sky.js?v=5"></script>
-  <script type="module" src="app/daycycle.js?v=5"></script>
-  <script type="module" src="app/city-lights.js?v=8"></script>
-  <script type="module" src="app/river.js?v=7"></script>
-  <script type="module" src="app/shadow-follow.js?v=2"></script>
-  <script type="module" src="app/mud-style.js?v=2"></script>
-  <script type="module" src="app/water-fx.js?v=11"></script>
-  <script type="module" src="app/city-map.js?v=23"></script>
-  <script type="module" src="app/neantis-base.js?v=30"></script>
-  <script type="module" src="app/vehicle.js?v=66"></script>
-  <script type="module" src="app/dispositif1.js?v=29"></script>
-  <script type="module" src="app/explore.js?v=2"></script>
-  <script type="module" src="app/gamepad.js?v=15"></script>
-  <script type="module" src="app/drone-game.js?v=39"></script>
-  <script type="module" src="app/wet-look.js?v=1"></script>
-  <script type="module" src="app/sanctuary-mode.js?v=169"></script>
-  <script type="module" src="app/menu.js?v=3"></script>
-  <script type="module" src="app/keyboard-menu.js?v=3"></script>
-  <script type="module" src="app/laboratoire.js?v=18"></script>
-  <script type="module" src="app/dossier.js?v=6"></script>
-  <script type="module" src="app/tapama.js?v=26"></script>
-  <script type="module" src="app/wrong-way.js?v=1"></script>   <!-- Tapama prévient le joueur qui reste 2 minutes sur le mauvais chemin -->
-
-  <script type="module" src="app/playtest.js?v=3"></script>   <!-- mode test uniquement (?test=1) : enregistre les actions du joueur -->
-  <script type="module" src="app/game-ui.js?v=69"></script>
-  <script type="module" src="app/touch-controls.js?v=9"></script>
+  <script src="app/main.js?v=3"></script>
+  <script type="module" src="app/drone-viewer.js?v=3"></script>
+  <script type="module" src="app/mosque-viewer.js?v=3"></script>
+  <script type="module" src="app/drone-game.js?v=3"></script>
+  <script type="module" src="app/sanctuary-mode.js?v=1"></script>
 </body>
 
 </html>

@@ -29,7 +29,7 @@
   const loadModelSound = () => {
     if (modelSound) return;
     modelSound = new Audio('assets/audio/model-sound.mp3');
-    modelSound.preload = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ? 'none' : 'auto';   // mobile : chargé à la première lecture
+    modelSound.preload = 'auto';
   };
   loadModelSound();
   const playModelSound = () => {
@@ -45,7 +45,6 @@
   const initAudio = () => {
     if (ac) return;
     ac = new (window.AudioContext || window.webkitAudioContext)();
-    if (window.GameAudio) GameAudio.ctx(ac, 'effects');
   };
 
   /* Active l'audio dès le premier geste utilisateur.
@@ -57,7 +56,7 @@
 
     // Déverrouillage iOS : play+pause sur chaque élément audio de ce module
     [_countdownSound, _transitionSound, _textSound, modelWind, modelSound].forEach(a => {
-      if (!a || !a.paused) return;     // un son déjà lancé (vent de la maquette démarré par ce même clic) n'est pas coupé par le déverrouillage
+      if (!a) return;
       a.play().catch(() => {});
       a.pause();
       a.currentTime = 0;
@@ -177,14 +176,6 @@
       modelWind.play().catch(() => {});
     }
   });
-  /* Volumes par catégorie (Options › Audio) : game-audio.js multiplie le volume de chaque son */
-  if (window.GameAudio) {
-    GameAudio.track(_countdownSound, 'effects');
-    GameAudio.track(_transitionSound, 'effects');
-    GameAudio.track(_textSound, 'effects');
-    GameAudio.track(modelWind, 'ambience');
-    GameAudio.track(modelSound, 'music');
-  }
   const playModelWind = () => { if (soundOn) modelWind.play().catch(() => {}); };
   const stopModelWind = () => { modelWind.pause(); modelWind.currentTime = 0; };
   window.playModelWind = playModelWind;
@@ -432,10 +423,8 @@
       video.load();
     }
   };
-  // mobile : pas de préchargement de la vidéo d'intro (elle se charge au décollage)
-  const _lite = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  if (!_lite) preloadVideo();
-  window.addEventListener('resize', () => { updateMode(); if (!_lite) preloadVideo(); });
+  preloadVideo();
+  window.addEventListener('resize', () => { updateMode(); preloadVideo(); });
 
   /* ==========================================================
      SÉQUENCE DE DÉCOLLAGE + VIDÉO
@@ -549,10 +538,7 @@
   const CUT_AT = 10; // couper la vidéo à 10s → enchaîne sur la vue mosquée
   video.addEventListener('timeupdate', () => {
     vMeta.textContent = `DRONE · ${fmt(video.currentTime)}`;
-    // Fondu du son de la vidéo : UNIQUEMENT sur grand écran / PC.
-    // Sur smartphone (< 768 px), le son n'est PAS réduit et reste à plein volume.
-    const isMobile = window.innerWidth < MOBILE;
-    if (!isMobile && video.currentTime >= 2) {
+    if (video.currentTime >= 2) {
       const vol = Math.max(0, 1 - (video.currentTime - 2) / 6);
       video.volume = vol;
     }
@@ -603,9 +589,7 @@
      ========================================================== */
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-  if (window.__NEW_UI) {
-    // Nouvelle interface (game-ui.js) : l'ancienne intro ne démarre pas.
-  } else if (!isTouchDevice) {
+  if (!isTouchDevice) {
     runIntro();
   } else {
     // Affiche un hint "touchez pour commencer"

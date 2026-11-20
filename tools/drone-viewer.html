@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>Drone — viewer test</title>
+<style>html,body{margin:0;height:100%;background:#1a1320;overflow:hidden}
+#label{position:fixed;top:10px;left:14px;font:600 22px system-ui;color:#f9d58b;text-shadow:0 0 8px #000}
+#sub{position:fixed;top:42px;left:14px;font:500 15px system-ui;color:#cbb6e0}</style>
+</head>
+<body>
+<div id="label">…</div>
+<div id="sub"></div>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x241a2e);
+const cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,0.01,100);
+cam.position.set(2.4,1.3,2.6); cam.lookAt(0,0.2,0);
+const r=new THREE.WebGLRenderer({antialias:true});
+r.setSize(innerWidth,innerHeight); r.setPixelRatio(2); document.body.appendChild(r.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x442a55,1.4));
+const d=new THREE.DirectionalLight(0xffffff,2.0); d.position.set(3,5,2); scene.add(d);
+
+let mixer, clips={}, current=null;
+const loader=new GLTFLoader();
+const draco=new DRACOLoader();
+draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+loader.setDRACOLoader(draco);
+loader.load('/assets/models/drone.glb',(g)=>{
+  scene.add(g.scene);
+  window.__root=g.scene; window.__scene=scene; window.__cam=cam; window.__THREE=THREE;
+  mixer=new THREE.AnimationMixer(g.scene);
+  g.animations.forEach(c=>clips[c.name]=c);
+  window.__clipNames=g.animations.map(c=>c.name);
+  window.__ready=true;
+  window.playClip('Idle_Hover',0);
+},undefined,(e)=>{document.getElementById('label').textContent='ERREUR: '+e;});
+
+window.playClip=(name,t)=>{
+  if(!mixer||!clips[name])return false;
+  mixer.stopAllAction();
+  current=mixer.clipAction(clips[name]); current.reset().play();
+  mixer.setTime(t||0);
+  document.getElementById('label').textContent=name;
+  document.getElementById('sub').textContent='t='+(t||0).toFixed(2)+'s';
+  r.render(scene,cam);
+  return true;
+};
+window.setTime=(t)=>{ if(mixer){mixer.setTime(t); document.getElementById('sub').textContent='t='+t.toFixed(2)+'s'; r.render(scene,cam);} };
+
+// continuous render loop too (for manual viewing)
+let last=performance.now();
+function loop(now){ const dt=(now-last)/1000; last=now; if(mixer&&!window.__freeze){mixer.update(dt);} r.render(scene,cam); requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
