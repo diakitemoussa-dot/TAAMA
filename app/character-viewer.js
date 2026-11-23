@@ -29,9 +29,9 @@ const DRONE_URL = 'assets/models/drone.glb';
 const DRACO_PATH = 'assets/vendor/three/examples/jsm/libs/draco/';   // décodeurs Draco locaux (plus de dépendance à gstatic)
 /* Enchaînement des poses du menu (en boucle, fondu de 0,6 s) : repos -> regard autour (long repos) -> tireur d'élite -> agenouillé.
    [clip du GLB (minuscules), durée affichée en s, part du balancement conservée au lissage]. Un clip absent est sauté. */
-const SEQUENCE = [['walk', 4, 1]];   // menu : posture neutre, bras le long du corps (les poses de repos du modèle tiennent l'arme)
+const SEQUENCE = [['idle', 4, 1]];   // menu : animation « idle » (repos)
 const FADE = 0.6;
-const CLIP = 'walk';                    // personnage Sahel : repos, pistolet au bout du bras (comme l'image du menu)
+const CLIP = 'idle';                    // personnage Sahel : animation de repos « idle » (au lieu de « walk »)
 const SPEED = 0.55;                     // rad/s : un tour en ~11 s
 const START_ANGLE = 155 * Math.PI / 180;   // 3/4 arrière : sac, drone et gadget visibles
 

@@ -29,6 +29,8 @@ _gltfDir.setDRACOLoader(_draco);
 
 /* ---------- Personnage joueur (GLB animé, 3e personne) ---------- */
 import { heroUrl } from './hero.js?v=3';
+import { LABO } from './labo-position.js?v=2';
+import { blackTransition } from './screen-fx.js?v=2';
 import { hideFirearms } from './weapon-hide.js?v=1';
 import * as Sniper from './sniper-cam.js?v=1';
 import * as AimSolve from './aim-solve.js?v=1';
@@ -136,7 +138,7 @@ function _spawnDirAt(pos, radius = 2.5, opts = {}) {
   col.position.y = 1.5; col.raycast = () => {}; col.renderOrder = 4; col.frustumCulled = false;
   root.add(disc, ring, pulse, col);
   root.userData.pulse = pulse; root.userData.phaseOff = Math.random() * Math.PI * 2; root.userData.snap = !!opts.snapGround;
-  root.userData.parts = { disc, ring, pulse, col }; root.userData.radius = radius; root.userData.fitted = false;
+  root.userData.parts = { disc, ring, pulse, col }; root.userData.radius = radius; root.userData.fitted = !!opts.fixed;   // fixed : hauteur et rayon imposés (pas d'ajustement au sol)
   M.scene.add(root);
   _dirNodes.push(root);
 }
@@ -357,6 +359,7 @@ function _icButton() {
 /** Lance le plan : caméra → dispositif. Renvoie false si on ne peut pas (pas en jeu à pied, scène pas prête…). opts : { target: Vector3 (le dispositif), onDone } */
 function showDeviceIntro(opts = {}) {
   if (_introCam || !active || state !== S_FPS || !M?.camera || !colliders || !colliders.length || !opts.target) return false;
+  if (!_playerReady || !_playerTag) return false;                                // personnage pas encore chargé (juste après « Continuer ») : le plan attend (sinon il plantait à chaque image et la caméra restait figée)
   if (_inVehicle() || _swimming || _pilotHold) return false;
   const A = M.camera.position.clone(), device = opts.target.clone();
   const away = new THREE.Vector3(A.x - device.x, 0, A.z - device.z); if (away.lengthSq() < 1e-6) away.set(0, 0, 1); away.normalize();
@@ -373,9 +376,11 @@ function showDeviceIntro(opts = {}) {
   _introCam = { phase: 'out', t: 0, dur, curve: pick.curve, safe: pick.safe, dir: dir0, look0: _camLookAt.clone(), look1: device.clone().add(new THREE.Vector3(0, 0.3, 0)), device, onDone: opts.onDone };
   for (const k in keys) keys[k] = false; joyInput.x = 0; joyInput.y = 0;       // plus de touche « tenue » pendant le plan
   _stopWalk();
+  try { if (_playerReady) _playAction('idle', { fade: 0.2 }); } catch (_) {}      // le plan coupe l'animation en cours : le personnage garde la posture idle (pas de pose en T)
+  _playerCurrentAction = '';
   window.__storyFreeze = true;                                                 // les autres modules se taisent (comme pour le labo)
   try { window.GamepadKit?.capture?.(true); } catch (_) {}
-  _icButton(); _introTitle.textContent = 'Dispositif 1'; _icObs = null;
+  _icButton(); _introTitle.textContent = opts.title || 'Dispositif 1'; _icObs = null;
   return true;
 }
 function _icStartBack() {
@@ -387,6 +392,7 @@ function _icStartBack() {
   const r = _icBuildCurve(M.camera.position.clone(), E);
   c.curve = r.curve; c.safe = r.safe; c.dur = Math.max(5, Math.min(7.5, r.curve.getLength() / 16));
   c.look0 = c.look1.clone(); c.look1 = _camLookRig.clone();
+  _playerCurrentAction = '';                                                   // le personnage reprend son animation de repos au retour
   const d1 = new THREE.Vector3(E.x - M.camera.position.x, 0, E.z - M.camera.position.z); if (d1.lengthSq() > 1e-6) c.dir = d1.normalize();   // au retour, on regarde la ville dans le sens du retour
   c.phase = 'back'; c.t = 0;
 }
@@ -400,12 +406,13 @@ function _icEnd() {
   window.__storyFreeze = false;
   try { window.GamepadKit?.capture?.(false); } catch (_) {}
   _camSnap = true;                                                             // la caméra de jeu reprend exactement là où le plan s'arrête (même point, même regard)
+  try { if (_playerReady) _playAction('idle', { fade: 0.2 }); } catch (_) {}                  // fin du plan : le personnage reprend son animation de repos
   try { c && c.onDone && c.onDone(); } catch (e) { console.warn('[plan d’ouverture]', e); }
 }
 function _tickIntroCam(dt) {
   const c = _introCam;
   if (_playerMixer) _playerMixer.update(dt);                                   // le personnage continue de respirer (animation « idle »)
-  _playerTag.update(M.camera, _tagPos.set(playerPos.x, playerPos.y - EYE_HEIGHT + 2.0, playerPos.z), { name: '', frac: 1, hidden: true });   // pas d'étiquette flottante pendant le plan
+  _playerTag?.update(M.camera, _tagPos.set(playerPos.x, playerPos.y - EYE_HEIGHT + 2.0, playerPos.z), { name: '', frac: 1, hidden: true });   // pas d'étiquette flottante pendant le plan
   if (_guideEl) _guideEl.style.display = 'none';                                // ni la pastille « Dispositif à … m »
   if (c.phase === 'hold') {
     const gk = window.GamepadKit, raw = gk && (gk.raw || gk);
@@ -474,8 +481,8 @@ function _loadDirModel() {
   // Deux repères seulement : sol de la cour, devant la porte qui monte sur le toit ; sol du toit, devant la porte qui redescend
   _spawnDirAt(GUIDE_PORTAIL, PORTAL_RADIUS);                         // cercle A (cour)
   _spawnDirAt(new THREE.Vector3(13.104, 15.37, -3.5774), PORTAL_RADIUS);   // cercle B (toit)
-  // Cercle posé à l'emplacement du cube placé dans la scène Blender « Djenné — maquette » : Blender (−203,59 ; −185,18 ; 3,68) -> repère du jeu par le recalage de la ville (échelle 1/0,84, rotation −90°, décalage de la mosquée) -> three (x, z, −y)
-  _spawnDirAt(new THREE.Vector3(-175.012, 5.40, -219.890), PORTAL_RADIUS, { snapGround: true });
+  // Cercle jaune du laboratoire de Tapama : au centre du cylindre posé dans Blender, dans la nouvelle maison (app/labo-position.js). L'ancien cercle (cour de l'ancien labo) n'existe plus.
+  _spawnDirAt(new THREE.Vector3(LABO.x, LABO.y, LABO.z), PORTAL_RADIUS, { fixed: true });   // fixed : le cercle reste exactement à l'endroit où le déclencheur (dispositif1.js) le cherche (pas de recalage contre les murs de la maison)
 }
 
 
@@ -2173,6 +2180,7 @@ function _loadPlayerModel() {
 
     _playerModel = model;
     hideFirearms(model);                            // plus d'arme à feu sur le personnage
+    _applyGear();                                   // fin du chapitre 1 : sans sac ni drone sur le dos
     _headFade = installHeadFade(model);
     _gadgetNode = model.getObjectByName(GADGET_GLB_NODE)
                || model.getObjectByName(GADGET_GLB_NODE + '_Mesh')
@@ -3333,12 +3341,24 @@ function _attachDockedDrone() {
   g.position.set(0, DRONE_DOCK_Z, 0);
   g.rotation.set(0, DRONE_DOCK_YAW, 0);          // retourné de 180° autour de la normale du pad : nez vers le bas, arrière vers le haut
   g.scale.setScalar(DRONE_DOCK_SCALE);
-  g.visible = true;
+  g.visible = !_gearHidden();
   if (g.parent !== anchor) anchor.add(g);
   for (const d of dd.discs) d.node.scale.copy(d.base).multiplyScalar(0.0001);
 }
 
+/* Fin du labo 2 : le personnage n'a plus ni sac à dos ni drone posé dessus (état mémorisé : taama.sansac). */
+function _gearHidden() { try { return localStorage.getItem('taama.sansac') === '1'; } catch (_) { return false; } }
+function _applyGear() {
+  const hide = _gearHidden();
+  const bp = _playerModel && _playerModel.getObjectByName('BP_Backpack');
+  if (bp) bp.visible = !hide;
+  const dd = _dockedDrone;
+  if (dd && dd.group && dd.group.parent !== M.scene) dd.group.visible = !hide;
+}
+function setGearHidden(on) { try { if (on) localStorage.setItem('taama.sansac', '1'); else localStorage.removeItem('taama.sansac'); } catch (_) {} _applyGear(); }
+
 function _startDroneTakeoff() {
+  if (_gearHidden()) return false;                    // plus de drone sur le dos
   if (_vehicleCtl && _vehicleCtl.active()) { window.GamepadKit?.toast?.('Impossible de lancer le drone depuis la voiture'); return false; }
   const dd = _dockedDrone;
   if (!dd || !_playerModel || _droneTakeoff || !dd.group.parent) return false;
@@ -4780,6 +4800,55 @@ function _afterTeleport() {
   _syncPlayerRoot();
 }
 
+/* Passage d'un portail : même écran noir que les menus (1 s vers le noir, téléportation au noir, 1 s de retour). Les commandes sont gelées pendant ce temps. */
+let _portalFading = false;
+function _portalBlack(dest, kind) {
+  if (_portalFading) return;
+  _portalFading = true;
+  const prevFreeze = window.__storyFreeze;
+  window.__storyFreeze = true;
+  _portalCooldown = 99;                                   // pas de re-déclenchement pendant le fondu
+  blackTransition(() => {
+    playerPos.copy(dest);
+    _portalHold = { x: dest.x, z: dest.z };
+    _afterTeleport();
+    _missionEvent('portal', kind);
+  }).then(() => {
+    _portalFading = false;
+    window.__storyFreeze = prevFreeze;
+    _portalCooldown = PORTAL_COOLDOWN_SEC;
+  });
+}
+
+/* Scène pilotée par un module extérieur (app/crepissage.js) : il reçoit tick(dt) à chaque image, après l'animation de repos du personnage, et règle lui-même la caméra et les os du bras. */
+let _sceneHook = null;
+function beginSceneHook(hook) {
+  if (_sceneHook || _introCam || !active || state !== S_FPS || !M?.camera || !_playerModel) return false;
+  _sceneHook = hook;
+  for (const k in keys) keys[k] = false; joyInput.x = 0; joyInput.y = 0;
+  _stopWalk();
+  _velY = 0; _inAir = false; _playerJumping = false; _freeFall = false;
+  try { if (_playerReady) _playAction('idle', { fade: 0.45 }); } catch (_) {}     // le personnage ralentit et se tient immobile en douceur (fondu de 0,45 s vers la pose de repos)
+  _playerCurrentAction = '';
+  window.__storyFreeze = true;
+  try { window.GamepadKit?.capture?.(true); } catch (_) {}
+  try { document.exitPointerLock?.(); } catch (_) {}
+  return true;
+}
+function endSceneHook() {
+  if (!_sceneHook) return;
+  _sceneHook = null;
+  window.__storyFreeze = false;
+  try { window.GamepadKit?.capture?.(false); } catch (_) {}
+  _camSnap = true;                                                             // la caméra de jeu reprend sa place normale
+  if (_baseFov !== null) { M.camera.fov = _baseFov; if (_baseNear !== null) M.camera.near = _baseNear; M.camera.updateProjectionMatrix(); }
+}
+function _sceneInfo() {
+  return { model: _playerModel, camera: M.camera, colliders, playerPos, yaw: playerYaw, eyeHeight: EYE_HEIGHT, baseFov: _baseFov };
+}
+function _scenePlaceXZ(x, z) { playerPos.x = x; playerPos.z = z; _syncPlayerRoot(); }
+function _sceneSetYaw(y) { playerYaw = y; _syncPlayerRoot(); }
+
 function tickPortals(dt) {
   if (_portalCooldown > 0) _portalCooldown -= dt;
 
@@ -4796,26 +4865,14 @@ function tickPortals(dt) {
   const ax = playerPos.x - PORTAL_A_TRIGGER.x;
   const az = playerPos.z - PORTAL_A_TRIGGER.z;
   if (Math.sqrt(ax * ax + az * az) < PORTAL_RADIUS) {
-    // plus de vidéo de transition : téléportation immédiate (comme le retour toit → bas), avec le même éclair doré
-    playerPos.copy(PORTAL_A_DEST);
-    _portalCooldown = PORTAL_COOLDOWN_SEC;
-    _portalHold = { x: PORTAL_A_DEST.x, z: PORTAL_A_DEST.z };
-    _afterTeleport();
-    _teleportFlash();
-    _missionEvent('portal', 'roof');
+    _portalBlack(PORTAL_A_DEST, 'roof');
     return;
   }
 
   const bx = playerPos.x - PORTAL_B_TRIGGER.x;
   const bz = playerPos.z - PORTAL_B_TRIGGER.z;
   if (Math.sqrt(bx * bx + bz * bz) < PORTAL_RADIUS) {
-    // Pas de vidéo au retour (toit → bas) : téléportation instantanée
-    playerPos.copy(PORTAL_B_DEST);
-    _portalCooldown = PORTAL_COOLDOWN_SEC;
-    _portalHold = { x: PORTAL_B_DEST.x, z: PORTAL_B_DEST.z };
-    _afterTeleport();
-    _teleportFlash();
-    _missionEvent('portal', 'floor');
+    _portalBlack(PORTAL_B_DEST, 'floor');
     return;
   }
 }
@@ -5187,6 +5244,14 @@ function update(dt) {
   window.WetLook?.update(dt, _playerModel);
   dt = Math.min(dt, 0.05);
   if (dt <= 0) return;
+  if (_sceneHook) {                                                            // scène pilotée par un module (crépissage) : seule la caméra, le bras et l'animation de repos bougent
+    _stopWalk();
+    if (_playerMixer) _playerMixer.update(dt);
+    _playerTag?.update(M.camera, _tagPos.set(playerPos.x, playerPos.y - EYE_HEIGHT + 2.0, playerPos.z), { name: '', frac: 1, hidden: true });
+    if (_guideEl) _guideEl.style.display = 'none';
+    try { _sceneHook.tick(dt); } catch (e) { console.warn('[scène]', e); endSceneHook(); }
+    return;
+  }
   if (_introCam) { _stopWalk(); _tickIntroCam(dt); return; }                   // plan de caméra d'ouverture : seule la caméra bouge (window.__storyFreeze est posé pour les autres modules)
   if (window.__storyFreeze) { _stopWalk(); _stopInsideSound(); return; }       // scène plein écran de l'histoire (labo, dossier : app/dispositif1.js : plus de pas ni d'ambiance de mosquée) : le monde 3D est gelé
   if (_gadgetNode) _gadgetNode.visible = false;   // plus d'arme à feu   // pas de pistolet avant le dispositif 1 (ni au volant, ni à la nage, ni en pilotant le drone)
@@ -5370,7 +5435,6 @@ function enter() {
     _sanctuaryDroneN.group.quaternion.copy(_sanctuaryDroneN.baseQuat);
     _retireMainDrone();
     _droneNFireCooldown = 1.2;
-    _resetSentinels(true);
     _updateGadgetHud();
   } else {
     // drone N : retiré du jeu (violence supprimée)
@@ -5446,7 +5510,6 @@ function exit() {
     _resetDroneNModel(_sanctuaryDroneN, false);
     _sanctuaryDroneN.group.visible = false;
   }
-  _resetSentinels(false);
   _droneNFireCooldown = 0;
   _hideDroneNLaserFx();
   _updateGadgetHud();
@@ -5456,7 +5519,6 @@ function exit() {
   resetImamScan();
   resetEntreeScan();
   _clearDirMarkers();
-  _removeGadgetPickup();
   if (_markerImam) M.scene.remove(_markerImam);
   if (ambLight)   { ambLight.color.set(0xffe8c0); ambLight.intensity = 0.08; ambLight.visible = false; }
   if (pointLight)   pointLight.visible = false;
@@ -5515,6 +5577,13 @@ window.SanctuaryMode = {
   // diagnostic : état du gadget posé dans le monde (null s'il n'y en a pas)
   debugLaunch: (v = 25) => { _velY = v; _inAir = true; _jumpCount = JUMP_MAX; _playerJumping = true; return true; },   // propulse vers le haut (tests de chute libre)
   debugFlyFix: (deg) => _applyFlyFix(deg),   // réglage de l'orientation de « Flying » (tests)
+  setGearHidden, gearHidden: _gearHidden,
+  beginSceneHook, endSceneHook, sceneInfo: _sceneInfo, scenePlaceXZ: _scenePlaceXZ, sceneSetYaw: _sceneSetYaw,
+  // téléporte le personnage (x, y = hauteur des YEUX, z) et le tourne vers yaw (optionnel) ; la caméra se cale tout de suite
+  teleportTo: (x, y, z, yaw) => { playerPos.set(x, y, z); if (typeof yaw === 'number') playerYaw = yaw; _portalHold = { x, z }; _portalCooldown = PORTAL_COOLDOWN_SEC; _afterTeleport(); },
+  // cercle jaune posé au sol (mission du crépissage) : renvoie le repère ; removeCircle le retire
+  spawnCircle: (x, y, z, radius = 1.8) => { _spawnDirAt(new THREE.Vector3(x, y, z), radius, { fixed: true }); return _dirNodes[_dirNodes.length - 1]; },
+  removeCircle: (node) => { if (!node) return; M.scene.remove(node); const i = _dirNodes.indexOf(node); if (i >= 0) _dirNodes.splice(i, 1); },
   debugFlying: () => { const a = _playerActions.flying; if (!a || !_playerModel) return null; const names = a.getClip().tracks.map((t) => t.name); const bones = new Set(); _playerModel.traverse((o) => { if (o.name) bones.add(o.name); }); const miss = names.filter((n) => !bones.has(n.split('.')[0])); return { tracks: names.length, missing: miss.length, missingBones: [...new Set(miss.map((n) => n.split('.')[0]))].slice(0, 30), sample: names.slice(0, 6), duration: a.getClip().duration }; },
   debugDash: (go = true) => { if (go) _dashRequest = true; return { cd: +_dashCd.toFixed(2), t: +_dashT.toFixed(2), velY: +_velY.toFixed(2), inAir: _inAir, jumping: _playerJumping, jumpCount: _jumpCount, landT: +_landT.toFixed(2), anim: _playerCurrentAction, freeFall: _freeFall }; },   // propulsion sans manette (tests) ; debugDash(false) = état seul
   // diagnostic : téléporte le personnage (test de l'IA de la Sentinelle)
@@ -5547,6 +5616,7 @@ window.SanctuaryMode = {
     state: () => state,
   },
   enter, exit, isActive, spots, resetScans,
+  isGrounded: () => active && !_inAir && !_playerJumping && !_freeFall,                      // les pieds sont posés au sol (ni saut, ni chute, ni vol)
   showDeviceIntro,                                           // plan de caméra d'ouverture (lancé par app/dispositif1.js) : { target: Vector3, onDone }
   introState: () => (_introCam ? { phase: _introCam.phase, t: +_introCam.t.toFixed(2), dur: +((_introCam.kf ? _introCam.kf.dur : _introCam.dur) || 0).toFixed(2), safe: _introCam.safe } : null),   // diagnostic
   introSkipToHold: () => { if (_introCam && _introCam.phase === 'out') _introCam.t = _introCam.dur; },                                               // diagnostic

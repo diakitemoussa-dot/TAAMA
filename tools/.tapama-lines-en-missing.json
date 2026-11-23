@@ -1,0 +1,337 @@
+[
+ {
+  "key": "b3339681",
+  "text": "Ils sont nombreux, {nom}. Reste accroupi derrière les murs (K) et neutralise les drones un par un avec ton gadget.",
+  "mood": "attentive"
+ },
+ {
+  "key": "2bfa8f0e",
+  "text": "Salut",
+  "mood": "souriante"
+ },
+ {
+  "key": "2c93cccd",
+  "text": "! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je porte son nom en hommage : je veux que son histoire ne s’oublie pas.",
+  "mood": "souriante"
+ },
+ {
+  "key": "a7734282",
+  "text": "Mes recherches sont formelles : il existe, quelque part dans la mosquée. J’ignore ce qu’il fait. Je veux le découvrir, et pour ça j’ai besoin de toi,",
+  "mood": "attentive"
+ },
+ {
+  "key": "5eacbf85",
+  "text": ", j’ai découvert quelque chose près de la mosquée. Je ne sais pas encore ce que c’est, mais certains détails ne correspondent à rien de ce que j’ai étudié.",
+  "mood": "neutre"
+ },
+ {
+  "key": "7479233e",
+  "text": "Je ne sais pas. C’est justement pour cela que j’ai besoin de toi,",
+  "mood": "inquiete"
+ },
+ {
+  "key": "64b46838",
+  "text": ". Viens examiner l’endroit avant que quelqu’un d’autre ne le découvre.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "122639a2",
+  "text": "Ce n’est pas une projection ordinaire,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "c39e664d",
+  "text": ". Regarde les détails. Tout semble lié à un événement précis.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "541b89d3",
+  "text": "Ne les perds pas de vue,",
+  "mood": "inquiete"
+ },
+ {
+  "key": "8f877507",
+  "text": ". Je vais essayer de comprendre ce qu’ils savent déjà. Fais attention, nous ne savons pas qui ils sont ni jusqu’où ils sont prêts à aller.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "0f2359e5",
+  "text": "Regarde cette carte,",
+  "mood": "surprise"
+ },
+ {
+  "key": "feef86ae",
+  "text": ". Djenné n’est qu’un point parmi d’autres.",
+  "mood": "surprise"
+ },
+ {
+  "key": "b1e6fa88",
+  "text": ". Je vais essayer de comprendre ce qu’ils savent déjà.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "829a87fe",
+  "text": "Fais attention,",
+  "mood": "inquiete"
+ },
+ {
+  "key": "9645f508",
+  "text": ", ils sont plus rapides que toi.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "32d00189",
+  "text": "Prends une photo avec le drone,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "5f32b691",
+  "text": ", je regarde ce que ça donne.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "e8745dbb",
+  "text": "Tu as trouvé quelque chose,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "61395a47",
+  "text": "? Montre-moi.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "c51ec4e4",
+  "text": "Commence par le toit,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "8adc5f2c",
+  "text": ". Les secrets aiment les hauteurs. Prends des photos si quelque chose te semble bizarre.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "6282d4e8",
+  "text": "Suis les indications sous l’écran,",
+  "mood": "attentive"
+ },
+ {
+  "key": "3fafae3e",
+  "text": ": quand ça chauffe, descends et tourne-toi doucement. Il est sur le toit.",
+  "mood": "attentive"
+ },
+ {
+  "key": "04f52064",
+  "text": "Attends… zoome encore ! Là, à moitié enfoui. C’est ça,",
+  "mood": "surprise"
+ },
+ {
+  "key": "933811a9",
+  "text": "! Atterris et va le chercher.",
+  "mood": "surprise"
+ },
+ {
+  "key": "2f7d8a3a",
+  "text": "Lance ton drone et explore la ville,",
+  "mood": "souriante"
+ },
+ {
+  "key": "7c91b109",
+  "text": "Cherche un objet brillant sur le toit,",
+  "mood": "souriante"
+ },
+ {
+  "key": "740901e3",
+  "text": "Bravo",
+  "mood": "souriante"
+ },
+ {
+  "key": "80df5718",
+  "text": "! Choisis ta prochaine aventure sur la carte.",
+  "mood": "souriante"
+ },
+ {
+  "key": "2693c6b4",
+  "text": "Bien joué,",
+  "mood": "souriante"
+ },
+ {
+  "key": "8e516919",
+  "text": "! Tu as déjà de quoi travailler. Rejoins-moi à mon laboratoire avec tes phrases : on va déverrouiller le dispositif 2.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e7724725",
+  "text": "Tu as récolté toutes les informations,",
+  "mood": "souriante"
+ },
+ {
+  "key": "ade5c3a5",
+  "text": "! Rejoins-moi à mon laboratoire avec les phrases que tu as retenues : on va déverrouiller le dispositif 2.",
+  "mood": "souriante"
+ },
+ {
+  "key": "2f9be615",
+  "text": "Te voilà à Barey So,",
+  "mood": "attentive"
+ },
+ {
+  "key": "444efdd4",
+  "text": "! Récolte le plus d’informations que tu peux. Juste après, je t’affiche le chemin de retour vers mon laboratoire, puis tu pourras lire les livres.",
+  "mood": "attentive"
+ },
+ {
+  "key": "4977ca14",
+  "text": "Plus qu’un verrou,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "9538f0cf",
+  "text": ". Celui-là demande un petit calcul : prends ton temps.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "9f2ff84b",
+  "text": "Bienvenue chez moi,",
+  "mood": "souriante"
+ },
+ {
+  "key": "d803827b",
+  "text": "! Pose le dispositif dans la machine, là, au centre. Doucement…",
+  "mood": "souriante"
+ },
+ {
+  "key": "5b1631b9",
+  "text": "Regarde ! Ce n’est pas un écran, ça sort de l’objet lui-même…",
+  "mood": "surprise"
+ },
+ {
+  "key": "db0d4798",
+  "text": ", tu vois cette scène ?",
+  "mood": "surprise"
+ },
+ {
+  "key": "29f58da0",
+  "text": "Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché à côté de la tombe de Djenépo. C’est lui qu’il nous faut,",
+  "mood": "attentive"
+ },
+ {
+  "key": "a32cf9c6",
+  "text": ". Tes phrases viennent de lancer le dispositif : Djenné n’est qu’un point parmi d’autres.",
+  "mood": "surprise"
+ },
+ {
+  "key": "524d40d8",
+  "text": "Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac,",
+  "mood": "souriante"
+ },
+ {
+  "key": "5f2c0a14",
+  "text": "Maintenant,",
+  "mood": "attentive"
+ },
+ {
+  "key": "7d102aa1",
+  "text": ", dis-moi ce que tu as retenu de ton aventure dans ce jeu. Écris une phrase qui t’a marqué : c’est elle qui déverrouille le dispositif.",
+  "mood": "attentive"
+ },
+ {
+  "key": "cd934d29",
+  "text": "C’est un peu court,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "ca76b95f",
+  "text": ". Écris au moins un mot, même avec des fautes : ce qui compte, c’est ce que tu penses.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "2838d7c8",
+  "text": "Avant de regarder tes phrases,",
+  "mood": "attentive"
+ },
+ {
+  "key": "91e32029",
+  "text": ", parle-moi de chez toi. Dans ton quartier ou ton village, quelles maisons ou quels murs sont faits en terre, en bambou ou en pierre ?",
+  "mood": "attentive"
+ },
+ {
+  "key": "56712a39",
+  "text": "Je n’ai pas bien compris. Écris-moi ce que tu as retenu, avec tes mots à toi,",
+  "mood": "curieuse"
+ },
+ {
+  "key": "41cf3641",
+  "text": "Merci,",
+  "mood": "souriante"
+ },
+ {
+  "key": "facc31c0",
+  "text": ". Voilà une phrase qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.",
+  "mood": "souriante"
+ },
+ {
+  "key": "3a6a5958",
+  "text": "Les verrous cèdent un par un…",
+  "mood": "surprise"
+ },
+ {
+  "key": "cb45a5c9",
+  "text": ", ce sont tes phrases qui ouvrent le dispositif 2 !",
+  "mood": "surprise"
+ },
+ {
+  "key": "d6e010cf",
+  "text": "On reprend où on s’était arrêtés,",
+  "mood": "souriante"
+ },
+ {
+  "key": "7a8537b2",
+  "text": "Écris d’abord une réponse,",
+  "mood": "attentive"
+ },
+ {
+  "key": "84fe0793",
+  "text": ". Même une idée, on l’essaie.",
+  "mood": "attentive"
+ },
+ {
+  "key": "5464f769",
+  "text": "On a fait le tour des indices,",
+  "mood": "souriante"
+ },
+ {
+  "key": "d335d8cc",
+  "text": ". Si tu veux, je te donne la réponse : tu l’écris et on avance ensemble.",
+  "mood": "souriante"
+ },
+ {
+  "key": "5ce9f66b",
+  "text": "Ils sont nombreux,",
+  "mood": "attentive"
+ },
+ {
+  "key": "be81ce6f",
+  "text": ". Reste accroupi derrière les murs (K) et neutralise les drones un par un avec ton gadget.",
+  "mood": "attentive"
+ },
+ {
+  "key": "a0945e44",
+  "text": "Je brouille leurs capteurs : ils vont te rater plus souvent. Avance doucement,",
+  "mood": "souriante"
+ },
+ {
+  "key": "a02d445c",
+  "text": "! Tu as le dispositif 2, mais il est verrouillé. Va à Barey So, la bibliothèque, récolter des informations sur lui. Ensuite on le déverrouille ensemble dans mon labo.",
+  "mood": "souriante"
+ },
+ {
+  "key": "1aa7edf6",
+  "text": "Nous voici près de la tombe de Tapama Djénépo,",
+  "mood": "attentive"
+ },
+ {
+  "key": "e4f3b059",
+  "text": ". On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
+  "mood": "attentive"
+ }
+]

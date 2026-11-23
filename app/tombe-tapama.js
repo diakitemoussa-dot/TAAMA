@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { t } from './i18n.js?v=1';
+import { t } from './i18n.js?v=3';
 import { fitGround, applyFit, groundAt } from './ground-fit.js?v=1';
 
 const M = window.MosqueScene;
@@ -130,7 +130,17 @@ function take() {
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 10000); }
   window.dispatchEvent(new CustomEvent('tombe:dispositif', { detail: { position: state.device.toArray() } }));
 }
-let tickT = 0;
+/* Recueillement : à la première arrivée près de l'enclos, Tapama parle de Tapama Djénépo puis laisse un temps de silence avant que le joueur puisse ramasser. */
+let hushUntil = 0;
+const hushDone = () => { try { return localStorage.getItem('taama.tombe.silence') === '1'; } catch (_) { return true; } };
+function startHush() {
+  try { localStorage.setItem('taama.tombe.silence', '1'); } catch (_) {}
+  const call = { text: 'Nous voici près de la tombe de Tapama Djénépo, {nom}. On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.', mood: 'attentive', duration: 13 };
+  hushUntil = performance.now() + 22000;                                            // parole (≈ 13 s) + silence (≈ 9 s)
+  if (promptEl) promptEl.style.display = 'none';
+  window.Tapama?.radio?.(call);
+}
+let tickT = 0, nearNow = false;
 M?.addFrameHook((dt) => {
   if (!requested || !state.loaded) return;
   if (lock > 0) lock -= dt;
@@ -141,13 +151,17 @@ M?.addFrameHook((dt) => {
     state.glowMat.emissiveIntensity = 0.8 + 0.4 * (0.5 + 0.5 * Math.sin(state.t * 2.2));
   }
   if (done) { if (promptEl) promptEl.style.display = 'none'; return; }
+  const GP = window.GamepadKit;
+  if (nearNow && GP?.connected?.() && GP.justPressed('Y')) { take(); return; }   // △ (Y) : un appui ne dure qu'une image, donc lu à chaque image (pas dans le test ralenti)
   tickT += dt; if (tickT < 0.1) return; tickT = 0;
-  const near = playerNear();
-  ensurePrompt().style.display = near ? 'block' : 'none';
-  if (near && window.GamepadKit?.justPressed?.('Y')) take();
+  nearNow = playerNear();
+  if (nearNow && !hushDone()) { startHush(); nearNow = false; }                     // recueillement : on ne ramasse pas pendant le silence
+  else if (nearNow && performance.now() < hushUntil) nearNow = false;
+  const pr = ensurePrompt(); pr.style.display = nearNow ? 'block' : 'none';
+  if (nearNow) { const k = pr.querySelector('kbd'); if (k) k.textContent = GP?.connected?.() ? '△' : 'E'; }
 });
 window.addEventListener('keydown', (e) => {
-  if (e.code !== 'KeyE' || e.repeat || !promptEl || promptEl.style.display !== 'block') return;
+  if (e.code !== 'KeyE' || e.repeat || !promptEl || promptEl.style.display !== 'block' || performance.now() < hushUntil) return;
   e.preventDefault(); e.stopImmediatePropagation(); take();
 }, true);
 

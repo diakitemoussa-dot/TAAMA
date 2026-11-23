@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import * as WL from './water-logic.js?v=8';
-import { createCarDashboard } from './car-dashboard.js?v=5';
+import { createCarDashboard } from './car-dashboard.js?v=11';
 import { createCargo } from './car-cargo.js?v=2';
 
 const M = window.MosqueScene;
@@ -29,6 +29,8 @@ const PARK = { x: -21.5, z: 47.0, yaw: Math.PI * 0.5 };
 const WHEEL_R = 0.50, WHEEL_BASE = 3.0, TRACK = 1.6, AX_F = 1.55, AX_R = 1.45;   // mètres (= unités du jeu)
 // Voiture plus lente et moins puissante : vitesse de pointe 34 -> 20 m/s (122 -> 72 km/h), accélération 23 -> 13, marche arrière 9 -> 6, freinage 28 -> 22.
 const MAX_FWD = 20, MAX_REV = 6, ACCEL = 13, BRAKE = 22, DRAG = 0.30, ROLL_DRAG = 1.1;
+// Accélérateur maintenu : la voiture continue de prendre de la vitesse. Au bout de BOOST_TIME secondes pied au plancher, la vitesse de pointe passe de MAX_FWD à MAX_FWD * (1 + BOOST_GAIN).
+const BOOST_TIME = 4, BOOST_GAIN = 0.6;
 const CLIMB_POWER = 9;               // surcroît de couple en montée (par radian de pente) ; relevé (6,5 -> 9) pour compenser la baisse d'ACCEL : le pick-up grimpe toujours les pentes sans caler
 const LOW_TORQUE = 1.1;              // couple supplémentaire à basse vitesse (démarrage en côte)
 const MAX_STEER = 0.52, STEER_RATE = 3.2;
@@ -378,7 +380,8 @@ function toggleLights() {
 const dash = createCarDashboard();     // app/car-dashboard.js
 function drivingHint() {
   const pad = window.GamepadKit && window.GamepadKit.connected && window.GamepadKit.connected();
-  return `<kbd style="${KBD}">${pad ? 'R3' : 'V'}</kbd>Vue habitacle / extérieure<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">${pad ? 'L1→R1' : 'L'}</kbd>Phares<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">H</kbd>Détresse<span style="opacity:.6;margin:0 10px">·</span><kbd style="${KBD}">${pad ? '▲' : 'F'}</kbd>Descendre`;
+  const key = (k, label) => `<span class="cd-key"><kbd>${k}</kbd>${label}</span>`;
+  return key(pad ? 'R3' : 'V', 'Vue habitacle') + key(pad ? 'L1→R1' : 'L', 'Phares') + key('H', 'Détresse') + key(pad ? '▲' : 'F', 'Descendre');
 }
 function promptText(driving) {
   const pad = window.GamepadKit && window.GamepadKit.connected && window.GamepadKit.connected();
@@ -778,12 +781,14 @@ function drive(dt) {
   // vitesse
   const climb = Math.max(0, S.slope || 0);                                      // pente montante (rad) mesurée à l'image précédente
   const torque = 1 + LOW_TORQUE * Math.max(0, 1 - Math.abs(S.speed) / 9) + CLIMB_POWER * climb;
-  if (inp.thr > 0.02) S.speed += ACCEL * torque * inp.thr * dt * (S.speed < 0 ? 2 : 1 - Math.max(0, S.speed) / (MAX_FWD * (1.15 + 0.5 * climb)));
+  S.boost = (inp.thr > 0.6 && inp.brake < 0.02 && !inp.hand && S.speed > 3) ? Math.min(1, (S.boost || 0) + dt / BOOST_TIME) : Math.max(0, (S.boost || 0) - 2 * dt / BOOST_TIME);   // monte pendant qu'on reste appuyé, retombe vite au relâchement
+  const vmax = MAX_FWD * (1 + BOOST_GAIN * S.boost);
+  if (inp.thr > 0.02) S.speed += ACCEL * torque * inp.thr * dt * (S.speed < 0 ? 2 : 1 - Math.max(0, S.speed) / (vmax * (1.15 + 0.5 * climb)));
   if (climb > 0.05 && inp.thr < 0.02 && inp.brake < 0.02 && !inp.hand && S.speed > 0) S.speed -= Math.min(S.speed, 9.8 * Math.sin(climb) * 0.35 * dt);   // en côte sans gaz : la voiture ralentit un peu
   if (inp.brake > 0.02) S.speed -= (S.speed > 0.4 ? BRAKE : ACCEL * 0.7) * inp.brake * dt;
   if (inp.hand) S.speed -= Math.sign(S.speed) * Math.min(Math.abs(S.speed), BRAKE * 0.9 * dt);
   if (inp.thr < 0.02 && inp.brake < 0.02) S.speed -= Math.sign(S.speed) * Math.min(Math.abs(S.speed), (DRAG * Math.abs(S.speed) + ROLL_DRAG) * dt);
-  S.speed = Math.max(-MAX_REV, Math.min(MAX_FWD, S.speed));
+  S.speed = Math.max(-MAX_REV, Math.min(vmax, S.speed));
   if (wet) {                                                     // traînée de l'eau : plafond de vitesse selon la profondeur + décélération ajoutée
     const cap = WL.carSpeedCap(wdepth, MAX_FWD), as = Math.abs(S.speed), sg = Math.sign(S.speed);
     if (as > cap) S.speed = sg * Math.max(cap, as - (32 + 3 * as) * dt);                  // plafond ferme : la poussée du moteur ne le dépasse pas
@@ -834,7 +839,9 @@ function drive(dt) {
   // tableau de bord à l'écran (remplace l'ancienne barre de touches) : vitesse, cadran de guidage, clignotants, rapport, voyants
   dash.update(dt, { speed: S.speed, steer: S.steer, hazard: S.hazard, beams: beamsWanted(), drowned: !!S.drowned, wet: !!S.wet, phase: _blinkPhase,
     heading: Math.PI / 2 - S.yaw, guide: window.CityMap && window.CityMap.guide });
-  dustTick(dt, !wet && Math.abs(S.speed) > 1.5 ? Math.min(1, (Math.abs(S.speed) - 1.5) / 7) : 0);   // dans l'eau : gerbes à la place de la poussière
+  // poussière seulement sur la terre (sol de la ville) : pas sur le pont, le gazon ni le béton
+  const onDirt = (() => { const cols = envColliders(); if (!cols || !cols.length) return false; rc.set(_v.set(pos.x, pos.y + 3.0, pos.z), DOWN); rc.near = 0; rc.far = 12; const h = rc.intersectObjects(cols, false); return !!h.length && /^Sol_/.test(h[0].object.name || ''); })();
+  dustTick(dt, !wet && onDirt && Math.abs(S.speed) > 1.5 ? Math.min(1, (Math.abs(S.speed) - 1.5) / 7) : 0);   // dans l'eau : gerbes à la place de la poussière
   if (wet) WFX.vehicleFx(dt, { x: pos.x, z: pos.z, yaw: S.yaw, speed: S.speed, surface: wsurf, depth: wdepth });
   engineUpdate(!drowned);
 }
@@ -922,7 +929,7 @@ const controller = {
       S._gt = 0; const g = findGround(pos.x, pos.z, S.parkHint != null && S.parkAt && Math.hypot(pos.x - S.parkAt.x, pos.z - S.parkAt.z) < 3 ? S.parkHint : pos.y);
       if (g !== null && Math.abs(g - pos.y) > 0.12) { pos.y = g; S.pendingGround = false; applyTransform(); }
     }
-    if (S.st === ST.DRIVE) { if (!_wasDrive) { _wasDrive = true; document.body.classList.add('in-car'); dash.refuel(); dash.showHint(drivingHint(), 9000); } drive(dt); }
+    if (S.st === ST.DRIVE) { if (!_wasDrive) { _wasDrive = true; document.body.classList.add('in-car'); dash.refuel(); dash.showHint(drivingHint(), 0); } drive(dt); }
     else { if (_wasDrive) { _wasDrive = false; document.body.classList.remove('in-car'); dash.hide(); } tickSequence(dt); }
   },
 };

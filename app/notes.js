@@ -6,8 +6,8 @@
    • Notes.openPanel() : affiche le carnet (bouton « Mes notes » du menu pause, injecté par app/game-ui.js).
      Clavier : Échap ferme · Manette : B ferme, haut/bas défilent · Tactile : bouton Fermer, défilement au doigt.
    ========================================================== */
-import { sendProfile } from './player-sync.js?v=5';
-import { t as tr } from './i18n.js?v=1';
+import { sendProfile } from './player-sync.js?v=6';
+import { t as tr } from './i18n.js?v=3';
 
 const KEY = 'taama.notes';
 const load = () => { try { const v = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
@@ -45,7 +45,7 @@ function add({ texte, source = 'jeu' } = {}) {
 /* ---------- carnet ---------- */
 let panel = null, raf = 0;
 const fmt = (iso) => { try { return new Date(iso).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'fr-FR', { dateStyle: 'short', timeStyle: 'short' }); } catch (_) { return ''; } };
-const SRC = { labo2: 'Laboratoire de Tapama' };
+const SRC = { labo2: 'Laboratoire de Tapama', labo2q: 'Laboratoire de Tapama · chez moi' };
 
 function closePanel() {
   if (!panel) return;
@@ -84,7 +84,7 @@ function openPanel() {
   const close = document.createElement('button'); close.type = 'button'; close.textContent = tr('Fermer');
   close.style.cssText = 'align-self:flex-end;min-height:48px;padding:0 28px;border:0;border-radius:14px;background:#f9d58b;color:#55415d;font:700 18px Rubik,sans-serif;cursor:pointer;box-shadow:0 0 0 3px #f8f3ea;touch-action:manipulation';
   close.addEventListener('click', closePanel);
-  const hint = document.createElement('div'); hint.style.cssText = 'font-size:13px;opacity:.75'; hint.textContent = window.GamepadKit?.connected?.() ? '↕ ' + tr('défiler') + ' · ○ / ✕ ' + tr('fermer') : '↑ ↓ ' + tr('défiler') + ' · Échap ' + tr('fermer');
+  const hint = document.createElement('div'); hint.style.cssText = 'font-size:13px;opacity:.75'; hint.textContent = window.GamepadKit?.connected?.() ? '↕ ' + tr('défiler') + ' · ○ / ✕ ' + tr('fermer') : '↑ ↓ ' + tr('défiler') + ' · ' + tr('Échap') + ' ' + tr('fermer');
   card.append(h, sub, box, close, hint); panel.appendChild(card); document.body.appendChild(panel);
   panel.addEventListener('pointerdown', (e) => { if (e.target === panel) closePanel(); });
   window.addEventListener('keydown', onKey, true);

@@ -120,3 +120,13 @@ test('guideTone : hystérésis, pas de papillotement autour des seuils', () => {
   let t = 'ok', changes = 0; for (let i = 0; i < 100; i++) { const n = guideTone(t, 30 + (i % 2 ? 4 : -4)); if (n !== t) changes++; t = n; }
   assert.ok(changes <= 1, `${changes} changements autour de 30°`);
 });
+
+test('roadProject / roadRibbon : perspective (la route rétrécit au loin, s’arrête derrière la voiture)', async () => {
+  const { roadProject, roadRibbon, ROAD } = await import('../app/car-dashboard.js');
+  const [x0, y0] = roadProject(0, 0); assert.equal(x0, 95); assert.equal(y0, ROAD.yCar);
+  const far = roadProject(1000, 0); assert.ok(far[1] < ROAD.yCar && far[1] > ROAD.yHorizon);
+  assert.ok(Math.abs(roadProject(100, 5)[0] - 95) < Math.abs(roadProject(5, 5)[0] - 95));      // même écart latéral : plus petit au loin
+  const rb = roadRibbon([[0, 0], [50, 0], [100, 10]]); assert.ok(rb.poly.startsWith('M') && rb.poly.endsWith('Z') && rb.mid.startsWith('M'));
+  assert.equal(roadRibbon([[0, 0]]).poly, '');
+  const back = roadRibbon([[0, 0], [20, 0], [-30, 0]]); assert.ok(back.mid.split('L').length <= 8);      // la partie derrière la voiture n’est pas dessinée
+});

@@ -1,0 +1,602 @@
+[
+ {
+  "key": "42a9f6a6",
+  "text": "Hi {nom}! I’m Tapama Traoré. I carry the name of a heroine of Djenné, Tapama Djénépo. She watched over the city, and I carry her name in tribute: I want her story never to be forgotten.",
+  "mood": "souriante"
+ },
+ {
+  "key": "02323b8c",
+  "text": "Legend says she sacrificed herself so that Djenné could stand. Where I come from, they say the city’s secrets belong to those who dare to look for them.",
+  "mood": "neutre"
+ },
+ {
+  "key": "ff78cc7c",
+  "text": "For a few years now, I’ve been looking for an ancient device hidden in the Great Mosque. My grandfather used to tell me about it when I was little, in the evenings, under the Djenné sky.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "97f0accc",
+  "text": "My research is clear: it exists, somewhere in the mosque. I don’t know what it does. I want to find out, and for that I need you, {nom}.",
+  "mood": "attentive"
+ },
+ {
+  "key": "2be5590b",
+  "text": "Take off with your drone. Inspect every corner of the mosque, starting from the top. I’ll guide you by radio. Come on, let’s go!",
+  "mood": "souriante"
+ },
+ {
+  "key": "0de47fa3",
+  "text": "{nom}, I found something near the mosque. I don’t know what it is yet, but some details don’t match anything I’ve studied.",
+  "mood": "neutre"
+ },
+ {
+  "key": "d82c81bf",
+  "text": "I don’t know. That’s exactly why I need you, {nom}. Come and examine the spot before someone else finds it.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "5df2dd78",
+  "text": "This is no ordinary projection, {nom}. Look at the details. Everything seems tied to one specific event.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "0eead818",
+  "text": "Something is missing. We need to find the other device.",
+  "mood": "attentive"
+ },
+ {
+  "key": "7437cbed",
+  "text": "Don’t lose sight of them, {nom}. I’ll try to understand what they already know. Be careful, we don’t know who they are or how far they’re willing to go.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "0152e63f",
+  "text": "Then they’re not here to resell an object. They’re looking for something specific.",
+  "mood": "attentive"
+ },
+ {
+  "key": "aa679a66",
+  "text": "Look at this map, {nom}. Djenné is just one point among others.",
+  "mood": "surprise"
+ },
+ {
+  "key": "f6352f26",
+  "text": "We thought we had found two isolated objects. But they are part of a whole.",
+  "mood": "attentive"
+ },
+ {
+  "key": "9c3d9466",
+  "text": "Don’t lose sight of them, {nom}. I’ll try to understand what they already know.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "ba471a8f",
+  "text": "Be careful, {nom}, they’re faster than you.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "79238505",
+  "text": "Take a photo with the drone, {nom}, and I’ll see what it shows.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "5213c957",
+  "text": "Did you find something, {nom}? Show me.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "69c6124d",
+  "text": "Start with the roof, {nom}. Secrets love heights. Take pictures if anything looks odd.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "ea5b399e",
+  "text": "Look for an object that doesn’t look like earth or wood. Something smooth, with patterns.",
+  "mood": "attentive"
+ },
+ {
+  "key": "5266158d",
+  "text": "Follow the hints under the screen, {nom}: when it gets warm, fly lower and turn slowly. It’s on the roof.",
+  "mood": "attentive"
+ },
+ {
+  "key": "de4212a2",
+  "text": "Wait… zoom in more! There, half buried. That’s it, {nom}! Land and go get it.",
+  "mood": "surprise"
+ },
+ {
+  "key": "438727ca",
+  "text": "Look closely at the device. Some patterns repeat, and not by chance. What changes from one side to the other?",
+  "mood": "attentive"
+ },
+ {
+  "key": "6cc517be",
+  "text": "We’re trying to activate the first device found near the mosque. It must react to one specific interaction.",
+  "mood": "neutre"
+ },
+ {
+  "key": "9bd31633",
+  "text": "Look at the patterns engraved on its surface. Some repeat, others don’t.",
+  "mood": "attentive"
+ },
+ {
+  "key": "ede872bb",
+  "text": "I think the patterns that change show an order to follow. Do you want to try it that way?",
+  "mood": "curieuse"
+ },
+ {
+  "key": "d4eaa050",
+  "text": "Take your time, look around. I’m here if you need me.",
+  "mood": "attentive"
+ },
+ {
+  "key": "62e14e5d",
+  "text": "Look around and use the drone to spot anything out of the ordinary.",
+  "mood": "neutre"
+ },
+ {
+  "key": "b608ca0a",
+  "text": "Look at the details of the architecture: an element that doesn’t look like the others is worth a closer look.",
+  "mood": "attentive"
+ },
+ {
+  "key": "f66e7f7c",
+  "text": "If an area looks strange to you, photograph it with the drone and we’ll talk about it.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "0ddf0055",
+  "text": "Launch your drone and explore the city, {nom}!",
+  "mood": "souriante"
+ },
+ {
+  "key": "71685dfd",
+  "text": "Look for a shiny object on the roof, {nom}.",
+  "mood": "souriante"
+ },
+ {
+  "key": "366a6c3b",
+  "text": "Get close to the device and pick it up!",
+  "mood": "souriante"
+ },
+ {
+  "key": "a702631a",
+  "text": "Go to the yellow circle: it’s my lab!",
+  "mood": "souriante"
+ },
+ {
+  "key": "c481a9b6",
+  "text": "Go back to the big mosque.",
+  "mood": "souriante"
+ },
+ {
+  "key": "fcc38c3a",
+  "text": "Go to Djenépo’s tomb: look next to it.",
+  "mood": "souriante"
+ },
+ {
+  "key": "9103def2",
+  "text": "Read the books of Barey So, keep the sentences.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e6464122",
+  "text": "Bring the device back to the yellow circle.",
+  "mood": "souriante"
+ },
+ {
+  "key": "b3869c10",
+  "text": "Well done {nom}! Pick your next adventure on the map.",
+  "mood": "souriante"
+ },
+ {
+  "key": "ec35e7ac",
+  "text": "Well done, {nom}! You already have enough to work with. Join me at my laboratory with your sentences: we will unlock device 2.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f8333bb7",
+  "text": "You gathered all the information, {nom}! Meet me at my lab with the sentences you kept: we will unlock device 2.",
+  "mood": "souriante"
+ },
+ {
+  "key": "1fa42a76",
+  "text": "Here you are at Barey So, {nom}! Gather as much information as you can. Right after, I will show you the way back to my lab, then you can read the books.",
+  "mood": "attentive"
+ },
+ {
+  "key": "6361ee56",
+  "text": "Look at how the toron lets you hold on, and how the whole community comes out to work as a team. Run your hand over the wall: the earth must cover it everywhere.",
+  "mood": "attentive"
+ },
+ {
+  "key": "a6da2a12",
+  "text": "That’s it, gently, with your whole palm. A well-plastered wall protects the mosque all year round.",
+  "mood": "souriante"
+ },
+ {
+  "key": "a3326252",
+  "text": "There: the mosque is ready for the rainy season. Thank you for taking care of this wall. Our road continues to Bandiagara.",
+  "mood": "souriante"
+ },
+ {
+  "key": "57698852",
+  "text": "Great, I see you got it! Take the pickup parked in front of the mosque and join me at these coordinates.",
+  "mood": "souriante"
+ },
+ {
+  "key": "c3abfe11",
+  "text": "Before you leave, you have one last mission. Go back to the Great Mosque: part of its walls must be replastered, and everyone needs you. I am showing you the way.",
+  "mood": "souriante"
+ },
+ {
+  "key": "1871ee4f",
+  "text": "The first lock is open! See, together we move fast. Only two left.",
+  "mood": "souriante"
+ },
+ {
+  "key": "a3b68982",
+  "text": "Two out of three! The last one is a date. Think of the mosque you see today, not the old one.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "1733dd7b",
+  "text": "One down! The masons of Djenné would be proud of you. Two more.",
+  "mood": "souriante"
+ },
+ {
+  "key": "2dec4bb2",
+  "text": "Just one lock left, {nom}. This one needs a little calculation: take your time.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "4d699b3b",
+  "text": "Welcome to my place, {nom}! Put the device in the machine, right there, in the center. Gently…",
+  "mood": "souriante"
+ },
+ {
+  "key": "8f6694cd",
+  "text": "It is locked. Three passwords, and they are all about the mosque. We will find them together: you observe, I look through my notes.",
+  "mood": "attentive"
+ },
+ {
+  "key": "da855a99",
+  "text": "You got it! You are amazing. Put it in the machine, next to the first one.",
+  "mood": "surprise"
+ },
+ {
+  "key": "6fff1202",
+  "text": "It is locked, and I have no password this time. But you read the books of Barey So: the sentences you kept are our keys.",
+  "mood": "attentive"
+ },
+ {
+  "key": "ac8cb55c",
+  "text": "Look! It is not a screen, it comes out of the object itself… {nom}, do you see this scene?",
+  "mood": "surprise"
+ },
+ {
+  "key": "832cc7eb",
+  "text": "Wait, wait… Let me look at what happened.",
+  "mood": "inquiete"
+ },
+ {
+  "key": "15558b2e",
+  "text": "The device did not show everything. A piece is missing: another device is hidden next to Djenépo’s tomb. That is the one we need, {nom}.",
+  "mood": "attentive"
+ },
+ {
+  "key": "d9c5c0e1",
+  "text": "Go to Djenépo’s tomb with the pick-up, near the river. I’m staying at the lab to get the screens running again. Take your time, but stay alert.",
+  "mood": "attentive"
+ },
+ {
+  "key": "455df2de",
+  "text": "Look at this map, {nom}. Your sentences just started the device: Djenné is only one point among others.",
+  "mood": "surprise"
+ },
+ {
+  "key": "cff8b54b",
+  "text": "The map went dark. I am restarting the screens, but remember what the device just showed us.",
+  "mood": "attentive"
+ },
+ {
+  "key": "10bbd554",
+  "text": "The two devices are only the beginning. There are others, hidden elsewhere in West Africa.",
+  "mood": "attentive"
+ },
+ {
+  "key": "e4bbba8f",
+  "text": "Exactly. Next stop: Bandiagara, in the cliffs. Pack your bag, {nom}!",
+  "mood": "souriante"
+ },
+ {
+  "key": "41d9b48c",
+  "text": "Before you start, let us look together at the sentences you selected in the books. I will explain them one by one, so you understand them well.",
+  "mood": "attentive"
+ },
+ {
+  "key": "4d568c71",
+  "text": "You did not select any sentence in the books. No worries: I will show you a few important sentences and explain them.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "b80754ab",
+  "text": "There, we have been through your sentences. Now you understand what they mean.",
+  "mood": "souriante"
+ },
+ {
+  "key": "8be3cbca",
+  "text": "Now, {nom}, tell me what you remember from your adventure in this game. Write a sentence that stayed with you: it is what unlocks the device.",
+  "mood": "attentive"
+ },
+ {
+  "key": "edb3e26b",
+  "text": "That’s a bit short, {nom}. Write at least one word, even with mistakes: what matters is what you think.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "39751508",
+  "text": "Before we look at your sentences, {nom}, tell me about home. In your neighbourhood or village, which houses or walls are made of earth, bamboo or stone?",
+  "mood": "attentive"
+ },
+ {
+  "key": "9ee9dfba",
+  "text": "Thank you, that helps me understand where you come from. I’ll keep it in your notebook. Now let’s look at what you learned at Barey So.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f41287cd",
+  "text": "I didn’t quite understand. Write what you remembered, in your own words, {nom}.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "37f0aa54",
+  "text": "Thank you, {nom}. That is a sentence that matters. I am putting it in your notebook; you will find it in the pause menu.",
+  "mood": "souriante"
+ },
+ {
+  "key": "fd1aa9ee",
+  "text": "The locks give way one by one… {nom}, it is your sentences that open device 2!",
+  "mood": "surprise"
+ },
+ {
+  "key": "15f397af",
+  "text": "Let’s pick up where we left off, {nom}.",
+  "mood": "souriante"
+ },
+ {
+  "key": "1376066c",
+  "text": "Slide the device to the glowing slot. Or press “Place the device”.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "562b1a4f",
+  "text": "Perfect, it is in place. The locks are showing up… let’s look at the first one.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e40d347e",
+  "text": "Write an answer first, {nom}. Even just an idea, we will try it.",
+  "mood": "attentive"
+ },
+ {
+  "key": "265a455b",
+  "text": "I did not quite understand your answer. Can you write it another way?",
+  "mood": "curieuse"
+ },
+ {
+  "key": "dadf3c48",
+  "text": "We are a bit stuck, that is fine. Let me give you a little help.",
+  "mood": "attentive"
+ },
+ {
+  "key": "abe3cc88",
+  "text": "We have been through all the hints, {nom}. If you like, I will give you the answer: you write it down and we move on together.",
+  "mood": "souriante"
+ },
+ {
+  "key": "ed138e0f",
+  "text": "Alright, take your time. I am here if you change your mind.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e42f22c5",
+  "text": "I have no more hints to give you, but I can tell you the answer if you want.",
+  "mood": "attentive"
+ },
+ {
+  "key": "2351e59a",
+  "text": "The torons are the wooden beams sticking out of the walls. They stay in place for good: the masons climb on them to repair and plaster the mosque, with no scaffolding.",
+  "mood": "attentive"
+ },
+ {
+  "key": "bbc48418",
+  "text": "The torons stick out of the wall, so they cast little shadows on the earth. The shade protects the plaster from the burning sun, so it cracks less quickly.",
+  "mood": "attentive"
+ },
+ {
+  "key": "c1994e19",
+  "text": "A canari is a ceramic jar, handmade by local potters. There are 104 of them on the mosque, set into the roof.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "c4dd7bbb",
+  "text": "Ceramic lets air through but keeps the heat out. Inside it is cooler, and the light arrives soft, without dazzling those who pray.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "04f116a4",
+  "text": "The ostrich egg is a very old symbol in Africa. It reminds us that life begins, that it can give other lives, and that it always renews itself.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f150a212",
+  "text": "The eggs are placed at the very top of the towers, where they can be seen from afar. It is a way of saying that the mosque watches over the life of the town.",
+  "mood": "souriante"
+ },
+ {
+  "key": "ebe8a4f0",
+  "text": "The pillars hold up the roof of the prayer hall. They are thick and close together, because earth is heavy and cannot span wide gaps.",
+  "mood": "attentive"
+ },
+ {
+  "key": "2bd64179",
+  "text": "The pillars also recall the community: together, everyone carries a little of the weight. The mosque stands because people organise around it.",
+  "mood": "attentive"
+ },
+ {
+  "key": "5ff31062",
+  "text": "Every year, before the rainy season, all of Djenné gathers to cover the mosque with a new layer of earth. Without it, the rain would slowly dissolve it.",
+  "mood": "souriante"
+ },
+ {
+  "key": "b90ed0b1",
+  "text": "For young people, bringing the first mortar is an honour. The festival passes the craft from one generation to the next, and that is what keeps the mosque alive.",
+  "mood": "souriante"
+ },
+ {
+  "key": "4923818d",
+  "text": "In the Sahel, earth is found everywhere, while wood and stone are rare. That is why people have known how to build with it for centuries.",
+  "mood": "attentive"
+ },
+ {
+  "key": "b6a2fd9b",
+  "text": "Local know-how, like thick walls and raw earth, keeps buildings cool. Today it inspires homes suited to the heat, without relying on machines.",
+  "mood": "attentive"
+ },
+ {
+  "key": "de5767f0",
+  "text": "A jewel is a treasure. This mosque is built of earth, and yet it is magnificent and solid, at the heart of the town of Djenné.",
+  "mood": "souriante"
+ },
+ {
+  "key": "7f2aeacf",
+  "text": "It was rebuilt in 1907, on the traces of older mosques. It is a place of prayer, but also of gathering and celebration for the whole town.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f798f086",
+  "text": "UNESCO protects places that matter to all humanity. Since 1988, the mosque and the old town of Djenné have been part of that, and it is among the largest earthen buildings.",
+  "mood": "souriante"
+ },
+ {
+  "key": "1c72c35b",
+  "text": "On the terrace, in front of the prayer wall, two important people of the town rest. Their tombs are very simple, with no decoration.",
+  "mood": "attentive"
+ },
+ {
+  "key": "45db6a24",
+  "text": "The baraka is a blessing, a beneficial force. People come to ask for it near these tombs, with respect and in silence.",
+  "mood": "attentive"
+ },
+ {
+  "key": "f1be5c5a",
+  "text": "These tombs are made of earth, like the mosque. They are kept up like the walls: with earth, water and a lot of patience.",
+  "mood": "attentive"
+ },
+ {
+  "key": "40c113ae",
+  "text": "The mihrab is a niche in the wall. It shows the direction of Mecca, toward which all worshippers turn to pray.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "680502a6",
+  "text": "The imam stands near the mihrab to lead the prayer, especially on Fridays, when worshippers are most numerous.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "054ee733",
+  "text": "On festival days, the hall is not enough. People settle in the courtyard, and the whole town prays together.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "b8159668",
+  "text": "Holes in the roof let the hot air out. Cool air then comes in through other openings: the mosque breathes.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "788932b9",
+  "text": "When it rains, a canari is placed over each opening to close it. When the sun returns, they are removed to ventilate again.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "5d46ed10",
+  "text": "No air conditioning here: only thick walls, shade and air circulation keep it cool. It is a very old idea, and a very modern one.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "0a4b3a56",
+  "text": "The Bani is the river that surrounds Djenné. During the rains it rises, and the town looks like an island.",
+  "mood": "souriante"
+ },
+ {
+  "key": "a7ef4979",
+  "text": "Every Monday, the big market is held in front of the mosque. Traders come from all over the Sahel to buy and sell.",
+  "mood": "souriante"
+ },
+ {
+  "key": "2c38f410",
+  "text": "The river carried goods by pirogue. It is thanks to this trade that Djenné became rich and famous.",
+  "mood": "souriante"
+ },
+ {
+  "key": "fa8d9b60",
+  "text": "This sentence sums it all up: the mosque has crossed the centuries because people kept the knowledge of building in earth and passed it on together.",
+  "mood": "attentive"
+ },
+ {
+  "key": "dae96a51",
+  "text": "Regenerative means repairing instead of damaging. Highdigenous means drawing on local knowledge to invent tomorrow. That is the idea behind this whole game.",
+  "mood": "attentive"
+ },
+ {
+  "key": "a33ee0fb",
+  "text": "It is an invitation, for you. What you learned here can help build the future. It is up to you to decide what to do with it.",
+  "mood": "attentive"
+ },
+ {
+  "key": "c97e90b2",
+  "text": "I’m jamming their sensors: they’ll miss you more often. Move slowly, {nom}.",
+  "mood": "souriante"
+ },
+ {
+  "key": "dc9be741",
+  "text": "Well done, {nom}! You have device 2, but it is locked. Go to Barey So, the library, and gather information about it. Then we unlock it together in my lab.",
+  "mood": "souriante"
+ },
+ {
+  "key": "88bdd4ba",
+  "text": "Here we are near the tomb of Tapama Djénépo, {nom}. It is said she gave her life so that Djenné could be born and endure. Here, we do not speak loudly. Let us stay a moment in silence, for her.",
+  "mood": "attentive"
+ },
+ {
+  "key": "cd7c71db",
+  "text": "The answer is “90”. Write it and confirm, let’s keep the pace.",
+  "mood": "neutre"
+ },
+ {
+  "key": "0fc78193",
+  "text": "The answer is “104”. Write it and confirm, let’s keep the pace.",
+  "mood": "neutre"
+ },
+ {
+  "key": "ba32118d",
+  "text": "The answer is “1907”. Write it and confirm, let’s keep the pace.",
+  "mood": "neutre"
+ },
+ {
+  "key": "b541744b",
+  "text": "The answer is “torons”. Write it and confirm, let’s keep the pace.",
+  "mood": "neutre"
+ },
+ {
+  "key": "409d4a8d",
+  "text": "The answer is “3”. Write it and confirm, let’s keep the pace.",
+  "mood": "neutre"
+ },
+ {
+  "key": "77de0035",
+  "text": "The answer is “81”. Write it and confirm, let’s keep the pace.",
+  "mood": "neutre"
+ }
+]

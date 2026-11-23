@@ -22,10 +22,10 @@ import {
   SEQUENCES, RADIO, HELP_LEVELS, PUZZLES, ANALYSES,
   PLAYER_NAME, TAPAMA_NAME,
   createSequence, createRadioQueue, helpFor, portraitUrl, safeMood, analysisSummary,
-} from './tapama-core.js?v=3';
-import { fillName } from './player-profile.js?v=1';
-import { t, translateTree } from './i18n.js?v=1';
-import './tapama-voice.js?v=6';
+} from './tapama-core.js?v=4';
+import { fillName } from './player-profile.js?v=2';
+import { t, translateTree } from './i18n.js?v=3';
+import './tapama-voice.js?v=10';
 import { attachTapamaFace } from './tapama-face.js?v=5';   // bouche animée au rythme de la voix + clignements des yeux                       // voix féminine de Tapama (synthèse vocale du navigateur, provisoire)
 
 const INPUT_LOCK_MS = 280;   // ignore l'appui qui vient d'ouvrir l'écran

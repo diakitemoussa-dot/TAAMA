@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { toggleHologram, setHologram } from './hologram.js?v=4';
 import { mediaUrl, currentBytesPlan } from './device-quality.js?v=6';
-import { t as _t } from './i18n.js?v=1';
+import { t as _t } from './i18n.js?v=3';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createRemote, fovFor, aimDrop } from './drone-remote.js?v=2';
@@ -392,6 +392,7 @@ const KB_FLY = { KeyW:1, KeyS:1, KeyA:1, KeyD:1, ArrowUp:1, ArrowDown:1, ArrowLe
 const kbHeld = new Set();
 window.addEventListener('keydown', (e) => {
   if (!active) return;                                                       // hors vol : le clavier reste aux autres menus
+  const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;   // saisie dans un champ (note du labo…) : le drone ne vole pas les lettres
   if (KB_FLY[e.code]) { kbHeld.add(e.code); e.preventDefault(); return; }
   if (e.repeat) return;
   if (e.code === 'KeyP') { e.preventDefault(); takePhoto(); }

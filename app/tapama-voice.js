@@ -9,7 +9,7 @@
    Désactivable : localStorage taama.voice = '0' ou ?novoice=1.
    API : window.TapamaVoice { line(texteOrigine, humeur), stop(), speaking, level(), lineKey(texte), recorded }. lineKey() est pure (testée sous Node).
    ========================================================== */
-import { getLang } from './i18n.js?v=1';
+import { getLang } from './i18n.js?v=3';
 
 /** Clé stable d'une réplique (texte français d'origine, avec {nom}) : FNV-1a 32 bits en hexadécimal. */
 export function lineKey(raw) {
@@ -20,9 +20,11 @@ export function lineKey(raw) {
 }
 
 const AUDIO_BASE = 'assets/audio/tapama/';
-let manifest = null, manifestP = null, segTimer = 0, segAudio = null, token = 0, speakingAudio = false, busy = false;   // busy : une réplique est en cours (y compris les pauses entre ses phrases)
+let manifests = {}, manifestPs = {}, segTimer = 0, segAudio = null, token = 0, speakingAudio = false, busy = false;   // busy : une réplique est en cours (y compris les pauses entre ses phrases)
 const off = () => { try { return localStorage.getItem('taama.voice') === '0' || /[?&]novoice=1/.test(location.search); } catch (_) { return false; } };
-const loadManifest = () => manifestP || (manifestP = fetch(AUDIO_BASE + 'manifest.json?v=5').then((r) => (r.ok ? r.json() : {})).then((m) => (manifest = m)).catch(() => (manifest = {})));
+/* Un manifeste par langue : manifest.json (français) et manifest-en.json (voix anglaise). Les clés sont celles du texte FRANÇAIS d'origine. */
+const mfile = (lg) => (lg === 'en' ? 'manifest-en.json?v=4' : 'manifest.json?v=8');
+const loadManifest = (lg = getLang()) => manifestPs[lg] || (manifestPs[lg] = fetch(AUDIO_BASE + mfile(lg)).then((r) => (r.ok ? r.json() : {})).then((m) => (manifests[lg] = m)).catch(() => (manifests[lg] = {})));
 if (typeof window !== 'undefined') setTimeout(() => { if (!off()) loadManifest(); }, 1500);
 
 /* Analyse du son joué (pour animer la bouche de Tapama) : les phrases passent par un analyseur puis par un gain (volume du jeu). */
@@ -60,11 +62,11 @@ function line(raw, mood) {
   if (off() || !raw) return false;
   stop();
   const GA = window.GameAudio; const g = GA && GA.gain ? GA.gain('master') : 1;
-  if (g <= 0 || getLang() === 'en') return false;                     // son coupé ; anglais : pas encore de voix enregistrée
-  const my = token;
-  const play = () => { if (my !== token) return false; const segs = manifest && manifest[lineKey(raw)]; if (!segs || !segs.length) return false; playSegments(segs, g); return true; };
-  if (manifest) return play();
-  busy = true; loadManifest().then(() => { if (my === token) busy = false; play(); });                                    // première réplique avant le chargement du manifeste : elle est jouée dès qu'il arrive
+  if (g <= 0) return false;                                           // son coupé
+  const lg = getLang(), my = token;                                   // la voix suit la langue du jeu : française (FR) ou anglaise (EN)
+  const play = () => { if (my !== token) return false; const m = manifests[lg]; const segs = m && m[lineKey(raw)]; if (!segs || !segs.length) return false; playSegments(segs, g); return true; };
+  if (manifests[lg]) return play();
+  busy = true; loadManifest(lg).then(() => { if (my === token) busy = false; play(); });                                    // première réplique avant le chargement du manifeste : elle est jouée dès qu'il arrive
   return true;
 }
 
@@ -80,7 +82,7 @@ if (typeof window !== 'undefined') window.TapamaVoice = {
       const t0 = performance.now(), iv = setInterval(() => { if (!busy || performance.now() - t0 > maxMs) { clearInterval(iv); res(); } }, 100);
     });
   },
-  get recorded() { return manifest ? Object.keys(manifest).length : 0; },
+  get recorded() { const m = manifests[getLang()]; return m ? Object.keys(m).length : 0; },
   /** Intensité de la voix en ce moment (0..1) : sert à ouvrir la bouche de Tapama. */
   level() {
     if (!speakingAudio || !analyser) return 0;

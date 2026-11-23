@@ -11,7 +11,7 @@
    Textes : app/bibliotheque-textes.js (provisoires).
    ========================================================== */
 import * as THREE from 'three';
-import { t } from './i18n.js?v=1';
+import { t } from './i18n.js?v=3';
 import { BOOKS } from './bibliotheque-textes.js?v=2';
 import { Book3D } from './livre-3d.js?v=7';
 
@@ -158,7 +158,7 @@ function openReader(book) {
     btn(t('Valider la sélection'), H - 290, true, phr.length);
     btn(t('Fermer'), H - 184, false, phr.length + 1);
     gl.fillStyle = INK2; gl.font = 'italic 25px Georgia, serif';
-    gl.fillText(window.GamepadKit?.connected?.() ? '↕ ' + t('choisir') + ' · ✕ ' + t('cocher') + ' · ○ ' + t('fermer') : '↑ ↓ ' + t('choisir') + ' · ' + t('Entrée') + ' ' + t('cocher') + ' · Échap ' + t('fermer'), padX, H - 52);
+    gl.fillText(window.GamepadKit?.connected?.() ? '↕ ' + t('choisir') + ' · ✕ ' + t('cocher') + ' · ○ ' + t('fermer') : '↑ ↓ ' + t('choisir') + ' · ' + t('Entrée') + ' ' + t('cocher') + ' · ' + t('Échap') + ' ' + t('fermer'), padX, H - 52);
     // page de droite : les phrases (la taille du texte s'ajuste pour que tout tienne)
     let fs = 38, lines;
     const layout = (size) => { gr.font = 'bold ' + size + 'px Georgia, serif'; return phr.map((p) => wrapLines(gr, p.text, W - 2 * padX - 70)); };
@@ -197,7 +197,7 @@ function openReader(book) {
     const l = lus(); if (!l.includes(book.id)) { l.push(book.id); store.set(KEY_LUS, l); }
     window.GamepadKit?.toast?.(t('Phrases enregistrées dans la base du drone') + ' : ' + n);
     window.dispatchEvent(new CustomEvent('bibliotheque:valide', { detail: { livre: book.id, nouvelles: n } }));
-    close(); checkFini();
+    close(); unlockLab(); checkFini();
   }
   function onKey(e) {
     if (e.code === 'Escape') close();
@@ -230,9 +230,25 @@ function openReader(book) {
   state.reader = { toggle, validate, close, focus: (i) => { cur = i; draw(); }, selected: () => [...sel], count: phr.length, ready: () => ready };
 }
 
+/* Dès que le joueur a lu et validé LIVRES_MIN livres (avec au moins une phrase dans la base du drone), Tapama l'appelle (« Bien joué ») et le labo s'ouvre (cercle jaune actif) : il peut y retourner sans avoir lu tous les livres. */
+const LIVRES_MIN = 4;
+function unlockLab() {
+  let done = false; try { done = localStorage.getItem('taama.dispositif2') === '1'; } catch (_) {}
+  if (done || lus().length < LIVRES_MIN || DroneBase.phrases().length < 1) return;
+  try { localStorage.setItem('taama.dispositif2', '1'); localStorage.setItem('taama.acte', '3:retour'); } catch (_) {}
+  try { window.GameUI?.completeSequence?.(9); window.GameUI?.completeSequence?.(10); } catch (_) {}
+  window.GamepadKit?.toast?.(t('Le laboratoire de Tapama est ouvert : rejoins le cercle jaune.'));
+  const call = { text: 'Bien joué, {nom} ! Tu as déjà de quoi travailler. Rejoins-moi à mon laboratoire avec tes phrases : on va déverrouiller le dispositif 2.', mood: 'souriante', duration: 8 };
+  const go = () => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} };
+  if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 9000); }
+  window.dispatchEvent(new CustomEvent('bibliotheque:fini', { detail: { phrases: DroneBase.phrases().length, anticipe: true } }));
+}
+
 function checkFini() {
   if (state.fini || lus().length < BOOKS.length) return;
   state.fini = true;
+  let ouvert = false; try { ouvert = localStorage.getItem('taama.dispositif2') === '1'; } catch (_) {}
+  if (ouvert) return;                                                  // le labo a déjà été ouvert (et Tapama déjà appelée) dès les premières phrases
   window.GamepadKit?.toast?.(t('Tous les livres sont lus. Tapama t’attend à son laboratoire.'));
   try { localStorage.setItem('taama.dispositif2', '1'); } catch (_) {}
   try { window.GameUI?.completeSequence?.(9); window.GameUI?.completeSequence?.(10); } catch (_) {}
@@ -270,9 +286,10 @@ function checkEntree(dt) {
   if (Math.abs(l.x) > 14.25 || Math.abs(l.z) > 10.25) return;
   try { localStorage.setItem(KEY_ENTREE, '1'); } catch (_) {}
   const call = { text: 'Te voilà à Barey So, {nom} ! Récolte le plus d’informations que tu peux. Juste après, je t’affiche le chemin de retour vers mon laboratoire, puis tu pourras lire les livres.', mood: 'attentive', duration: 11 };
-  const go = () => setTimeout(() => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} }, 2000);     // 2 s après la disparition de la bulle // ouvre la carte sur le labo avec l'itinéraire de retour
-  if (window.Dispositif1?.radioThen) { window.Dispositif1.radioThen(call); setTimeout(go, 1000); }
-  else { window.Tapama?.radio?.(call); setTimeout(go, 1000); }
+  // l'itinéraire de retour vers le labo ne s'affiche qu'APRÈS le message de Tapama (1 s après la disparition de la bulle)
+  const go = () => setTimeout(() => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} }, 1000);
+  if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go);
+  else { window.Tapama?.radio?.(call); setTimeout(go, (call.duration || 11) * 1000 + 1000); }
 }
 
 M?.addFrameHook((dt) => {

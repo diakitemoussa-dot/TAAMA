@@ -16,9 +16,9 @@
    ========================================================== */
 
 /** Numéro de build UNIQUE du guide : tools/bump-guide.mjs le propage dans tous les imports et feuilles de style (aucun fichier ancien en cache). */
-const GUIDE_BUILD = '52';
+const GUIDE_BUILD = '53';
 let mod = null, loading = null;
-const load = () => loading || (loading = import('./guide-ui.js?v=52').then((m) => (mod = m.default)));
+const load = () => loading || (loading = import('./guide-ui.js?v=53').then((m) => (mod = m.default)));
 
 window.Guide = {
   get isOpen() { return !!(mod && mod.isOpen()); },

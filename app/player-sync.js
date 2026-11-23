@@ -7,7 +7,7 @@
    et le jeu réessaiera plus tard (profil marqué « en attente »).
    ========================================================== */
 
-import { toPayload } from './player-profile.js?v=1';
+import { toPayload } from './player-profile.js?v=2';
 
 /** Adresse du serveur : `window.TAAMA_PLAYERS_ENDPOINT` ou <meta name="taama-players-endpoint"> si définis (hébergeur externe),
  *  sinon une adresse RELATIVE à la page (sous /Taama/ sur GitHub Pages, « /api/players » absolu visait la racine du domaine). */

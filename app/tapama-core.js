@@ -41,7 +41,7 @@ export const SEQUENCES = {
     chapter: 'Séquence 3',
     title: 'Ouverture · Tapama',
     lines: [
-      { who: 'tapama', mood: 'souriante', text: 'Salut {nom} ! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je suis sa descendante.' },
+      { who: 'tapama', mood: 'souriante', text: 'Salut {nom} ! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je porte son nom en hommage : je veux que son histoire ne s’oublie pas.' },
       { who: 'tapama', mood: 'neutre', text: 'La légende raconte qu’elle s’est sacrifiée pour que Djenné tienne debout. Chez nous, on dit que les secrets de la ville appartiennent à ceux qui osent les chercher.' },
       { who: 'tapama', mood: 'curieuse', text: 'Depuis quelques années, je cherche un ancien dispositif caché dans la Grande Mosquée. Mon grand-père m’en parlait déjà quand j’étais petite, le soir, sous le ciel de Djenné.' },
       { who: 'tapama', mood: 'attentive', text: 'Mes recherches sont formelles : il existe, quelque part dans la mosquée. J’ignore ce qu’il fait. Je veux le découvrir, et pour ça j’ai besoin de toi, {nom}.' },

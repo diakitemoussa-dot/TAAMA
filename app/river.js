@@ -71,8 +71,11 @@ const uni = {
   uMaskTexel: { value: 3 / (2 * BED_R) },                   // 3 m en coordonnées de texture (lissage du bord)
 };
 
-function makeWaterMaterial(old) {
-  const map = makeWaveTexture(TEX);
+let _pondMap = null;
+/** pond = true : eau d'un bassin (hors du fleuve) — même matière (vaguelettes, couleur du Bani, reflet du ciel, heure du jour), sans carte du lit : l'eau ne disparaît donc pas hors du fleuve. */
+function makeWaterMaterial(old, pond = false) {
+  const map = pond ? (_pondMap || (_pondMap = makeWaveTexture(TEX))) : makeWaveTexture(TEX);
+  const U = pond ? { ...uni, uHasBed: { value: 0 } } : uni;
   const mat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(0x56704a),         // eau limoneuse du Bani (vert-brun)
     roughness: 0.2, metalness: 0.0,
@@ -83,7 +86,7 @@ function makeWaterMaterial(old) {
   if (old && old.side !== undefined) mat.side = old.side;
   mat.userData.isRiverWater = true;
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, uni, { uWave: { value: map } });
+    Object.assign(sh.uniforms, U, { uWave: { value: map } });
     sh.vertexShader = sh.vertexShader
       .replace('void main() {', 'varying vec3 vRiverW;\nvoid main() {')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vRiverW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
@@ -124,7 +127,7 @@ function makeWaterMaterial(old) {
           totalEmissiveRadiance += uSky * (0.05 + fr * 0.55) * uSkyAmt;     // reflet du ciel, plus fort sur les bords vus de biais
         }`);
   };
-  mat.customProgramCacheKey = () => 'river-water-shore-' + QUALITY;
+  mat.customProgramCacheKey = () => (pond ? 'river-water-pond-' : 'river-water-shore-') + QUALITY;
   return mat;
 }
 
@@ -198,7 +201,7 @@ export function carveDepth(distM) { return Math.min(CARVE_MAX, CARVE_SLOPE * Mat
 async function carveRiver(water) {
   const r = M.renderer, grounds = []; M.scene.traverse((o) => { if (o.isMesh && /^Sol_/i.test(o.name || '')) grounds.push(o); });
   if (!r || !grounds.length || !state.bed || !uni.uMask.value) return false;
-  let routes; try { routes = await (await fetch('assets/data/routes-djenne-voiture.json?v=1')).json(); } catch (_) { return false; }     // sans le réseau routier, on ne creuse pas (gués inconnus)
+  let routes; try { routes = await (await fetch('assets/data/routes-djenne-voiture.json?v=2')).json(); } catch (_) { return false; }     // sans le réseau routier, on ne creuse pas (gués inconnus)
   const surf = state.bed.surf, W = CARVE_RES, H = CARVE_RES, texel = (2 * BED_R) / W;
   // 1. hauteur du sol (8 bits : 16 bits sur R,G) et masque de l'eau, lus sur le CPU
   const rt = new THREE.WebGLRenderTarget(W, H, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, generateMipmaps: false });
@@ -316,4 +319,4 @@ if (M && M.addFrameHook) {
   });
 }
 
-window.River = { get ready() { return state.ready; }, get mesh() { return state.mesh; }, get bed() { return state.bed; }, get carved() { return state.carved; }, setStrength(v) { uni.uStrength.value = +v; } };
+window.River = { get ready() { return state.ready; }, get mesh() { return state.mesh; }, get bed() { return state.bed; }, get carved() { return state.carved; }, setStrength(v) { uni.uStrength.value = +v; }, makePondMaterial() { return makeWaterMaterial(null, true); } };

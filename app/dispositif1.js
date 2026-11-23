@@ -17,6 +17,7 @@
    ========================================================== */
 import * as THREE from 'three';
 import { mediaUrl } from './device-quality.js?v=6';
+import { LABO, LABO_HAUTEUR } from './labo-position.js?v=2';
 
 const M = window.MosqueScene;
 const POS = new THREE.Vector3(-10.0, 15.3, 15.0);         // repère du jeu (x nord, z est) : SUR LE TOIT de la Grande Mosquée (emplacement d'origine, côté façade à minarets)
@@ -182,8 +183,8 @@ window.addEventListener('bibliotheque:fini', () => badge(2, 'Dispositif 2'));
    ========================================================== */
 const ACTE = 'taama.acte', LAB1 = 'taama.lab1', LAB2 = 'taama.lab2', DEV2 = 'taama.dispositif2', DOSSIER = 'taama.dossier', GADGET = 'taama.gadget';
 const VOL_KEY = 'taama.vol', REV_KEY = 'taama.revelation', GADGET_PENDING = 'taama.gadget.pending', INTRO_CAM = 'taama.intro.cam';
-const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
-const CIRCLE = { x: -175.012, z: -219.890, r: 1.8, away: 6 };      // cercle jaune = labo de Tapama (même rayon que PORTAL_RADIUS) ; verrou levé à 6 m
+const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', 'taama.sansac', 'taama.crepissage.cercle', 'taama.tombe.silence', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
+const CIRCLE = { x: LABO.x, z: LABO.z, r: LABO.r, away: 6 };      // cercle jaune = labo de Tapama (même rayon que PORTAL_RADIUS) ; verrou levé à 6 m
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
 const emit = (n, d) => window.dispatchEvent(new CustomEvent(n, { detail: d }));
@@ -266,12 +267,17 @@ function leaveLab(stage) {
       };
       setTimeout(showTombRoute, 1500);
     } else {
-      lsSet(LAB2, 'done'); lsSet(REV_KEY, '1'); lsSet('taama.chapitre1', 'done'); lsSet('taama.next', 'bandiagara');
-      seq(11, 12, 13); emit('taama:chapitre1-fin');   // la séquence 12 (« La menace demeure ») est facultative dans le scénario : on la clôt avec la fin du chapitre
+      // Dispositif 2 déverrouillé : le personnage n'a plus ni sac ni drone sur le dos, et il reste UNE mission avant le départ (le crépissage de la mosquée).
+      // Le chapitre n'est donc pas terminé : pas de « fin du chapitre 1 » ni de carte de Bandiagara pour l'instant.
+      lsSet(LAB2, 'done'); lsSet(REV_KEY, '1'); lsSet('taama.next', 'crepissage'); lsSet(ACTE, '4:crepissage');
+      try { window.SanctuaryMode?.setGearHidden?.(true); } catch (_) {}
+      seq(11, 12);
     }
     freeze(false); S.labBusy = false; S.leaving = false;
     veil(false, 700);
-    if (stage === 2) setTimeout(() => { try { window.GameUI?.show?.('carte'); } catch (e) { console.warn('[GameUI]', e); } }, 900);   // S14 : carte des destinations, Bandiagara
+    if (stage === 2) setTimeout(() => {       // dès la sortie du labo : Tapama annonce la dernière mission, puis l'itinéraire de la mosquée s'affiche
+      radioThen({ text: 'Avant ton départ, il te manque une dernière mission. Retourne à la Grande Mosquée : une partie de ses murs doit être recrépie, et tout le monde a besoin de toi.', mood: 'souriante', duration: 11 }, () => { window.dispatchEvent(new CustomEvent('taama:crepissage-cercle')); });
+    }, 900);
   });
 }
 /* le cercle déclenche à pied comme au volant (portée élargie en voiture : le point suivi est le siège) */
@@ -279,7 +285,7 @@ M?.addFrameHook(() => {
   if (S.labBusy) return;
   const sm = window.SanctuaryMode, pp = sm && sm.isActive && sm.isActive() ? sm.playerPosition() : null;
   if (!pp) return;
-  const d = Math.hypot(pp.x - CIRCLE.x, pp.z - CIRCLE.z);
+  const d = Math.hypot(pp.x - CIRCLE.x, pp.z - CIRCLE.z) + (Math.abs(pp.y - LABO.y) > LABO_HAUTEUR ? 99 : 0);     // la nouvelle maison a des étages : seul le rez-de-chaussée compte
   if (S.circleLock) { if (d > CIRCLE.away) S.circleLock = false; return; }
   if (d >= CIRCLE.r + (window.Vehicle?.state === 'drive' ? 1.2 : 0)) return;
   if (window.Tapama?.isBusy?.() || window.CityMap?.isOpen) return;
@@ -301,8 +307,8 @@ function introEligible() {
 let mapWasOpen = false, introRunning = false, skipSince = 0;
 setInterval(() => {
   const open = !!window.CityMap?.isOpen, justClosed = mapWasOpen && !open; mapWasOpen = open;
-  // Tuto passé (« Passer le guide ») : le joueur n'ouvrira peut-être jamais la carte → le plan se lance quand même, dès que le jeu est libre depuis 2,5 s
-  const g = guideState(), skipped = !!(g.prefs && g.prefs.off) && !open && !document.querySelector('.gu-screen.on') && !document.documentElement.classList.contains('gu-paused');
+  // Tuto passé (« Passer le guide ») ou déjà vu lors d'une partie précédente (nouvelle partie) : le joueur n'ouvrira peut-être jamais la carte → le plan se lance quand même, dès que le jeu est libre depuis 2,5 s
+  const g = guideState(), tutosFaits = !!(g.prefs && g.prefs.off) || !!((g.seen || {}).walk && ((g.seen || {}).bigmap || (g.seen || {}).map)), skipped = tutosFaits && !open && !document.querySelector('.gu-screen.on') && !document.documentElement.classList.contains('gu-paused');
   skipSince = skipped && introEligible() ? (skipSince || Date.now()) : 0;
   const skipReady = skipSince && Date.now() - skipSince > 2500;
   if ((!justClosed && !skipReady) || introRunning || !introEligible()) return;
@@ -372,6 +378,7 @@ window.Dispositif1 = {
     S.labBusy = S.volBusy = S.circleLock = S.leaving = false; freeze(false); if (veilEl) { veilEl.style.opacity = '0'; veilEl.style.pointerEvents = 'none'; }
     if (S.badge) S.badge.innerHTML = ''; S.taken = false; S.taking = 0; if (S.group) S.group.visible = true; if (S.holder) S.holder.scale.setScalar(1); S.active = false; S.glow = 0;
     if (S.holder) { S.holder.position.y = 0.2; S.holder.rotation.set(0.32, 0.6, 0.18); }
+    try { window.SanctuaryMode?.setGearHidden?.(false); } catch (_) {}   // nouvelle partie : sac et drone reviennent sur le dos
     window.dispatchEvent(new CustomEvent('taama:reset'));
   },
 };

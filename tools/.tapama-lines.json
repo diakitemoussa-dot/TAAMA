@@ -1,7 +1,7 @@
 [
  {
-  "key": "18b710fb",
-  "text": "Salut {nom} ! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je suis sa descendante.",
+  "key": "42a9f6a6",
+  "text": "Salut {nom} ! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je porte son nom en hommage : je veux que son histoire ne s’oublie pas.",
   "mood": "souriante"
  },
  {
@@ -190,6 +190,11 @@
   "mood": "souriante"
  },
  {
+  "key": "ec35e7ac",
+  "text": "Bien joué, {nom} ! Tu as déjà de quoi travailler. Rejoins-moi à mon laboratoire avec tes phrases : on va déverrouiller le dispositif 2.",
+  "mood": "souriante"
+ },
+ {
   "key": "f8333bb7",
   "text": "Tu as récolté toutes les informations, {nom} ! Rejoins-moi à mon laboratoire avec les phrases que tu as retenues : on va déverrouiller le dispositif 2.",
   "mood": "souriante"
@@ -200,8 +205,28 @@
   "mood": "attentive"
  },
  {
+  "key": "6361ee56",
+  "text": "Regarde comment le toron te permet de tenir, et comment toute la communauté sort pour travailler en équipe. Passe la main sur le mur : la terre doit le couvrir partout.",
+  "mood": "attentive"
+ },
+ {
+  "key": "a6da2a12",
+  "text": "C’est ça, doucement, avec toute la paume. Un mur bien crépi protège la mosquée toute l’année.",
+  "mood": "souriante"
+ },
+ {
+  "key": "a3326252",
+  "text": "Voilà : la mosquée est prête pour la saison des pluies. Merci d’avoir pris soin de ce mur. Notre route continue vers Bandiagara.",
+  "mood": "souriante"
+ },
+ {
   "key": "57698852",
   "text": "Super, je vois que tu l’as récupéré ! Prends le pick-up garé devant la mosquée pour me rejoindre à ces coordonnées.",
+  "mood": "souriante"
+ },
+ {
+  "key": "c3abfe11",
+  "text": "Avant ton départ, il te manque une dernière mission. Retourne à la Grande Mosquée : une partie de ses murs doit être recrépie, et tout le monde a besoin de toi. Je t’affiche le chemin.",
   "mood": "souriante"
  },
  {
@@ -260,8 +285,8 @@
   "mood": "attentive"
  },
  {
-  "key": "bfb6cbbf",
-  "text": "Va à la tombe de Djenépo avec le pick-up, près du fleuve. Je t’attends là-bas, {nom}. Prends ton temps, mais reste vigilant.",
+  "key": "d9c5c0e1",
+  "text": "Va à la tombe de Djenépo avec le pick-up, près du fleuve. Moi, je reste au labo pour remettre les écrans en marche. Prends ton temps, mais reste vigilant.",
   "mood": "attentive"
  },
  {
@@ -305,8 +330,23 @@
   "mood": "attentive"
  },
  {
-  "key": "8e8acc5a",
-  "text": "C’est un peu court, {nom}. Écris une vraie phrase, avec tes mots, pour que je puisse la garder.",
+  "key": "edb3e26b",
+  "text": "C’est un peu court, {nom}. Écris au moins un mot, même avec des fautes : ce qui compte, c’est ce que tu penses.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "39751508",
+  "text": "Avant de regarder tes phrases, {nom}, parle-moi de chez toi. Dans ton quartier ou ton village, quelles maisons ou quels murs sont faits en terre, en bambou ou en pierre ?",
+  "mood": "attentive"
+ },
+ {
+  "key": "9ee9dfba",
+  "text": "Merci, voilà qui m’aide à comprendre d’où tu viens. Je le garde dans ton carnet. Regardons maintenant ce que tu as appris à Barey So.",
+  "mood": "souriante"
+ },
+ {
+  "key": "f41287cd",
+  "text": "Je n’ai pas bien compris. Écris-moi ce que tu as retenu, avec tes mots à toi, {nom}.",
   "mood": "curieuse"
  },
  {
@@ -530,6 +570,11 @@
   "mood": "souriante"
  },
  {
+  "key": "88bdd4ba",
+  "text": "Nous voici près de la tombe de Tapama Djénépo, {nom}. On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
+  "mood": "attentive"
+ },
+ {
   "key": "cd7c71db",
   "text": "La réponse, c’est « 90 ». Écris-la et valide, on garde le rythme.",
   "mood": "neutre"
@@ -565,8 +610,8 @@
   "mood": "souriante"
  },
  {
-  "key": "74ae2e88",
-  "text": "! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je suis sa descendante.",
+  "key": "2c93cccd",
+  "text": "! Je suis Tapama Traoré. Je porte le nom d’une héroïne de Djenné, Tapama Djénépo. Elle a veillé sur la ville, et je porte son nom en hommage : je veux que son histoire ne s’oublie pas.",
   "mood": "souriante"
  },
  {
@@ -705,6 +750,16 @@
   "mood": "souriante"
  },
  {
+  "key": "2693c6b4",
+  "text": "Bien joué,",
+  "mood": "souriante"
+ },
+ {
+  "key": "8e516919",
+  "text": "! Tu as déjà de quoi travailler. Rejoins-moi à mon laboratoire avec tes phrases : on va déverrouiller le dispositif 2.",
+  "mood": "souriante"
+ },
+ {
   "key": "e7724725",
   "text": "Tu as récolté toutes les informations,",
   "mood": "souriante"
@@ -760,16 +815,6 @@
   "mood": "attentive"
  },
  {
-  "key": "77493eea",
-  "text": "Va à la tombe de Djenépo avec le pick-up, près du fleuve. Je t’attends là-bas,",
-  "mood": "attentive"
- },
- {
-  "key": "07407e78",
-  "text": ". Prends ton temps, mais reste vigilant.",
-  "mood": "attentive"
- },
- {
   "key": "a32cf9c6",
   "text": ". Tes phrases viennent de lancer le dispositif : Djenné n’est qu’un point parmi d’autres.",
   "mood": "surprise"
@@ -795,8 +840,23 @@
   "mood": "curieuse"
  },
  {
-  "key": "249525ae",
-  "text": ". Écris une vraie phrase, avec tes mots, pour que je puisse la garder.",
+  "key": "ca76b95f",
+  "text": ". Écris au moins un mot, même avec des fautes : ce qui compte, c’est ce que tu penses.",
+  "mood": "curieuse"
+ },
+ {
+  "key": "2838d7c8",
+  "text": "Avant de regarder tes phrases,",
+  "mood": "attentive"
+ },
+ {
+  "key": "91e32029",
+  "text": ", parle-moi de chez toi. Dans ton quartier ou ton village, quelles maisons ou quels murs sont faits en terre, en bambou ou en pierre ?",
+  "mood": "attentive"
+ },
+ {
+  "key": "56712a39",
+  "text": "Je n’ai pas bien compris. Écris-moi ce que tu as retenu, avec tes mots à toi,",
   "mood": "curieuse"
  },
  {
@@ -860,13 +920,18 @@
   "mood": "souriante"
  },
  {
-  "key": "2693c6b4",
-  "text": "Bien joué,",
-  "mood": "souriante"
- },
- {
   "key": "a02d445c",
   "text": "! Tu as le dispositif 2, mais il est verrouillé. Va à Barey So, la bibliothèque, récolter des informations sur lui. Ensuite on le déverrouille ensemble dans mon labo.",
   "mood": "souriante"
+ },
+ {
+  "key": "1aa7edf6",
+  "text": "Nous voici près de la tombe de Tapama Djénépo,",
+  "mood": "attentive"
+ },
+ {
+  "key": "e4f3b059",
+  "text": ". On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
+  "mood": "attentive"
  }
 ]

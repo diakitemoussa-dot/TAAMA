@@ -5,7 +5,7 @@
    ========================================================== */
 
 import * as TL from './touch-layout.js?v=3';
-import { t } from './i18n.js?v=1';
+import { t } from './i18n.js?v=3';
 
 /* ---------- Pictogrammes : mêmes tracés que les boutons de touch-controls.js ---------- */
 export const ICO = {

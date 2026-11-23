@@ -23,16 +23,16 @@
 
 import { SCREENS } from './game-screens.js?v=14';
 import { applyTaamaLogo } from './taama-logo.js?v=3';
-import * as G from './game-save.js?v=2';
+import * as G from './game-save.js?v=3';
 import { detectQuality } from './device-quality.js?v=6';
 import { CINE, cinematicUrl, preloadCinematic, introPre } from './intro-video.js?v=1';
 import { blackTransition, isMenuScreen, BLACK_MS } from './screen-fx.js?v=2';
-import * as P from './player-profile.js?v=1';
-import * as I18n from './i18n.js?v=1';
-import { t, translateTree } from './i18n.js?v=1';
-import { EN } from './i18n-en.js?v=19';
-import { sendProfile, deviceLabel } from './player-sync.js?v=5';
-import { SEQUENCES } from './tapama-core.js?v=3';
+import * as P from './player-profile.js?v=2';
+import * as I18n from './i18n.js?v=3';
+import { t, translateTree } from './i18n.js?v=3';
+import { EN } from './i18n-en.js?v=28';
+import { sendProfile, deviceLabel } from './player-sync.js?v=6';
+import { SEQUENCES } from './tapama-core.js?v=4';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
 
 const NEW_UI = window.__NEW_UI !== false;
@@ -1028,7 +1028,7 @@ function toggleSubtitles() {
 
 /* Nouvelle partie : clés de progression de l'histoire à effacer (hors profil joueur taama.player.v1) */
 const NEW_GAME_KEYS = ['taama.dispositif1', 'taama.dispositif2', 'taama.vol', 'taama.piste', 'taama.revelation', 'taama.acte', 'taama.d1.spotted',
-  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
+  'taama.lab1', 'taama.lab1.q', 'taama.lab2', 'taama.lab2.q', 'taama.dossier', 'taama.gadget', 'taama.gadget.pending', 'taama.intro.cam', 'taama.base.cam', 'taama.sansac', 'taama.crepissage.cercle', 'taama.tombe.silence', 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
 
 let playClock = 0;
 let progressTick = 0;

@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { SEQUENCES, RADIO, PUZZLES } from '../app/tapama-core.js?v=2';
+import { SEQUENCES, RADIO, PUZZLES } from '../app/tapama-core.js?v=4';
 import { lineKey } from '../app/tapama-voice.js';
 
 import { fileURLToPath } from 'node:url';
@@ -55,6 +55,19 @@ for (const l of [...lines.values()]) {
 const out = [...lines.values()];
 fs.writeFileSync(path.join(root, 'tools', '.tapama-lines.json'), JSON.stringify(out, null, 1));
 console.log(`${out.length} répliques collectées`);
+// version anglaise : même clé (calculée sur le français), texte = traduction du dictionnaire i18n-en.js ; les répliques sans traduction sont listées
+{
+  const { EN } = await import('../app/i18n-en.js?v=28');
+  const norm = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').replace(/'/g, '’').trim();
+  const en = [], missing = [];
+  for (const l of out) {
+    const tr = Object.prototype.hasOwnProperty.call(EN, norm(l.text)) ? EN[norm(l.text)] : undefined;
+    if (tr === undefined) missing.push(l); else en.push({ key: l.key, text: tr, mood: l.mood });
+  }
+  fs.writeFileSync(path.join(root, 'tools', '.tapama-lines-en.json'), JSON.stringify(en, null, 1));
+  fs.writeFileSync(path.join(root, 'tools', '.tapama-lines-en-missing.json'), JSON.stringify(missing, null, 1));
+  console.log(`anglais : ${en.length} traduites, ${missing.length} sans traduction`);
+}
 if (process.argv.includes('--collect-only')) process.exit(0);
 const py = process.env.TAAMA_PY || 'python';
 const r = spawnSync(py, [path.join(root, 'tools', 'gen_tapama_voice.py'), ...(process.argv.includes('--force') ? ['--force'] : [])], { stdio: 'inherit' });

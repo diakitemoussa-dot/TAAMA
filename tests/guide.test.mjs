@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import * as I from '../app/i18n.js?v=1';          // mêmes URL que l'app : une seule instance du dictionnaire
+import * as I from '../app/i18n.js?v=3';          // mêmes URL que l'app : une seule instance du dictionnaire
 import * as L from '../app/guide-logic.js';
 import * as C from '../app/guide-content.js';
 import * as TL from '../app/touch-layout.js';

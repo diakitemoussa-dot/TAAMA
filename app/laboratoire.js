@@ -25,9 +25,9 @@
    exportée : voir tests/lab-enigmes.test.mjs.
    ========================================================== */
 
-import { fillName } from './player-profile.js?v=1';
+import { fillName } from './player-profile.js?v=2';
 import { mediaUrl } from './device-quality.js?v=6';
-import { t, translateTree } from './i18n.js?v=1';
+import { t, translateTree } from './i18n.js?v=3';
 import { BOOKS } from './bibliotheque-textes.js?v=2';
 import { EXPLICATIONS } from './phrases-tapama.js?v=1';
 
@@ -221,7 +221,7 @@ const LIGNES = {
   ],
   fin1: [
     { who: 'tapama', mood: 'attentive', text: 'Le dispositif n’a pas tout montré. Il manque une pièce : un autre dispositif est caché à côté de la tombe de Djenépo. C’est lui qu’il nous faut, {nom}.' },
-    { who: 'tapama', mood: 'attentive', text: 'Va à la tombe de Djenépo avec le pick-up, près du fleuve. Je t’attends là-bas, {nom}. Prends ton temps, mais reste vigilant.' },
+    { who: 'tapama', mood: 'attentive', text: 'Va à la tombe de Djenépo avec le pick-up, près du fleuve. Moi, je reste au labo pour remettre les écrans en marche. Prends ton temps, mais reste vigilant.' },
   ],
   proj2: { who: 'tapama', mood: 'surprise', text: 'Regarde cette carte, {nom}. Tes phrases viennent de lancer le dispositif : Djenné n’est qu’un point parmi d’autres.' },
   coupure2: [
@@ -239,7 +239,11 @@ const MSG = {
   aucunePhrase: { mood: 'curieuse', text: 'Tu n’as sélectionné aucune phrase dans les livres. Pas de souci : je te montre quelques phrases importantes, et je te les explique.' },
   tableauFin: { mood: 'souriante', text: 'Voilà, on a fait le tour de tes phrases. Tu en comprends maintenant le sens.' },
   noteDemande: { mood: 'attentive', text: 'Maintenant, {nom}, dis-moi ce que tu as retenu de ton aventure dans ce jeu. Écris une phrase qui t’a marqué : c’est elle qui déverrouille le dispositif.' },
-  noteCourte: { mood: 'curieuse', text: 'C’est un peu court, {nom}. Écris une vraie phrase, avec tes mots, pour que je puisse la garder.' },
+  noteCourte: { mood: 'curieuse', text: 'C’est un peu court, {nom}. Écris au moins un mot, même avec des fautes : ce qui compte, c’est ce que tu penses.' },
+  quartierDemande: { mood: 'attentive', text: 'Avant de regarder tes phrases, {nom}, parle-moi de chez toi. Dans ton quartier ou ton village, quelles maisons ou quels murs sont faits en terre, en bambou ou en pierre ?' },
+  quartierMerci: { mood: 'souriante', text: 'Merci, voilà qui m’aide à comprendre d’où tu viens. Je le garde dans ton carnet. Regardons maintenant ce que tu as appris à Barey So.' },
+  noteIncomprise: { mood: 'curieuse', text: 'Je n’ai pas bien compris. Écris-moi ce que tu as retenu, avec tes mots à toi, {nom}.' },
+  noteMot: { mood: 'souriante', text: 'Tu parles de « {mot} »… voilà une idée qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.' },
   noteMerci: { mood: 'souriante', text: 'Merci, {nom}. Voilà une phrase qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.' },
   deverrouille: { mood: 'surprise', text: 'Les verrous cèdent un par un… {nom}, ce sont tes phrases qui ouvrent le dispositif 2 !' },
   reprise: { mood: 'souriante', text: 'On reprend où on s’était arrêtés, {nom}.' },
@@ -668,7 +672,7 @@ function say(mood, text, opts = {}) {
   const line = { who: 'tapama', mood: mood || 'neutre', text };
   S.log.push(line);
   ui.face.src = PORTRAIT(mood);
-  window.TapamaVoice?.line(text, mood || 'neutre', nm(text));      // sa voix (audio préenregistré ou synthèse selon l'humeur)
+  window.TapamaVoice?.line(opts.voix || text, mood || 'neutre', nm(opts.voix || text));      // sa voix (audio préenregistré ou synthèse selon l'humeur)
   ui.bubbleText.textContent = `« ${nm(text)} »`;
   ui.bubble.classList.remove('pop'); void ui.bubble.offsetWidth; ui.bubble.classList.add('pop');
   ui.visio.dataset.mood = mood || 'neutre';
@@ -1158,17 +1162,17 @@ async function phaseTableau() {
 
 /* Stade 2 : le joueur écrit, avec ses mots, une phrase qu'il a retenue dans le jeu. Tapama la range dans son carnet (menu pause, app/notes.js),
    elle part dans la feuille du jeu, et c'est elle qui déverrouille le dispositif 2. Clavier à l'écran : manette et tactile. */
-const NOTE_MIN_CARS = 12, NOTE_MIN_MOTS = 3;
+const NOTE_MIN_CARS = 3, NOTE_MIN_MOTS = 1;      // réponse courte acceptée (un mot suffit) ; les fautes d'orthographe ne comptent pas
 const KEYPAD_NOTE = [...'azertyuiopqsdfghjklmwxcvbn', 'é', 'è', 'à', 'ç', 'ê', '’', ',', '.', '?', '!'];
 
-function renderNote() {
+function renderNote(titre = 'Écris une phrase que tu as retenue dans le jeu.', kicker = 'Ma note', chip = 'Carnet de Tapama') {
   const panel = ui.panel;
   panel.hidden = false;
   panel.className = 'lab-panel lab-enigme lab-note';
   panel.replaceChildren();
   const top = el('div', 'lab-p-top');
-  top.append(el('span', 'lab-kicker', 'Ma note'), el('span', 'lab-chip', 'Carnet de Tapama'));
-  const q = el('h2', 'lab-q', 'Écris une phrase que tu as retenue dans le jeu.');
+  top.append(el('span', 'lab-kicker', kicker), el('span', 'lab-chip', chip));
+  const q = el('h2', 'lab-q', titre);
   q.id = 'labQ';
   const row = el('div', 'lab-answer');
   const input = document.createElement('input');
@@ -1220,21 +1224,66 @@ function renderNote() {
   if (!touch && !pad_) setTimeout(() => input.focus({ preventScroll: true }), 60);
 }
 
+/* Contrôle de la note : refuse le charabia (frappe au hasard, lettres répétées, suites du clavier) et repère un mot « utile » à citer. */
+const NOTE_RANGEES = ['azertyuiop', 'qsdfghjklm', 'wxcvbn', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+const NOTE_MOTS_VIDES = new Set(['dans', 'avec', 'pour', 'sans', 'sous', 'mais', 'donc', 'elle', 'elles', 'nous', 'vous', 'ils', 'les', 'des', 'une', 'qui', 'que', 'quoi', 'est', 'sont', 'été', 'ete', 'aux', 'ces', 'ses', 'son', 'mon', 'ton', 'leur', 'leurs', 'très', 'tres', 'plus', 'comme', 'cette', 'cet', 'tout', 'tous', 'fait', 'faire', 'j’ai', 'c’est', 'jai', 'cest']);
+function motNoteValable(w) {
+  const m = w.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
+  if (m.length < 2 || !/[aeiouy]/.test(m)) return false;
+  if (/(.)\1\1/.test(m)) return false;                                              // « aaaa », « hhhh »
+  if (new Set(m).size < 2 || (m.length >= 5 && new Set(m).size < 3)) return false;  // « ababab »
+  if (m.length >= 4 && NOTE_RANGEES.some((r) => r.includes(m.slice(0, 4)) || [...r].reverse().join('').includes(m.slice(0, 4)))) return false;   // « azer », « qsdf »
+  if (/[bcdfghjklmnpqrstvwxz]{5,}/.test(m)) return false;                          // pas de voyelle sur 5 lettres de suite
+  return true;
+}
+function analyseNote(texte) {
+  const mots = texte.split(' ').filter((w) => w.length > 0);
+  const bons = mots.filter(motNoteValable);
+  const ok = texte.length >= NOTE_MIN_CARS && mots.length >= NOTE_MIN_MOTS && bons.length >= Math.max(1, Math.ceil(mots.length / 2));
+  const net = (w) => w.replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ’']+$/g, '');
+  const utiles = bons.map(net).filter((w) => w.length >= 4 && !NOTE_MOTS_VIDES.has(w.toLowerCase()));
+  const mot = utiles.sort((a, b) => b.length - a.length)[0] || '';
+  return { ok, mots: mots.length, mot: mot.toLowerCase() };
+}
+
 function submitNote() {
   if (!S || !S.cur || !S.cur.note || S.cur.busy || S.phase !== 'note' || locked()) return;
   const c = S.cur, texte = c.input.value.replace(/\s+/g, ' ').trim();
-  const mots = texte.split(' ').filter((w) => w.length > 0).length;
-  if (texte.length < NOTE_MIN_CARS || mots < NOTE_MIN_MOTS) {
-    say(MSG.noteCourte.mood, MSG.noteCourte.text);
-    c.status.textContent = t('Écris une phrase d’au moins trois mots.');
+  const an = analyseNote(texte);
+  if (!an.ok) {
+    const court = texte.length < NOTE_MIN_CARS || an.mots < NOTE_MIN_MOTS;
+    const msg = court ? MSG.noteCourte : MSG.noteIncomprise;
+    say(msg.mood, msg.text);
+    c.status.textContent = court ? t('Écris au moins un mot.') : t('Je n’ai pas compris : écris une vraie phrase, avec tes mots.');
     c.status.className = 'lab-status is-bad';
     ui.panel.classList.remove('shake'); void ui.panel.offsetWidth; ui.panel.classList.add('shake');
     return;
   }
-  c.busy = true; c.texte = texte; c.resolve();
+  c.busy = true; c.texte = texte; c.mot = an.mot; c.resolve();
+}
+
+/* Question de départ : avant le tableau, Tapama part de ce que le joueur connaît. Réponse obligatoire (c'est par elle qu'il comprend le jeu), rangée dans « Mes notes ». */
+async function phaseQuartier() {
+  S.phase = 'note';
+  ui.panel.hidden = true;
+  say(MSG.quartierDemande.mood, MSG.quartierDemande.text);
+  await pause(400);
+  renderNote('Chez toi, quelles maisons ou quels murs sont faits en terre, en bambou ou en pierre ?', 'Ma réponse', 'Carnet de Tapama');
+  await new Promise((resolve) => { S.cur.resolve = resolve; });
+  guard();
+  const c = S.cur;
+  c.input.disabled = true;
+  ui.panel.classList.add('is-win');
+  sfx.unlock();
+  try { window.Notes && window.Notes.add({ texte: c.texte, source: 'labo2q' }); } catch (_) {}
+  say(MSG.quartierMerci.mood, MSG.quartierMerci.text);
+  await pause(4200);
+  S.cur = null;
+  ui.panel.hidden = true;
 }
 
 async function phaseNote() {
+  await phaseQuartier();
   await phaseTableau();
   S.phase = 'note';
   ui.panel.hidden = true;
@@ -1251,8 +1300,8 @@ async function phaseNote() {
   window.GamepadKit?.rumble?.(220, 0.7);
   try { window.Notes && window.Notes.add({ texte: c.texte, source: 'labo2' }); } catch (_) {}
   try { window.dispatchEvent(new CustomEvent('lab:note', { detail: { texte: c.texte } })); } catch (_) {}
-  say(MSG.noteMerci.mood, MSG.noteMerci.text);
-  await pause(2600);
+  if (c.mot) say(MSG.noteMot.mood, t(MSG.noteMot.text).replace('{mot}', c.mot), { voix: MSG.noteMerci.text }); else say(MSG.noteMerci.mood, MSG.noteMerci.text);   // Tapama commente la note en citant un mot
+  await pause(c.mot ? 4800 : 2600);
   S.cur = null;
   ui.panel.hidden = true;
   for (let i = 0; i < 3; i++) { markLock(i, true); await pause(650); guard(); }

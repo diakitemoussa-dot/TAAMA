@@ -16,7 +16,7 @@
    translateTree / observeDocument), donc testable sous Node.
    ========================================================== */
 
-import { EN } from './i18n-en.js?v=19';
+import { EN } from './i18n-en.js?v=28';
 
 export const LANGS = ['fr', 'en'];
 let lang = 'fr';
@@ -53,6 +53,12 @@ function lookup(fr) {
   if ((m = key.match(/^Séquence (\d+) · (.+)$/))) return `Sequence ${m[1]} · ${lookup(m[2]) ?? m[2]}`;
   if ((m = key.match(/^Séquence (\d+)$/))) return `Sequence ${m[1]}`;
   if ((m = key.match(/^(\d+) sur (\d+)$/))) return `${m[1]} of ${m[2]}`;
+  if ((m = key.match(/^Mot de passe (\d+) sur (\d+)$/))) return `Password ${m[1]} of ${m[2]}`;
+  // carte : « 2,4 km · ≈ 4 min en voiture · 29 min à pied (à vol d’oiseau) · gué de 100 m, roule doucement »
+  if ((m = key.match(/^(.+?) · ≈ (\d+) min en voiture · (\d+) min à pied( \(à vol d’oiseau\))?(?: · gué de (\d+) m, roule doucement)?$/)))
+    return `${m[1].replace(',', '.')} · ≈ ${m[2]} min by car · ${m[3]} min on foot${m[4] ? ' (as the crow flies)' : ''}${m[5] ? ` · ford of ${m[5]} m, drive slowly` : ''}`;
+  // flèche de route : « À droite dans 40 m »
+  if ((m = key.match(/^(Demi-tour|Légèrement à droite|À droite|Légèrement à gauche|À gauche|Tout droit) dans (\d+) m$/))) return `${{ 'Demi-tour': 'U-turn', 'Légèrement à droite': 'Slight right', 'À droite': 'Turn right', 'Légèrement à gauche': 'Slight left', 'À gauche': 'Turn left', 'Tout droit': 'Straight ahead' }[m[1]]} in ${m[2]} m`;
   if ((m = key.match(/^Aujourd’hui · (.+)$/))) return `Today · ${m[1]}`;
   if ((m = key.match(/^Hier · (.+)$/))) return `Yesterday · ${m[1]}`;
   if ((m = key.match(/^(\d{1,2}) (janv\.|févr\.|mars|avr\.|mai|juin|juil\.|août|sept\.|oct\.|nov\.|déc\.) · (.+)$/))) return `${MONTHS_EN[MONTHS_FR.indexOf(m[2])]} ${m[1]} · ${m[3]}`;

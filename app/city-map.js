@@ -17,10 +17,11 @@
 import * as THREE from 'three';
 import { PLACES, createRouter, formatDistance, etaMinutes } from './city-routes.js?v=2';
 import { createRouteArrow, projectOnRoute } from './route-arrow.js?v=9';
+import { LABO } from './labo-position.js?v=2';
 
 const M = window.MosqueScene;
 const MAP_URL = 'assets/images/carte-djenne.jpg?v=2';
-const ROUTES_URL = 'assets/data/routes-djenne-voiture.json?v=1';   // routes que la voiture du jeu peut vraiment prendre (tools/analyze-roads.mjs)
+const ROUTES_URL = 'assets/data/routes-djenne-voiture.json?v=2';   // routes que la voiture du jeu peut vraiment prendre (tools/analyze-roads.mjs)
 
 /* Géoréférence de l'image (repère « nouveau » de Blender/Blosm, mètres réels) */
 const HALF = 1470;                      // demi-côté de l'image (m)
@@ -125,7 +126,7 @@ function init() {
     // cercle jaune = laboratoire de Tapama (visible dès que le dispositif 1 est récupéré)
     // tombe de Tapama Djenepo : lieu du dispositif 2 (visible après le dispositif 1, tant qu'il n'est pas récupéré)
     if (!ls('taama.tombe')) { const r = gameToReal(-310.5, -476.4); l.push({ id: 'tombe', name: 'Tombe de Tapama Djenepo', short: 'Tombe Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Tapama t’a parlé d’un dispositif caché à côté de la tombe de Djenépo.' }); }
-    if (ls('taama.dispositif1')) { const r = gameToReal(-175.012, -219.890); l.push({ id: 'deuxieme', name: 'Laboratoire de Tapama', short: 'Labo Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Le cercle jaune : Tapama t’y attend avec son établi et ses écrans.' }); }
+    if (ls('taama.dispositif1')) { const r = gameToReal(LABO.x, LABO.z); l.push({ id: 'deuxieme', name: 'Laboratoire de Tapama', short: 'Labo Tapama', e: r.e, n: r.n, kind: 'labo', info: 'Le cercle jaune : Tapama t’y attend dans sa maison de bambou et de terre, avec ses écrans.' }); }
     return l;
   };
   const placeOf = (id) => places().find((p) => p.id === id) || null;
@@ -383,6 +384,7 @@ function init() {
     return best;
   }
 
+  let miniBear = null, miniBearT = 0, miniTurning = false;          // cap lissé de la mini-carte (voir draw)
   function draw(force) {
     if (!imgReady) return;
     resizeCanvas();
@@ -404,15 +406,24 @@ function init() {
       if (rt) {
         let bi = 0, bd = Infinity;
         for (let i = 0; i < rt.length; i++) { const d = Math.hypot(rt[i][0] - pl.e, rt[i][1] - pl.n); if (d < bd) { bd = d; bi = i; } }
-        let j = bi; while (j < rt.length - 1 && Math.hypot(rt[j][0] - rt[bi][0], rt[j][1] - rt[bi][1]) < 30) j++;
+        let j = bi; while (j < rt.length - 1 && Math.hypot(rt[j][0] - rt[bi][0], rt[j][1] - rt[bi][1]) < 70) j++;   // regarde ~70 m plus loin : le cap ne saute plus à chaque point de l'itinéraire
         const de = rt[j][0] - pl.e, dn = rt[j][1] - pl.n;
-        const bear = Math.atan2(de, dn) * 180 / Math.PI;                 // cap du prochain tronçon, depuis le nord, sens horaire
+        const target = Math.atan2(de, dn) * 180 / Math.PI;               // cap du prochain tronçon, depuis le nord, sens horaire
         const off = bd > 40;
+        // la carte ne tourne plus « toute seule » : zone morte de 15° (les petits écarts sont ignorés), puis rotation douce vers le nouveau cap ; hors itinéraire elle garde son cap
+        const nowT = performance.now(), dtB = Math.min(0.1, Math.max(0, (nowT - miniBearT) / 1000)); miniBearT = nowT;
+        if (miniBear === null) miniBear = target;
+        else if (!off) {
+          const dlt = ((target - miniBear + 540) % 360) - 180;
+          if (Math.abs(dlt) > 15) miniTurning = true;
+          if (miniTurning) { miniBear += dlt * (1 - Math.exp(-dtB * 2.2)); if (Math.abs(dlt) < 3) miniTurning = false; }
+        }
+        const bear = miniBear;
         cv.style.transform = `rotate(${(-bear).toFixed(1)}deg)`;
         nTag.style.display = 'none';
         box.classList.add('is-route'); box.classList.toggle('is-off', off);
       } else {
-        cv.style.transform = ''; nTag.style.display = '';
+        cv.style.transform = ''; nTag.style.display = ''; miniBear = null; miniTurning = false;
         box.classList.remove('is-route', 'is-off');
       }
     } else if (cv.style.transform) { cv.style.transform = ''; nTag.style.display = ''; box.classList.remove('is-route', 'is-off'); }   // grande carte : orientation nord en haut
@@ -590,6 +601,18 @@ function init() {
       return router.route(me.e, me.n, pl.e, pl.n).length;
     },
     get guide() { return routeArrow.state; },                    // cap du trajet, distance restante, prochain virage (tableau de bord de la voiture)
+    /** Prochains `maxM` mètres de l'itinéraire, relatifs à l'acteur : [[est, nord], …] en mètres, du point le plus proche vers la destination ; null sans itinéraire.
+     *  Sert au tracé en temps réel du cadran central du tableau de bord (app/car-dashboard.js). */
+    ahead(maxM = 250) {
+      const rt = sel.id && sel.route && sel.route.pts && sel.route.pts.length > 1 ? sel.route.pts : null; if (!rt) return null;
+      const a = actorReal();
+      let bi = 0, bd = Infinity;
+      for (let i = 0; i < rt.length; i++) { const d = Math.hypot(rt[i][0] - a.e, rt[i][1] - a.n); if (d < bd) { bd = d; bi = i; } }
+      const out = [[0, 0]]; let acc = Math.hypot(rt[bi][0] - a.e, rt[bi][1] - a.n);
+      out.push([rt[bi][0] - a.e, rt[bi][1] - a.n]);
+      for (let i = bi + 1; i < rt.length && acc < maxM; i++) { acc += Math.hypot(rt[i][0] - rt[i - 1][0], rt[i][1] - rt[i - 1][1]); out.push([rt[i][0] - a.e, rt[i][1] - a.n]); }
+      return out;
+    },
     get route() { return sel.route ? { id: sel.id, length: sel.route.length, pts: sel.route.pts.length, roads: sel.route.roads } : null; },
   };
 }

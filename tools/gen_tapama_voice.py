@@ -9,8 +9,12 @@ import edge_tts
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'assets', 'audio', 'tapama')
-VOICE = 'fr-FR-VivienneMultilingualNeural'
+LANG = sys.argv[sys.argv.index('--lang') + 1] if '--lang' in sys.argv else 'fr'     # --lang en : voix anglaise (textes de tools/.tapama-lines-en.json, fichiers en_<clé>_<n>.mp3, manifest-en.json)
+VOICE = 'en-US-AvaMultilingualNeural' if LANG == 'en' else 'fr-FR-VivienneMultilingualNeural'
 if '--voice' in sys.argv: VOICE = sys.argv[sys.argv.index('--voice') + 1]
+PREFIX = 'en_' if LANG == 'en' else ''
+LINES = '.tapama-lines-en.json' if LANG == 'en' else '.tapama-lines.json'
+MANIFEST = 'manifest-en.json' if LANG == 'en' else 'manifest.json'
 FORCE = '--force' in sys.argv
 
 # humeur -> (vitesse %, hauteur Hz, volume %, facteur de pause)
@@ -58,9 +62,9 @@ async def synth(text, rate, pitch, vol, path):
 async def main():
     global SEM
     SEM = asyncio.Semaphore(4)
-    lines = json.load(open(os.path.join(ROOT, 'tools', '.tapama-lines.json'), encoding='utf8'))
+    lines = json.load(open(os.path.join(ROOT, 'tools', LINES), encoding='utf8'))
     os.makedirs(OUT, exist_ok=True)
-    mpath = os.path.join(OUT, 'manifest.json')
+    mpath = os.path.join(OUT, MANIFEST)
     manifest = json.load(open(mpath, encoding='utf8')) if os.path.exists(mpath) else {}
     done = 0
     for L in lines:
@@ -77,7 +81,7 @@ async def main():
             elif end == '…': p -= 4; r -= 10; gap = 650
             if i == 0 and len(ps) > 1: p += 2                        # début de réplique plus vivant
             if last and end == '.': p -= 3; r -= 3                  # cadence descendante en fin de réplique
-            fn = f"{key}_{i}.mp3"
+            fn = f"{PREFIX}{key}_{i}.mp3"
             if not re.search(r'\w', ph): return None               # rien à dire (ponctuation seule)
             try:
                 await synth(ph, r, p, v, os.path.join(OUT, fn))
