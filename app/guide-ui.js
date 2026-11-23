@@ -11,16 +11,16 @@
    Chargé à la demande par app/guide.js.
    ========================================================== */
 
-import * as LG from './guide-logic.js?v=53';
-import { PAGES, OBJECTIVES, UI } from './guide-content.js?v=53';
-import * as A from './guide-icons.js?v=53';
+import * as LG from './guide-logic.js?v=63';
+import { PAGES, OBJECTIVES, UI } from './guide-content.js?v=63';
+import * as A from './guide-icons.js?v=63';
 import { t, getLang, onLangChange } from './i18n.js?v=3';
 import { fillName } from './player-profile.js?v=2';
 
 /* ---------- feuille de style (chargée avec le module) ---------- */
 if (!document.getElementById('gdCss')) {
   const l = document.createElement('link');
-  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=53';
+  l.id = 'gdCss'; l.rel = 'stylesheet'; l.href = 'styles/guide.css?v=63';
   document.head.appendChild(l);
   await new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 }
@@ -94,7 +94,7 @@ detect();
    ÉCRAN « COMMENT JOUER » : module séparé (guide-screen.js), chargé seulement à l'ouverture
    ========================================================== */
 let scr = null;
-const loadScreen = () => scr || (scr = import('./guide-screen.js?v=53').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
+const loadScreen = () => scr || (scr = import('./guide-screen.js?v=63').then((m) => (scr = Promise.resolve(m.default), (screenMod = m.default))));
 const setOpen = (b) => { isOpen = b; };
 const open = (topic) => loadScreen().then((s) => s.open(topic));
 const start = () => loadScreen().then((s) => s.start());
@@ -119,7 +119,7 @@ let artMod = null, artP = null;
 const screenCss = () => {
   if (document.getElementById('gdCss2')) return Promise.resolve();
   const l = document.createElement('link');
-  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=53';
+  l.id = 'gdCss2'; l.rel = 'stylesheet'; l.href = 'styles/guide-screen.css?v=63';
   document.head.appendChild(l);
   return new Promise((r) => { l.onload = r; l.onerror = r; setTimeout(r, 3500); });
 };
@@ -131,7 +131,7 @@ const lowData = () => {
     return !!(g.saveData || c.saveData || /^(slow-)?2g$/.test(c.effectiveType || '') || ls('taama.saveData') === '1');
   } catch (_) { return false; }
 };
-const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=53'), screenCss()]).then(([m]) => (artMod = m)));
+const loadArt = () => artP || (artP = Promise.all([import('./guide-art.js?v=63'), screenCss()]).then(([m]) => (artMod = m)));
 
 const coachRoot = () => {
   if (cRoot) return cRoot;

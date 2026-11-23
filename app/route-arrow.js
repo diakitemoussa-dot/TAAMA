@@ -137,7 +137,7 @@ export function isUTurn(relDeg) { return Math.abs(relDeg) > 110; }
 export function relativeDeg(bearingRad, headingRad) { return wrapPi(bearingRad - headingRad) * 180 / Math.PI; }
 
 const CSS = `
-#snRouteArrow { position: fixed; left: 14px; top: 196px; z-index: 56; pointer-events: none; display: none; align-items: center; gap: 9px;
+#snRouteArrow { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); top: auto; z-index: 56; pointer-events: none; display: none; align-items: center; gap: 9px;
   padding: 3px 10px 3px 5px; border-radius: 12px; background: rgba(60,42,66,.42); color: rgba(248,243,234,.85); border: 1px solid rgba(249,213,139,.25); opacity: .85;
   box-shadow: none; backdrop-filter: blur(3px); max-width: calc(100vw - 28px);
   font: 700 11px/1.2 'Rajdhani', 'Open Sans', system-ui, sans-serif; letter-spacing: .03em; white-space: nowrap; }
@@ -168,12 +168,8 @@ export function createRouteArrow() {
   function anchor() {
     const m = document.getElementById('cityMap');
     const r = m && m.getBoundingClientRect();
-    if (!r || !r.width) return;
-    const key = `${Math.round(r.left)}|${Math.round(r.bottom)}`;
-    if (key === anchoredKey) return;
-    anchoredKey = key;
-    el.style.left = `${Math.round(r.left)}px`;
-    el.style.top = `${Math.round(r.bottom) + 10}px`;
+    if (!r || !r.width) return;   // la pastille est désormais centrée en bas de l'écran (CSS) : rien à ancrer
+    anchoredKey = 'bottom-center';
   }
   function ensure() {
     if (el && el.isConnected) return;

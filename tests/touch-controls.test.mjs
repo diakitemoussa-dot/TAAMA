@@ -51,14 +51,14 @@ test('aimantation légère à la grille', () => {
 test('setControl : déplace, redimensionne, masque, remplace l’action (avec bornes)', () => {
   let s = T.defaultState();
   s = T.setControl(s, 'foot', 'jump', { x: 0.7, y: 0.5 });
-  s = T.setControl(s, 'foot', 'jump', { size: 5, opacity: 0.05, action: 'kneel' });
+  s = T.setControl(s, 'foot', 'jump', { size: 5, opacity: 0.05, action: 'dash' });
   s = T.setControl(s, 'foot', 'photo', { hidden: true });
   const r = T.resolveProfile(s, 'foot');
   const j = r.find((c) => c.key === 'jump');
   assert.equal(j.x, 0.7); assert.equal(j.y, 0.5);
   assert.equal(j.size, T.LIMITS.size.max);
   assert.equal(j.opacity, T.LIMITS.opacity.min);
-  assert.equal(j.action, 'kneel'); assert.equal(j.baseAction, 'jump');
+  assert.equal(j.action, 'dash'); assert.equal(j.baseAction, 'jump');
   assert.equal(r.find((c) => c.key === 'photo').hidden, true);
   assert.equal(T.hiddenCount(s, 'foot'), 1);
 });
@@ -99,7 +99,7 @@ test('préréglages : standard, gaucher, minimaliste, grands', () => {
   assert.equal(T.applyPreset(base, 'grands').globalSize, 1.3);
   const min = T.applyPreset(base, 'minimaliste');
   const foot = T.resolveProfile(min, 'foot');
-  assert.equal(foot.find((c) => c.key === 'kneel').hidden, true);
+  assert.equal(foot.find((c) => c.key === 'dash').hidden, true);
   assert.equal(foot.find((c) => c.key === 'jump').hidden, false);
   assert.equal(foot.find((c) => c.key === 'interact').hidden, false);
   assert.equal(foot.find((c) => c.key === 'look').hidden, false);

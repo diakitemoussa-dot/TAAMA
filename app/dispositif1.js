@@ -183,7 +183,7 @@ window.addEventListener('bibliotheque:fini', () => badge(2, 'Dispositif 2'));
    ========================================================== */
 const ACTE = 'taama.acte', LAB1 = 'taama.lab1', LAB2 = 'taama.lab2', DEV2 = 'taama.dispositif2', DOSSIER = 'taama.dossier', GADGET = 'taama.gadget';
 const VOL_KEY = 'taama.vol', REV_KEY = 'taama.revelation', GADGET_PENDING = 'taama.gadget.pending', INTRO_CAM = 'taama.intro.cam';
-const STORY_KEYS = [ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', 'taama.sansac', 'taama.crepissage.cercle', 'taama.tombe.silence', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
+const STORY_KEYS = ['taama.carte.autoopen', ACTE, 'taama.d1.spotted', DEV_KEY, 'taama.piste', LAB1, 'taama.lab1.q', VOL_KEY, DOSSIER, GADGET, GADGET_PENDING, INTRO_CAM, 'taama.base.cam', DEV2, LAB2, 'taama.lab2.q', 'taama.sansac', 'taama.crepissage.cercle', 'taama.tombe.silence', REV_KEY, 'taama.chapitre1', 'taama.next', 'taama.tombe', 'taama.biblio.lus', 'taama.biblio.entree', 'taama.drone.phrases'];
 const CIRCLE = { x: LABO.x, z: LABO.z, r: LABO.r, away: 6 };      // cercle jaune = labo de Tapama (même rayon que PORTAL_RADIUS) ; verrou levé à 6 m
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
@@ -225,9 +225,19 @@ function veil(on, ms = 550) {
   requestAnimationFrame(() => { veilEl.style.opacity = on ? '1' : '0'; });
   return new Promise((r) => setTimeout(r, ms + 60));
 }
+/* La carte ne s'ouvre toute seule qu'UNE fois : à la première consigne de Tapama (le cercle du labo). Les autres itinéraires
+   sont seulement tracés : la carte reste fermée, c'est au joueur de l'ouvrir. */
+const AUTO_OPEN_KEY = 'taama.carte.autoopen';
 function openMapTo(id) {
   const CM = window.CityMap; if (!CM) return;
-  if (CM.openTo) CM.openTo(id); else { CM.open(); CM.selectPlace(id); }
+  let firstTime = false;
+  try { firstTime = lsGet(AUTO_OPEN_KEY) !== '1'; } catch (_) {}
+  if (firstTime && id === 'deuxieme') {
+    try { lsSet(AUTO_OPEN_KEY, '1'); } catch (_) {}
+    if (CM.openTo) CM.openTo(id); else { CM.open(); CM.selectPlace(id); }
+    return;
+  }
+  CM.selectPlace(id);                                             // tracé seulement, carte fermée
 }
 /* S3/S4 — entrée dans le cercle jaune : fondu, gel du jeu, scène du labo (Lab.open) */
 function tryEnterLab() {

@@ -4,7 +4,7 @@
    Mêmes tracés que les boutons de touch-controls.js.
    ========================================================== */
 
-import * as TL from './touch-layout.js?v=3';
+import * as TL from './touch-layout.js?v=11';
 import { t } from './i18n.js?v=3';
 
 /* ---------- Pictogrammes : mêmes tracés que les boutons de touch-controls.js ---------- */

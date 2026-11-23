@@ -16,11 +16,31 @@
    ========================================================== */
 import * as THREE from 'three';
 import { PLACES, createRouter, formatDistance, etaMinutes } from './city-routes.js?v=2';
-import { createRouteArrow, projectOnRoute } from './route-arrow.js?v=9';
+import { createRouteArrow, projectOnRoute } from './route-arrow.js?v=10';
 import { LABO } from './labo-position.js?v=2';
 
 const M = window.MosqueScene;
 const MAP_URL = 'assets/images/carte-djenne.jpg?v=2';
+
+/* Style « ville de nuit » : la carte satellite devient sombre, avec les routes et les murs éclairés en or et les maisons en lumière tamisée.
+   Traitée une seule fois au chargement (le fichier d'origine reste intact). */
+function styleNightMap(src) {
+  const c = document.createElement('canvas'); c.width = src.naturalWidth; c.height = src.naturalHeight;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(src, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), px = d.data;
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i], gr = px[i + 1], b = px[i + 2];
+    const l = 0.3 * r + 0.59 * gr + 0.11 * b;
+    let R, G, B;
+    if (b > r + 25 && b > gr) { R = 10; G = 16; B = 24; }                              // eau : bleu nuit
+    else if (l > 215) { R = 178; G = 148; B = 92; }                                    // routes et murs clairs : or doux
+    else if (r - b > 45 && l > 60 && l < 130) { R = 122; G = 92; B = 52; }             // maisons : éclairées, discrètes
+    else { R = 7 + l * 0.05; G = 6 + l * 0.045; B = 4 + l * 0.035; }                   // terrain, champs : presque noir
+    px[i] = R; px[i + 1] = G; px[i + 2] = B;
+  }
+  g.putImageData(d, 0, 0);
+  return c;
+}
 const ROUTES_URL = 'assets/data/routes-djenne-voiture.json?v=2';   // routes que la voiture du jeu peut vraiment prendre (tools/analyze-roads.mjs)
 
 /* Géoréférence de l'image (repère « nouveau » de Blender/Blosm, mètres réels) */
@@ -30,7 +50,7 @@ const K = 0.84;                         // échelle mosquée du jeu / réalité 
 const CB_X = -12.0, CB_Y = 5.2;         // centre de la mosquée dans le repère d'origine du modèle
 const PPM = IMG / (2 * HALF);           // pixels d'image par mètre réel
 
-const MINI_HALF = 120;                  // demi-largeur de la vue réduite (m réels) — zoomée sur le joueur
+const MINI_HALF = 65;                  // demi-largeur de la vue réduite (m réels) — zoomée sur le joueur
 const OPEN_HALF = 300;                  // demi-largeur à l'ouverture de la grande carte (m réels)
 const MIN_HALF = 40;                    // zoom maximal (m réels)
 const PAN_KEYS = {
@@ -91,14 +111,14 @@ function init() {
   document.body.classList.add('has-citymap');
 
   const ctx = cv.getContext('2d');
-  const img = new Image(); let imgReady = false, imgReq = false;
+  const img = new Image(); let imgReady = false, imgReq = false, styled = null;
   let closedAt = -1e9, open = false, shown = false, acc = 0, lastKey = '';
   const dir = new THREE.Vector3();
   const view = { ce: 0, cn: 0, half: OPEN_HALF };               // vue de la grande carte (m réels)
   const held = new Set();                                        // flèches / WASD maintenues
 
   /* ---------- lieux et itinéraires ---------- */
-  let router = null, routeReq = false, autoShown = false;
+  let router = null, routeReq = false, autoShown = false, lastStory;   // lastStory : dernière destination de l'histoire vue (pour suivre ses changements)
   let autoOpened = false;   // carte ouverte PAR L'HISTOIRE (openTo) : les sticks sont bloqués tant qu'elle reste ouverte ; ouverte à la main : ils déplacent la carte
   const ls = (k) => { try { return localStorage.getItem(k) === '1'; } catch (_) { return false; } };
   // destination suggérée selon l'avancement de l'histoire (bible chapitre 1) : dispositif 1 -> labo ; labo 1 fait -> aucune ;
@@ -108,7 +128,9 @@ function init() {
   // destination de l'histoire : tombe (après le labo 1) -> bibliothèque (après le dispositif de la tombe, étape « 3:biblio ») -> labo 2
   const acte = () => lsv('taama.acte');
   const storyTarget = () => {
-    if (lsv('taama.lab2') === 'done' || lsv('taama.chapitre1') === 'done') return null;
+    if (lsv('taama.chapitre1') === 'done') return null;
+    if (acte() === '4:crepissage') return 'mosquee';                  // dernière mission (après le labo 2) : recrépir la Grande Mosquée
+    if (lsv('taama.lab2') === 'done') return null;
     if (ls('taama.dispositif2')) return 'deuxieme';
     if (ls('taama.tombe') && acte() === '3:biblio') return bibliFini() ? 'deuxieme' : 'bibliotheque';
     if (ls('taama.vol') || acte() === '3:tombe') return ls('taama.tombe') ? null : 'tombe';
@@ -402,30 +424,21 @@ function init() {
     const pl = playerReal();
     // mini-carte : elle tourne pour que la direction de l'itinéraire pointe vers le haut (comme la boussole) ; cadre doré sur l'itinéraire, orange si on s'en écarte
     if (!open) {
+      // mini-carte : la vue tourne avec la direction du joueur (le devant est en haut), en perspective ; l'itinéraire reste tracé dessus
+      const hd = pl.heading * 180 / Math.PI;                       // cap du joueur, depuis le nord, sens horaire
+      const nowT = performance.now(), dtB = Math.min(0.1, Math.max(0, (nowT - miniBearT) / 1000)); miniBearT = nowT;
+      if (miniBear === null) miniBear = hd;
+      else { const dlt = ((hd - miniBear + 540) % 360) - 180; miniBear += dlt * (1 - Math.exp(-dtB * 6)); }
+      cv.style.transform = `perspective(230px) rotateX(45deg) scale(1.9) rotate(${(-miniBear).toFixed(1)}deg)`;   // vue en perspective, agrandie pour remplir le cercle
+      nTag.style.display = 'none';
       const rt = sel.id && sel.route && sel.route.pts && sel.route.pts.length > 1 ? sel.route.pts : null;
+      let off = false;
       if (rt) {
-        let bi = 0, bd = Infinity;
-        for (let i = 0; i < rt.length; i++) { const d = Math.hypot(rt[i][0] - pl.e, rt[i][1] - pl.n); if (d < bd) { bd = d; bi = i; } }
-        let j = bi; while (j < rt.length - 1 && Math.hypot(rt[j][0] - rt[bi][0], rt[j][1] - rt[bi][1]) < 70) j++;   // regarde ~70 m plus loin : le cap ne saute plus à chaque point de l'itinéraire
-        const de = rt[j][0] - pl.e, dn = rt[j][1] - pl.n;
-        const target = Math.atan2(de, dn) * 180 / Math.PI;               // cap du prochain tronçon, depuis le nord, sens horaire
-        const off = bd > 40;
-        // la carte ne tourne plus « toute seule » : zone morte de 15° (les petits écarts sont ignorés), puis rotation douce vers le nouveau cap ; hors itinéraire elle garde son cap
-        const nowT = performance.now(), dtB = Math.min(0.1, Math.max(0, (nowT - miniBearT) / 1000)); miniBearT = nowT;
-        if (miniBear === null) miniBear = target;
-        else if (!off) {
-          const dlt = ((target - miniBear + 540) % 360) - 180;
-          if (Math.abs(dlt) > 15) miniTurning = true;
-          if (miniTurning) { miniBear += dlt * (1 - Math.exp(-dtB * 2.2)); if (Math.abs(dlt) < 3) miniTurning = false; }
-        }
-        const bear = miniBear;
-        cv.style.transform = `rotate(${(-bear).toFixed(1)}deg)`;
-        nTag.style.display = 'none';
-        box.classList.add('is-route'); box.classList.toggle('is-off', off);
-      } else {
-        cv.style.transform = ''; nTag.style.display = ''; miniBear = null; miniTurning = false;
-        box.classList.remove('is-route', 'is-off');
+        let bd = Infinity;
+        for (let i = 0; i < rt.length; i++) { const d = Math.hypot(rt[i][0] - pl.e, rt[i][1] - pl.n); if (d < bd) bd = d; }
+        off = bd > 40;                                               // cadre orange si on s'écarte de l'itinéraire
       }
+      box.classList.toggle('is-route', !!rt); box.classList.toggle('is-off', off);
     } else if (cv.style.transform) { cv.style.transform = ''; nTag.style.display = ''; box.classList.remove('is-route', 'is-off'); }   // grande carte : orientation nord en haut
     const half = open ? view.half : MINI_HALF;
     const hx = half * W / S, hy = half * H / S;                      // demi-étendues (m) horizontale et verticale
@@ -440,7 +453,7 @@ function init() {
     const sx = IMG / 2 + ce * PPM - hx * PPM, sy = IMG / 2 - cn * PPM - hy * PPM;
     ctx.clearRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, sx, sy, hx * PPM * 2, hy * PPM * 2, 0, 0, W, H);
+    ctx.drawImage(styled || img, sx, sy, hx * PPM * 2, hy * PPM * 2, 0, 0, W, H);
     const toC = (e, n) => [((e - ce) / (2 * hx) + 0.5) * W, (0.5 - (n - cn) / (2 * hy)) * H];
 
     // itinéraire vers le lieu choisi : liseré sombre + trait doré animé
@@ -560,7 +573,7 @@ function init() {
       if (want !== shown) {
         shown = want; box.classList.toggle('is-on', shown);
         if (!shown && open) setOpen(false);
-        if (shown && !imgReq) { imgReq = true; img.onload = () => { imgReady = true; draw(true); }; img.onerror = () => console.warn('[carte] image introuvable'); img.src = MAP_URL; }
+        if (shown && !imgReq) { imgReq = true; img.onload = () => { try { styled = styleNightMap(img); } catch (e) { styled = null; } imgReady = true; draw(true); }; img.onerror = () => console.warn('[carte] image introuvable'); img.src = MAP_URL; }
         if (shown) { resizeCanvas(); lastKey = ''; }
       }
     }
@@ -569,6 +582,16 @@ function init() {
     if (open || !sel.id || !sel.route) routeArrow.hide();
     else { const pl = placeOf(sel.id), a = actorReal(); routeArrow.update(d, { route: sel.route, name: pl ? (pl.short || pl.name) : '', me: a, speed: a.speed, visible: true }); }
     if (!autoShown && !sel.id && storyTarget() && placeOf(storyTarget())) { autoShown = true; sel.id = storyTarget(); loadRouter(); }   // itinéraire vers la base visible d'emblée, sur le cercle comme sur la grande carte
+    if (tickSlow) {                                                 // l'histoire avance pendant la partie (ex. fin du labo 2 → mosquée) : l'itinéraire suit la nouvelle étape
+      const tgt = storyTarget();
+      if (tgt !== lastStory) {
+        const prev = lastStory; lastStory = tgt;
+        if (prev !== undefined) {                                   // (au premier passage, on laisse faire la règle ci-dessus)
+          if (tgt && placeOf(tgt)) { sel.id = tgt; autoShown = true; loadRouter(); if (router) recomputeRoute(true); }
+          else if (!tgt && sel.id === prev) { sel.id = null; sel.route = null; }
+        }
+      }
+    }
     if (open) { applyInputs(d); draw(false); return; }
     // fermée : la croix gauche de la manette ouvre la carte (si aucun menu n'est affiché)
     const GP = window.GamepadKit;
@@ -581,6 +604,8 @@ function init() {
     get isOpen() { return open; }, get visible() { return shown; }, get busy() { return open || performance.now() - closedAt < 300; },
     get view() { return { ...view }; }, zoomAt, recenter,
     gameToReal,
+    realToGame: (e, n) => ({ x: n / K + CB_X, z: e / K - CB_Y }),
+    get routePts() { return sel.route && sel.route.pts && sel.route.pts.length > 1 ? sel.route.pts : null; },
     selectPlace: (id) => { if (id !== sel.id) selectPlace(id); }, clearRoute,
     // ouvre la grande carte avec l'itinéraire vers le lieu `id` déjà tracé et cadré
     openTo(id) {

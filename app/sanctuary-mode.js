@@ -373,6 +373,7 @@ function showDeviceIntro(opts = {}) {
   if (!pick) { const D = new THREE.Vector3(device.x, device.y + 7, device.z + 9); pick = { ..._icBuildCurve(A, D), D }; }
   const dur = Math.max(5.5, Math.min(8, pick.curve.getLength() / 16));
   const dir0 = new THREE.Vector3(pick.D.x - A.x, 0, pick.D.z - A.z); if (dir0.lengthSq() < 1e-6) dir0.set(0, 0, -1); dir0.normalize();   // direction du trajet : celle où l'on regarde la ville
+  document.documentElement.classList.add('sn-intro-cam');                       // plan de caméra : joystick et boutons à l'écran masqués (styles/sanctuary.css)
   _introCam = { phase: 'out', t: 0, dur, curve: pick.curve, safe: pick.safe, dir: dir0, look0: _camLookAt.clone(), look1: device.clone().add(new THREE.Vector3(0, 0.3, 0)), device, onDone: opts.onDone };
   for (const k in keys) keys[k] = false; joyInput.x = 0; joyInput.y = 0;       // plus de touche « tenue » pendant le plan
   _stopWalk();
@@ -398,6 +399,7 @@ function _icStartBack() {
 }
 function _icEnd() {
   const c = _introCam; _introCam = null;
+  document.documentElement.classList.remove('sn-intro-cam');                    // les commandes à l'écran reviennent
   if (_introBtn) _introBtn.classList.remove('on');
   if (_introTitle) _introTitle.classList.remove('on');
   if (_introSkip) _introSkip.classList.remove('on');
@@ -675,7 +677,9 @@ PLAYER_AIM_LOWER_BONES.delete(THREE.PropertyBinding.sanitizeNodeName('mixamorig:
 
 let _velY = 0;
 let _inAir = false, _jumpCount = 0;
-let _freeFall = false;                   // chute libre (tombe vite, loin du sol) : animation « flying », puis « land » à l'atterrissage
+let _touchRun = false;                   // joystick tactile poussé à fond : course (voir TOUCH_RUN_IN / TOUCH_RUN_OUT)
+const TOUCH_RUN_IN = 0.92, TOUCH_RUN_OUT = 0.8;
+let _freeFall = false;                  // chute libre (tombe vite, loin du sol) : animation « flying », puis « land » à l'atterrissage
 const FREEFALL_V = 8, FREEFALL_H = 2.5;  // m/s de chute et m de hauteur au-dessus du sol à partir desquels c'est une chute libre
 let _landT = 0;                          // > 0 : animation d'atterrissage (« Land ») en cours, après un saut
 const LAND_DUR = 0.55;                    // s : durée de l'atterrissage avant de reprendre les animations de déplacement   // saut en cours (de l'impulsion jusqu'au retour au sol) et nombre de sauts déjà faits
@@ -4610,7 +4614,7 @@ function _initControls() {
     if (k === 'x')                                     { if (!e.repeat) _tryJump(); e.preventDefault(); }
     if (e.code === 'Space' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) { if (!e.repeat && _canDash()) { _dashRequest = true; e.preventDefault(); const ae = document.activeElement; if (ae && ae.tagName === 'BUTTON') ae.blur(); } }   // le bouton resté actif (photo, vidéo…) ne doit pas être déclenché par Espace en même temps      // Espace = propulsion (clavier), comme ✕/A à la manette ; pendant un saut ou un sprint : envol vers le ciel
     if (k === 'r')                                     { if (!e.repeat && !_droneTakeoff && !_inVehicle() && !_sanctuaryMenuOpen()) _startDroneTakeoff(); e.preventDefault(); }      // R = lancer le drone (clavier) : c'est le joueur qui décide, rien ne décolle tout seul
-    if (k === 'k')                                     { if (!e.repeat) _toggleKneeling(); e.preventDefault(); }
+    // K : genoux à terre retiré (plus de touche)
     if (k === 'f')                                     { if (!e.repeat && !window.__vehicleBusy) _startGadgetShot(false); e.preventDefault(); }      // F = tir, sauf près de la voiture (monter / descendre)
     if (k === 'v')                                     { if (!e.repeat) _startGadgetShot(true); e.preventDefault(); }
     if (k === 'escape') exit();
@@ -5046,8 +5050,11 @@ function tickFPS(dt) {
   // Agenouillé : dès qu'il marche ou court (hors tir), l'animation de marche prend le relais et le joueur se relève.
   if (_playerKneeling && !_gadgetShooting && !_playerDying && inMag > 0.08) _standUpFromKneel();
   let isMoving = !(_playerKneeling && _gadgetShooting) && inMag > 0.08;
-  // Course : Maj au clavier, ou stick gauche enfoncé (L3) à la manette.
-  let running  = isMoving && !_aiming && (keys.shift || !!(GP && GP.down('L3')));
+  // Course : Maj au clavier, stick gauche enfoncé (L3) à la manette, ou joystick tactile poussé À FOND (marche → course sans bouton).
+  // Petit écart (seuil d'entrée 0,92 / de sortie 0,8) : la course ne clignote pas quand le doigt reste au bord du joystick.
+  const touchMag = Math.hypot(joyInput.x, joyInput.y);
+  _touchRun = touchMag > (_touchRun ? TOUCH_RUN_OUT : TOUCH_RUN_IN);
+  let running  = isMoving && !_aiming && (keys.shift || !!(GP && GP.down('L3')) || _touchRun);
 
   // Joueur neutralisé par le drone N : plus de contrôle, seule l'animation Dying joue.
   _playerRunning = running;
@@ -5286,10 +5293,6 @@ function update(dt) {
     if (GP.justPressed('B') && !_sanctuaryMenuOpen() && state === S_FPS && !(window.CityMap && window.CityMap.busy) && !window.Bibliotheque?.promptVisible?.()) {   // ○ ouvre le livre quand le bouton est affiché : pas de saut   // carte ouverte (ou fermée à l'instant par ○) : pas de saut
       _tryJump();
     }
-    // □ / X : genoux à terre (avant : le commentaire disait ✕, c'est bien □ sur une manette PlayStation).
-    if (GP.justPressed('X') && !_sanctuaryMenuOpen() && state === S_FPS) {
-      _toggleKneeling();
-    }
     // ✕ / A : propulsion (sprint explosif). Hors menu/fiche, à pied, prêt, recharge terminée.
     if (GP.justPressed('A') && _canDash()) _dashRequest = true;
 
@@ -5453,6 +5456,7 @@ function enter() {
 
 function exit() {
   window.ShadowFollow?.off?.();
+  document.documentElement.classList.remove('sn-intro-cam');                    // sortie pendant un plan de caméra : les commandes à l'écran reviennent
   if (!active) return;
   active = false; state = S_IDLE;
   _hitInd?.clear();

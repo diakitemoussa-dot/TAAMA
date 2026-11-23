@@ -17,7 +17,7 @@
          .state() · .set(patch) · .refresh()
    ========================================================== */
 
-import * as L from './touch-layout.js?v=3';
+import * as L from './touch-layout.js?v=11';
 
 if (!document.getElementById('tcCss')) {
   const l = document.createElement('link');
