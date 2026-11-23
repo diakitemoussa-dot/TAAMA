@@ -10,7 +10,7 @@
    Testé : tests/guide.test.mjs (10 mots max, anglais présent partout).
    ========================================================== */
 
-import { EN } from './i18n-en.js?v=28';
+import { EN } from './i18n-en.js?v=30';
 import { norm } from './i18n.js?v=3';
 
 const reg = (fr, en) => { const k = norm(fr); if (!Object.prototype.hasOwnProperty.call(EN, k)) EN[k] = en; return fr; };

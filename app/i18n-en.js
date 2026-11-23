@@ -67,6 +67,8 @@ export const EN = {
   'Échap': 'Esc',
   'Djenné. Un lieu où la terre garde la mémoire.': 'Djenné. A place where the earth keeps its memory.',
   'Au cœur du Mali, la Grande Mosquée veille depuis des siècles.': 'In the heart of Mali, the Great Mosque has stood watch for centuries.',
+  'Reconstruite pour la dernière fois en 1907, elle est le cœur spirituel, religieux, social et culturel de la ville.': 'Rebuilt for the last time in 1907, it is the spiritual, religious, social and cultural heart of the city.',
+  'Inscrite au patrimoine mondial de l’UNESCO depuis 1988, elle est l’une des plus grandes architectures en terre au monde.': 'A UNESCO World Heritage Site since 1988, it is one of the largest earthen architectures in the world.',
   'Sous-titres': 'Subtitles',
 
   /* ---------- Menu principal ---------- */
@@ -984,5 +986,5 @@ Object.assign(EN, {
   'Je n’ai pas bien compris. Écris-moi ce que tu as retenu, avec tes mots à toi, {nom}.': 'I didn’t quite understand. Write what you remembered, in your own words, {nom}.',
   'Tu parles de « {mot} »… voilà une idée qui compte. Je la range dans ton carnet de notes, tu la retrouveras dans le menu pause.': 'You’re talking about “{mot}”… that’s an idea that counts. I’ll put it in your notebook, you’ll find it in the pause menu.',
   'Laboratoire de Tapama · chez moi': 'Tapama’s lab · back home',
-  'Nous voici près de la tombe de Tapama Djénépo, {nom}. On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.': 'Here we are near the tomb of Tapama Djénépo, {nom}. It is said she gave her life so that Djenné could be born and endure. Here, we do not speak loudly. Let us stay a moment in silence, for her.',
+  'Nous voici près de la tombe de Tapama Djénépo, {nom}. On l’appelle la martyre de Djenné : une jeune fille qui s’est sacrifiée pour protéger ses habitants des forces maléfiques et assurer la stabilité des remparts. Son histoire, transmise de génération en génération, marque l’histoire de Djenné. Elle incarne le courage, la bravoure et la volonté de protéger sa communauté. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.': 'Here we are near the tomb of Tapama Djénépo, {nom}. She is called the martyr of Djenné: a young girl who gave herself up to protect her people from evil forces and keep the city’s walls standing. Her story, passed down from generation to generation, is part of the history of Djenné. She embodies courage, bravery and the will to protect her community. Here we do not speak loudly. Let us stay a moment in silence, for her.',
 });

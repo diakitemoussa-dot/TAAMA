@@ -145,51 +145,6 @@
   "mood": "curieuse"
  },
  {
-  "key": "0ddf0055",
-  "text": "Launch your drone and explore the city, {nom}!",
-  "mood": "souriante"
- },
- {
-  "key": "71685dfd",
-  "text": "Look for a shiny object on the roof, {nom}.",
-  "mood": "souriante"
- },
- {
-  "key": "366a6c3b",
-  "text": "Get close to the device and pick it up!",
-  "mood": "souriante"
- },
- {
-  "key": "a702631a",
-  "text": "Go to the yellow circle: it’s my lab!",
-  "mood": "souriante"
- },
- {
-  "key": "c481a9b6",
-  "text": "Go back to the big mosque.",
-  "mood": "souriante"
- },
- {
-  "key": "fcc38c3a",
-  "text": "Go to Djenépo’s tomb: look next to it.",
-  "mood": "souriante"
- },
- {
-  "key": "9103def2",
-  "text": "Read the books of Barey So, keep the sentences.",
-  "mood": "souriante"
- },
- {
-  "key": "e6464122",
-  "text": "Bring the device back to the yellow circle.",
-  "mood": "souriante"
- },
- {
-  "key": "b3869c10",
-  "text": "Well done {nom}! Pick your next adventure on the map.",
-  "mood": "souriante"
- },
- {
   "key": "ec35e7ac",
   "text": "Well done, {nom}! You already have enough to work with. Join me at my laboratory with your sentences: we will unlock device 2.",
   "mood": "souriante"
@@ -225,8 +180,8 @@
   "mood": "souriante"
  },
  {
-  "key": "c3abfe11",
-  "text": "Before you leave, you have one last mission. Go back to the Great Mosque: part of its walls must be replastered, and everyone needs you. I am showing you the way.",
+  "key": "6641b33e",
+  "text": "Before you leave, you have one last mission. Go back to the Great Mosque: part of its walls must be replastered, and everyone needs you.",
   "mood": "souriante"
  },
  {
@@ -565,8 +520,8 @@
   "mood": "souriante"
  },
  {
-  "key": "88bdd4ba",
-  "text": "Here we are near the tomb of Tapama Djénépo, {nom}. It is said she gave her life so that Djenné could be born and endure. Here, we do not speak loudly. Let us stay a moment in silence, for her.",
+  "key": "9b443616",
+  "text": "Here we are near the tomb of Tapama Djénépo, {nom}. She is called the martyr of Djenné: a young girl who gave herself up to protect her people from evil forces and keep the city’s walls standing. Her story, passed down from generation to generation, is part of the history of Djenné. She embodies courage, bravery and the will to protect her community. Here we do not speak loudly. Let us stay a moment in silence, for her.",
   "mood": "attentive"
  },
  {

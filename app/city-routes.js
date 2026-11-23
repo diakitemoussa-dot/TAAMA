@@ -41,18 +41,29 @@ export function createRouter(data) {
     }
     return best < 0 ? null : { i: best, d: bd };
   }
+  /** Tous les nœuds routiers à moins de R mètres : le départ peut être n'importe lequel d'entre eux (on prend le meilleur, vers la destination). */
+  function near(e, n, R) {
+    const out = [], r = Math.ceil(R / CELL), cx = Math.floor(e / CELL), cy = Math.floor(n / CELL);
+    for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+      const l = grid.get((cx + dx) + ',' + (cy + dy)); if (!l) continue;
+      for (const i of l) { if (!adj[i].length) continue; const d = Math.hypot(N[i][0] - e, N[i][1] - n); if (d <= R) out.push({ i, d }); }
+    }
+    return out;
+  }
   /** itinéraire { pts: [[e, n], …], length, roads, wet, deep } ; wet = mètres dans l'eau (gués), deep = dont gué profond ; ligne droite si le réseau n'est pas joignable. */
   function route(fe, fn, te, tn) {
-    const A = nearest(fe, fn), B = nearest(te, tn);
+    const B = nearest(te, tn);
+    let C = near(fe, fn, 60);                                   // départ : tous les accès routiers proches (ex. sortie de la mosquée), pas seulement le plus proche
+    if (!C.length) { const A0 = nearest(fe, fn); C = A0 ? [A0] : []; }
     const straight = () => ({ pts: [[fe, fn], [te, tn]], length: Math.hypot(te - fe, tn - fn), roads: false, wet: 0, deep: 0 });
-    if (!A || !B) return straight();
+    if (!C.length || !B) return straight();
     const g = new Float64Array(N.length).fill(Infinity), prev = new Int32Array(N.length).fill(-1), done = new Uint8Array(N.length);
     const prevCls = new Uint8Array(N.length), prevLen = new Float64Array(N.length);
     const h = (i) => Math.hypot(N[i][0] - N[B.i][0], N[i][1] - N[B.i][1]);
-    g[A.i] = 0;
-    const heap = [[h(A.i), A.i]];
+    const heap = [];
     const push = (x) => { heap.push(x); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
     const pop = () => { const t = heap[0], l = heap.pop(); if (heap.length) { heap[0] = l; let i = 0; for (;;) { let m = i; const a = 2 * i + 1, b = a + 1; if (a < heap.length && heap[a][0] < heap[m][0]) m = a; if (b < heap.length && heap[b][0] < heap[m][0]) m = b; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return t; };
+    for (const c of C) { if (c.d < g[c.i]) { g[c.i] = c.d; push([c.d + h(c.i), c.i]); } }
     while (heap.length) {
       const [, u] = pop(); if (done[u]) continue; done[u] = 1;
       if (u === B.i) break;
