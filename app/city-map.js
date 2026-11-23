@@ -15,7 +15,7 @@
    Repère du jeu : le nord réel est +x, l'est réel est +z (la ville est recalée sur la mosquée du jeu).
    ========================================================== */
 import * as THREE from 'three';
-import { PLACES, createRouter, formatDistance, etaMinutes } from './city-routes.js?v=2';
+import { PLACES, createRouter, formatDistance, etaMinutes } from './city-routes.js?v=3';
 import { createRouteArrow, projectOnRoute } from './route-arrow.js?v=10';
 import { LABO } from './labo-position.js?v=2';
 

@@ -25,7 +25,7 @@ import {
 } from './tapama-core.js?v=4';
 import { fillName } from './player-profile.js?v=2';
 import { t, translateTree } from './i18n.js?v=3';
-import './tapama-voice.js?v=10';
+import './tapama-voice.js?v=11';
 import { attachTapamaFace } from './tapama-face.js?v=5';   // bouche animée au rythme de la voix + clignements des yeux                       // voix féminine de Tapama (synthèse vocale du navigateur, provisoire)
 
 const INPUT_LOCK_MS = 280;   // ignore l'appui qui vient d'ouvrir l'écran

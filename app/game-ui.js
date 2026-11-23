@@ -30,7 +30,7 @@ import { blackTransition, isMenuScreen, BLACK_MS } from './screen-fx.js?v=2';
 import * as P from './player-profile.js?v=2';
 import * as I18n from './i18n.js?v=3';
 import { t, translateTree } from './i18n.js?v=3';
-import { EN } from './i18n-en.js?v=28';
+import { EN } from './i18n-en.js?v=30';
 import { sendProfile, deviceLabel } from './player-sync.js?v=6';
 import { SEQUENCES } from './tapama-core.js?v=4';
 import { attachCharacter, rotateCharacter, releaseCharacter } from './character-viewer.js?v=14';
@@ -941,6 +941,8 @@ function showMainMenu() {
 const CAPTIONS = [
   { t: 0, text: 'Djenné. Un lieu où la terre garde la mémoire.' },
   { t: 5, text: 'Au cœur du Mali, la Grande Mosquée veille depuis des siècles.' },   // proposition : à valider
+  { t: 11, text: 'Reconstruite pour la dernière fois en 1907, elle est le cœur spirituel, religieux, social et culturel de la ville.' },
+  { t: 18, text: 'Inscrite au patrimoine mondial de l’UNESCO depuis 1988, elle est l’une des plus grandes architectures en terre au monde.' },
 ];
 let cine = null;
 

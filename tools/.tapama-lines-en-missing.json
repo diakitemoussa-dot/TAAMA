@@ -1,5 +1,50 @@
 [
  {
+  "key": "0ddf0055",
+  "text": "Lance ton drone et explore la ville, {nom} !",
+  "mood": "souriante"
+ },
+ {
+  "key": "71685dfd",
+  "text": "Cherche un objet brillant sur le toit, {nom}.",
+  "mood": "souriante"
+ },
+ {
+  "key": "366a6c3b",
+  "text": "Rapproche-toi du dispositif et ramasse-le !",
+  "mood": "souriante"
+ },
+ {
+  "key": "a702631a",
+  "text": "Va au cercle jaune : c’est mon labo !",
+  "mood": "souriante"
+ },
+ {
+  "key": "c481a9b6",
+  "text": "Retourne devant la grande mosquée.",
+  "mood": "souriante"
+ },
+ {
+  "key": "fcc38c3a",
+  "text": "Va à la tombe de Djenépo : cherche à côté.",
+  "mood": "souriante"
+ },
+ {
+  "key": "9103def2",
+  "text": "Lis les livres de Barey So, retiens les phrases.",
+  "mood": "souriante"
+ },
+ {
+  "key": "e6464122",
+  "text": "Rapporte le dispositif au cercle jaune.",
+  "mood": "souriante"
+ },
+ {
+  "key": "b3869c10",
+  "text": "Bravo {nom} ! Choisis ta prochaine aventure sur la carte.",
+  "mood": "souriante"
+ },
+ {
   "key": "b3339681",
   "text": "Ils sont nombreux, {nom}. Reste accroupi derrière les murs (K) et neutralise les drones un par un avec ton gadget.",
   "mood": "attentive"
@@ -330,8 +375,8 @@
   "mood": "attentive"
  },
  {
-  "key": "e4f3b059",
-  "text": ". On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
+  "key": "8d243a91",
+  "text": ". On l’appelle la martyre de Djenné : une jeune fille qui s’est sacrifiée pour protéger ses habitants des forces maléfiques et assurer la stabilité des remparts. Son histoire, transmise de génération en génération, marque l’histoire de Djenné. Elle incarne le courage, la bravoure et la volonté de protéger sa communauté. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
   "mood": "attentive"
  }
 ]

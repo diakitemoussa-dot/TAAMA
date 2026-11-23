@@ -135,8 +135,8 @@ let hushUntil = 0;
 const hushDone = () => { try { return localStorage.getItem('taama.tombe.silence') === '1'; } catch (_) { return true; } };
 function startHush() {
   try { localStorage.setItem('taama.tombe.silence', '1'); } catch (_) {}
-  const call = { text: 'Nous voici près de la tombe de Tapama Djénépo, {nom}. On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.', mood: 'attentive', duration: 13 };
-  hushUntil = performance.now() + 22000;                                            // parole (≈ 13 s) + silence (≈ 9 s)
+  const call = { text: 'Nous voici près de la tombe de Tapama Djénépo, {nom}. On l’appelle la martyre de Djenné : une jeune fille qui s’est sacrifiée pour protéger ses habitants des forces maléfiques et assurer la stabilité des remparts. Son histoire, transmise de génération en génération, marque l’histoire de Djenné. Elle incarne le courage, la bravoure et la volonté de protéger sa communauté. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.', mood: 'attentive', duration: 26 };
+  hushUntil = performance.now() + 35000;                                            // parole (≈ 26 s) + silence (≈ 9 s)
   if (promptEl) promptEl.style.display = 'none';
   window.Tapama?.radio?.(call);
 }

@@ -225,8 +225,8 @@
   "mood": "souriante"
  },
  {
-  "key": "c3abfe11",
-  "text": "Avant ton départ, il te manque une dernière mission. Retourne à la Grande Mosquée : une partie de ses murs doit être recrépie, et tout le monde a besoin de toi. Je t’affiche le chemin.",
+  "key": "6641b33e",
+  "text": "Avant ton départ, il te manque une dernière mission. Retourne à la Grande Mosquée : une partie de ses murs doit être recrépie, et tout le monde a besoin de toi.",
   "mood": "souriante"
  },
  {
@@ -570,8 +570,8 @@
   "mood": "souriante"
  },
  {
-  "key": "88bdd4ba",
-  "text": "Nous voici près de la tombe de Tapama Djénépo, {nom}. On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
+  "key": "9b443616",
+  "text": "Nous voici près de la tombe de Tapama Djénépo, {nom}. On l’appelle la martyre de Djenné : une jeune fille qui s’est sacrifiée pour protéger ses habitants des forces maléfiques et assurer la stabilité des remparts. Son histoire, transmise de génération en génération, marque l’histoire de Djenné. Elle incarne le courage, la bravoure et la volonté de protéger sa communauté. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
   "mood": "attentive"
  },
  {
@@ -930,8 +930,8 @@
   "mood": "attentive"
  },
  {
-  "key": "e4f3b059",
-  "text": ". On raconte qu’elle a donné sa vie pour que Djenné puisse naître et durer. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
+  "key": "8d243a91",
+  "text": ". On l’appelle la martyre de Djenné : une jeune fille qui s’est sacrifiée pour protéger ses habitants des forces maléfiques et assurer la stabilité des remparts. Son histoire, transmise de génération en génération, marque l’histoire de Djenné. Elle incarne le courage, la bravoure et la volonté de protéger sa communauté. Ici, on ne parle pas fort. Restons un instant en silence, pour elle.",
   "mood": "attentive"
  }
 ]
