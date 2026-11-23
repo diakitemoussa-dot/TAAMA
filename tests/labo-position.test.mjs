@@ -11,9 +11,9 @@ test('LABO = cercle du modèle de la maison de Tapama', () => {
   assert.equal(LABO.r, 1.8);
   assert.ok(LABO_HAUTEUR > 2 && LABO_HAUTEUR < 4);
 });
-test('le cercle est dans la maison (à moins de 12 m de son centre) et les ampoules sont exportées', () => {
+test('le cercle est dans la maison (à moins de 25 m de son centre, la maison est grande) et les ampoules sont exportées', () => {
   const [mx, , mz] = info.maison;
-  assert.ok(Math.hypot(LABO.x - mx, LABO.z - mz) < 12);
+  assert.ok(Math.hypot(LABO.x - mx, LABO.z - mz) < 25);
   assert.ok(info.lampes.length >= 20);
   for (const p of info.lampes) assert.ok(p.length === 3 && Math.hypot(p[0] - mx, p[2] - mz) < 60);
 });

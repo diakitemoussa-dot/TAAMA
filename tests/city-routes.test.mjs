@@ -44,12 +44,12 @@ test('les traversées du fleuve restent courtes et peu profondes : au plus un gu
 });
 
 test('le routeur préfère la route sèche à un gué plus court, sauf détour énorme', () => {
-  // A (0,0) -> B (100,0) : un gué direct de 100 m (classe 1) ou un détour sec par C (50,40) de ~128 m
-  const mk = (cls) => createRouter({ n: [[0, 0], [100, 0], [50, 40]], e: [[0, 1, cls], [0, 2], [2, 1]] });
+  // A (0,0) -> B (100,0) : un gué direct de 100 m (classe 1, coût × (1 + WET_COST[1]) = × 1,25) ou un détour sec par C (50,30) de ~117 m
+  const mk = (cls) => createRouter({ n: [[0, 0], [100, 0], [50, 30]], e: [[0, 1, cls], [0, 2], [2, 1]] });
   const dry = mk(1).route(0, 0, 100, 0);
-  assert.equal(dry.wet, 0, 'le détour sec (128 m) coûte moins que le gué (100 m × 1,6)');
-  assert.ok(dry.length > 120 && dry.length < 135);
-  // détour sec ~ 2,4 fois plus long : le gué (classe 1) redevient préférable
+  assert.equal(dry.wet, 0, 'le détour sec (117 m) coûte moins que le gué (100 m × 1,25)');
+  assert.ok(dry.length > 110 && dry.length < 120);
+  // détour sec bien plus long : le gué (classe 1) redevient préférable
   const far = createRouter({ n: [[0, 0], [100, 0], [50, 150]], e: [[0, 1, 1], [0, 2], [2, 1]] }).route(0, 0, 100, 0);
   assert.ok(far.wet >= 99 && far.wet <= 101, 'le gué est pris quand le détour est beaucoup trop long');
   assert.ok(Math.abs(far.length - 100) < 1);
