@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import * as WL from './water-logic.js?v=8';
-import { createCarDashboard } from './car-dashboard.js?v=13';
+import { createCarDashboard } from './car-dashboard.js?v=15';
 import { createCargo } from './car-cargo.js?v=2';
 
 const M = window.MosqueScene;

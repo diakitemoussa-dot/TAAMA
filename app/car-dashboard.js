@@ -205,7 +205,6 @@ const CSS = `
 #snDash .cd-radar canvas { width: 100%; height: 100%; display: block; transform-origin: 50% 50%; }
 #snDash .cd-radar .cd-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
 #snDash .cd-radar .cd-lbl { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 1.4px; color: ${GOLD}; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
-#snDash .cd-gneedle { display: none; }                         /* le tracé de l'itinéraire remplace l'aiguille */
 #snDash .cd-trace { fill: url(#cdRoadG); stroke: #fff4d6; stroke-opacity: .9; stroke-width: 1.4; stroke-linejoin: round; }
 #snDash .cd-trace-glow { fill: #f9d58b; fill-opacity: .45; stroke: #f9d58b; stroke-opacity: .45; stroke-width: 6; stroke-linejoin: round; filter: blur(4px); }
 #snDash .cd-road-mid { fill: none; stroke: #3a2a20; stroke-opacity: .55; stroke-width: 1.6; stroke-dasharray: 5 6; stroke-linecap: round; }
@@ -331,7 +330,7 @@ export function createCarDashboard() {
       refs.gneedle.style.opacity = g && g.active ? '' : '0.25';
       refs.gdist.textContent = txt.dist; refs.gsub.textContent = txt.sub;
       // tracé de l'itinéraire en temps réel, en perspective (route vue depuis la voiture) : ~160 m de route devant, large au pied de la voiture, fine à l'horizon
-      const pts = g && g.active && window.CityMap && window.CityMap.ahead ? window.CityMap.ahead(TRACE_M) : null;
+      const pts = null;                                       // tracé retiré du cadran : la flèche jaune indique la direction
       let dPath = '', dMid = '';
       if (pts && pts.length > 1) {
         const hr = heading * Math.PI / 180, sh = Math.sin(hr), ch = Math.cos(hr);
