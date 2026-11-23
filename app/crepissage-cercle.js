@@ -24,10 +24,10 @@ function spawn() {
 function clear() { try { window.SanctuaryMode?.removeCircle?.(node); } catch (_) {} node = null; }
 
 /* Transitions noires, comme celles des menus, de 4 s chacune : à l'entrée le jeu passe au noir (4 s) puis la vidéo apparaît ; à la fin la vidéo repasse au noir,
-   le personnage est déplacé quand l'écran est noir, puis le noir se lève sur sa nouvelle position (1,5 + 1 + 1,5 = 4 s). */
+   le personnage est déplacé quand l'écran est noir, puis le noir se lève sur sa nouvelle position (0,8 + 0,4 + 0,8 = 2 s). */
 const FADE_IN_MS = 4000;                                                    // entrée : le jeu passe au noir en 4 s
 const VID_FADE_MS = 700;                                                    // la vidéo apparaît en fondu
-const FADE_OUT_VID_MS = 1500, HOLD_BLACK_MS = 1000, FADE_OUT_MS = 1500;    // sortie : 1,5 s vers le noir + 1 s de noir + 1,5 s de retour = 4 s
+const FADE_OUT_VID_MS = 800, HOLD_BLACK_MS = 400, FADE_OUT_MS = 800;       // sortie : 0,8 s vers le noir + 0,4 s de noir + 0,8 s de retour = 2 s
 
 function stop(ov, vid) {
   if (ov._ending) return; ov._ending = true;
