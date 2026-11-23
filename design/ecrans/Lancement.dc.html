@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Écran de lancement</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.btn{font-family:'Open Sans',system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:12px;font-weight:700}
+.btn:hover{filter:brightness(1.12)}
+.btn:focus-visible{outline:3px solid #F8F3EA;outline-offset:3px}
+.glass{border:1px solid rgba(248,243,234,.55);background:rgba(248,243,234,.12);color:#F8F3EA}
+.k{font-family:inherit;font-size:13px;font-weight:700;padding:3px 10px;border:1px solid rgba(248,243,234,.7);border-radius:8px}
+</style>
+</helmet>
+<div style="position:relative;width:1440px;height:810px;overflow:hidden;background:#55415D;font-family:'Open Sans',system-ui,sans-serif;color:#F8F3EA">
+
+<img src="/_blob/ead7075047fea84b5a3e1bd4523adc9d" alt="" style="position:absolute;left:0;top:0;width:1440px;height:810px;object-fit:cover">
+<div style="position:absolute;left:0;top:0;width:1440px;height:810px;background:radial-gradient(ellipse at 50% 50%,rgba(85,65,93,.72) 0%,rgba(85,65,93,.5) 55%,rgba(85,65,93,.25) 100%)"></div>
+<div style="position:absolute;left:0;top:0;width:1440px;height:810px;background:linear-gradient(0deg,rgba(85,65,93,.75) 0%,rgba(85,65,93,0) 38%)"></div>
+
+
+<div style="position:absolute;right:64px;top:36px;display:flex;align-items:center;gap:12px">
+<button class="btn glass" aria-label="Son activé" style="width:44px;height:44px;border-radius:14px;justify-content:center;padding:0">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="4,9 8,9 13,5 13,19 8,15 4,15" fill="#F8F3EA"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+</button>
+<div role="group" aria-label="Langue" style="display:flex;border:1px solid rgba(248,243,234,.7);border-radius:12px;overflow:hidden;background:rgba(85,65,93,.6)">
+<button class="btn" aria-pressed="true" style="border:0;padding:11px 18px;background:#F8F3EA;color:#55415D;font-size:14px">FR</button>
+<button class="btn" aria-pressed="false" style="border:0;padding:11px 18px;background:transparent;color:#F8F3EA;font-size:14px">EN</button>
+</div>
+</div>
+
+<div style="position:absolute;left:0;right:0;top:120px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px">
+<div style="display:flex;align-items:center;gap:16px">
+<svg width="60" height="60" viewBox="0 0 44 44" fill="none" stroke="#F9D58B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="22" cy="22" r="18"/><polygon points="22,8 27,22 22,36 17,22"/><circle cx="22" cy="22" r="2.5" fill="#F9D58B"/></svg>
+<div style="font-family:'Rubik',sans-serif;font-size:16px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:#F9D58B">Une aventure en Afrique de l’Ouest</div>
+</div>
+<h1 style="margin:0;font-family:'Rubik',sans-serif;font-weight:800;font-size:176px;line-height:.9;letter-spacing:.05em;color:#F8F3EA">TAAMA</h1>
+<p style="margin:0;font-size:26px;line-height:1.35;color:#F8F3EA;max-width:640px">L’Aventure des trésors cachés de l’Afrique de l’Ouest</p>
+<div style="width:120px;height:4px;border-radius:2px;background:#F9D58B"></div>
+</div>
+
+<div style="position:absolute;left:0;right:0;top:560px;display:flex;flex-direction:column;align-items:center;gap:18px">
+<button class="btn" style="height:68px;padding:0 36px;border:0;border-radius:22px;background:#F9D58B;color:#55415D;font-size:22px;box-shadow:0 0 0 4px rgba(248,243,234,.55),0 0 40px rgba(249,213,139,.5)">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="#55415D" aria-hidden="true"><polygon points="7,4 20,12 7,20"/></svg>
+Appuie pour commencer
+</button>
+<div style="display:flex;align-items:center;gap:20px;font-size:14px">
+<span style="display:flex;align-items:center;gap:8px"><kbd class="k">Entrée</kbd>Clavier</span>
+<span style="display:flex;align-items:center;gap:8px"><kbd class="k">✕</kbd>Manette</span>
+<span style="display:flex;align-items:center;gap:8px"><kbd class="k">Touche</kbd>Écran tactile</span>
+</div>
+</div>
+
+<div style="position:absolute;left:64px;right:64px;bottom:36px;display:flex;align-items:center;justify-content:space-between;font-size:14px;color:#F8F3EA">
+<span>Un projet Kabakoo · Grande Mosquée de Djenné, Mali</span>
+<span>Version prototype</span>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":810}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Carte des destinations</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.btn{font-family:'Open Sans',system-ui,sans-serif;cursor:pointer}
+.btn:hover{background:rgba(248,243,234,.24)!important}
+.btn:focus-visible{outline:3px solid #F8F3EA;outline-offset:3px}
+</style>
+</helmet>
+<div style="position:relative;width:1440px;height:810px;overflow:hidden;background:#55415D;font-family:'Open Sans',system-ui,sans-serif;color:#F8F3EA">
+
+<div data-leaflet role="application" aria-label="Carte de l'Afrique de l'Ouest : Djenné est accessible, Bandiagara, Ségou, Bamako et Lomé sont verrouillées" style="position:absolute;left:0;top:0;width:1440px;height:810px;isolation:isolate;background:#3f3147"></div>
+
+<header style="position:absolute;left:64px;top:32px;display:flex;align-items:center;gap:18px;padding:8px 28px 8px 8px;border-radius:22px;background:rgba(85,65,93,.9);border:1px solid rgba(248,243,234,.4);box-shadow:0 12px 36px rgba(40,26,46,.45);pointer-events:auto">
+<button class="btn" style="display:flex;align-items:center;gap:10px;height:44px;padding:0 18px;border:1px solid rgba(248,243,234,.55);border-radius:14px;background:rgba(248,243,234,.12);color:#F8F3EA;font-size:16px;font-weight:600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="20" y1="12" x2="5" y2="12"/><polyline points="11,6 5,12 11,18"/></svg>
+Menu principal
+</button>
+<h1 style="margin:0;font-family:'Rubik',sans-serif;font-weight:800;font-size:34px;letter-spacing:.02em">Destinations</h1>
+</header>
+
+<div style="position:absolute;left:64px;bottom:84px;display:flex;align-items:center;gap:18px;padding:10px 16px;border-radius:14px;background:rgba(85,65,93,.92);border:1px solid rgba(248,243,234,.35);font-size:13px;color:#F8F3EA;flex-wrap:wrap;max-width:420px">
+<span style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:50%;background:#F9D58B;display:inline-block"></span>Disponible</span>
+<span style="display:flex;align-items:center;gap:8px"><svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="#F8F3EA" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="10" height="8" rx="3" fill="#F8F3EA"/><path d="M4 7V5a3 3 0 0 1 6 0v2"/></svg>Verrouillée</span>
+<span style="display:flex;align-items:center;gap:8px"><svg width="28" height="6" viewBox="0 0 28 6" aria-hidden="true"><line x1="2" y1="3" x2="26" y2="3" stroke="#F9D58B" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 8"/></svg>Piste de la carte</span>
+</div>
+
+<aside aria-label="Détail de la destination" style="position:absolute;left:960px;top:32px;width:416px;height:746px;box-sizing:border-box;padding:28px;border-radius:24px;background:rgba(85,65,93,.92);border:1px solid rgba(248,243,234,.45);box-shadow:0 18px 50px rgba(40,26,46,.5);pointer-events:auto;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:12px">
+<span style="font-family:'Rubik',sans-serif;font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:{{accent}}">Chapitre 1</span>
+<span style="font-size:13px;font-weight:700;padding:4px 14px;border-radius:999px;background:{{accent}};color:#55415D">Disponible</span>
+</div>
+<div>
+<h2 style="margin:0 0 6px;font-family:'Rubik',sans-serif;font-weight:800;font-size:40px;line-height:1">Djenné</h2>
+<p style="margin:0;font-size:16px;line-height:1.45;color:#F8F3EA">Une enquête autour de la Grande Mosquée et de deux dispositifs mystérieux.</p>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span style="font-weight:700">Progression</span><span>Séquence 4 sur 13</span></div>
+<div style="height:10px;border-radius:5px;background:rgba(248,243,234,.25);overflow:hidden"><div style="width:31%;height:100%;border-radius:5px;background:{{accent}}"></div></div>
+</div>
+<div>
+<div style="font-size:14px;font-weight:700;margin-bottom:2px">À débloquer</div>
+<div style="font-size:12px;margin-bottom:10px;color:#F8F3EA">En avançant dans l’histoire, pas avec le temps de jeu.</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-radius:14px;background:rgba(248,243,234,.08);border:1px dashed rgba(248,243,234,.6)">
+<svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="#C3A5C7" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="10" height="8" rx="3" fill="#C3A5C7"/><path d="M4 7V5a3 3 0 0 1 6 0v2"/></svg>
+<span style="flex:1;font-size:15px;font-weight:600">Bandiagara</span><span style="font-size:13px">Chapitre 2</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-radius:14px;background:rgba(248,243,234,.08);border:1px dashed rgba(248,243,234,.6)">
+<svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="#C3A5C7" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="10" height="8" rx="3" fill="#C3A5C7"/><path d="M4 7V5a3 3 0 0 1 6 0v2"/></svg>
+<span style="flex:1;font-size:15px;font-weight:600">Ségou</span><span style="font-size:13px">Chapitre 3</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-radius:14px;background:rgba(248,243,234,.08);border:1px dashed rgba(248,243,234,.6)">
+<svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="#C3A5C7" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="10" height="8" rx="3" fill="#C3A5C7"/><path d="M4 7V5a3 3 0 0 1 6 0v2"/></svg>
+<span style="flex:1;font-size:15px;font-weight:600">Bamako</span><span style="font-size:13px">Plus tard</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-radius:14px;background:rgba(248,243,234,.08);border:1px dashed rgba(248,243,234,.6)">
+<svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="#C3A5C7" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="10" height="8" rx="3" fill="#C3A5C7"/><path d="M4 7V5a3 3 0 0 1 6 0v2"/></svg>
+<span style="flex:1;font-size:15px;font-weight:600">Lomé</span><span style="font-size:13px">Plus tard</span>
+</div>
+</div>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+<button class="btn" style="display:flex;align-items:center;justify-content:center;gap:12px;height:54px;border:0;border-radius:18px;background:{{accent}};color:#55415D;font-size:19px;font-weight:700;box-shadow:0 0 0 3px #F8F3EA">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="#55415D" aria-hidden="true"><polygon points="7,4 20,12 7,20"/></svg>
+Reprendre le chapitre
+</button>
+<button class="btn" style="height:44px;border:1px solid rgba(248,243,234,.55);border-radius:16px;background:rgba(248,243,234,.12);color:#F8F3EA;font-size:15px;font-weight:600">Revoir la cinématique d’introduction</button>
+</div>
+</aside>
+
+<div style="position:absolute;left:64px;bottom:28px;display:flex;align-items:center;gap:22px;padding:9px 18px;border-radius:16px;background:rgba(85,65,93,.9);font-size:14px;color:#F8F3EA">
+<span style="display:flex;align-items:center;gap:8px"><kbd style="font-family:inherit;font-size:13px;font-weight:700;padding:3px 10px;border:1px solid rgba(248,243,234,.7);border-radius:8px">← →</kbd>Changer de destination</span>
+<span style="display:flex;align-items:center;gap:8px"><kbd style="font-family:inherit;font-size:13px;font-weight:700;padding:3px 10px;border:1px solid rgba(248,243,234,.7);border-radius:8px">Entrée</kbd>Valider</span>
+<span style="display:flex;align-items:center;gap:8px"><kbd style="font-family:inherit;font-size:13px;font-weight:700;padding:3px 10px;border:1px solid rgba(248,243,234,.7);border-radius:8px">Échap</kbd>Retour</span>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9D58B","options":["#F9D58B","#C3A5C7","#F8F3EA"]},"$preview":{"width":1440,"height":810}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#F9D58B' };
+}
+}
+</script>
+</body>
+</html>

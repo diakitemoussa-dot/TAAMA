@@ -7,7 +7,7 @@ const canvas = document.getElementById('droneCanvas');
 if (!canvas) throw new Error('droneCanvas introuvable');
 
 const DRONE_URL = 'assets/models/drone.glb';
-const DRACO_DECODER = 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/';
+const DRACO_DECODER = 'assets/vendor/three/examples/jsm/libs/draco/';
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setClearColor(0x000000, 0);

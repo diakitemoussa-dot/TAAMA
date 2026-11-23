@@ -1,0 +1,204 @@
+{
+ "départ": {
+  "id": "depart",
+  "name": "Départ de la voiture",
+  "e": 43.848,
+  "n": -7.9799999999999995,
+  "snapM": 37
+ },
+ "lieux": [
+  {
+   "id": "mosquee",
+   "nom": "Grande Mosquée de Djenné",
+   "osm_m": 242,
+   "voiture_m": 252,
+   "dont_dans_leau_m": 0,
+   "dont_gue_profond_m": 0,
+   "eau_max_m": 0,
+   "plus_petit_degagement_m": 1.62,
+   "écart_au_réseau_m": 33,
+   "ancien_itineraire_bloque": {
+    "maison": 4
+   },
+   "ancien_itineraire_bloque_m": 46,
+   "noeud_voiture": 2562
+  },
+  {
+   "id": "marche",
+   "nom": "Marché du lundi",
+   "osm_m": 96,
+   "voiture_m": 96,
+   "dont_dans_leau_m": 0,
+   "dont_gue_profond_m": 0,
+   "eau_max_m": 0,
+   "plus_petit_degagement_m": 4.65,
+   "écart_au_réseau_m": 28,
+   "ancien_itineraire_bloque": {},
+   "ancien_itineraire_bloque_m": 0,
+   "noeud_voiture": 386
+  },
+  {
+   "id": "ecole",
+   "nom": "École FA AID",
+   "osm_m": 1061,
+   "voiture_m": 1090,
+   "dont_dans_leau_m": 99,
+   "dont_gue_profond_m": 33,
+   "eau_max_m": 0.85,
+   "plus_petit_degagement_m": 1.22,
+   "écart_au_réseau_m": 57,
+   "ancien_itineraire_bloque": {
+    "maison": 12
+   },
+   "ancien_itineraire_bloque_m": 168,
+   "noeud_voiture": 3162
+  },
+  {
+   "id": "barrage",
+   "nom": "Barrage du Seuil de Djenné",
+   "osm_m": 665,
+   "voiture_m": 694,
+   "dont_dans_leau_m": 0,
+   "dont_gue_profond_m": 0,
+   "eau_max_m": 0.06,
+   "plus_petit_degagement_m": 1.22,
+   "écart_au_réseau_m": 15,
+   "ancien_itineraire_bloque": {
+    "maison": 12
+   },
+   "ancien_itineraire_bloque_m": 168,
+   "noeud_voiture": 1888
+  },
+  {
+   "id": "tonombo",
+   "nom": "Tonombo",
+   "osm_m": 1072,
+   "voiture_m": 1101,
+   "dont_dans_leau_m": 182,
+   "dont_gue_profond_m": 95,
+   "eau_max_m": 0.85,
+   "plus_petit_degagement_m": 1.22,
+   "écart_au_réseau_m": 23,
+   "ancien_itineraire_bloque": {
+    "maison": 12
+   },
+   "ancien_itineraire_bloque_m": 168,
+   "noeud_voiture": 1125
+  },
+  {
+   "id": "stade",
+   "nom": "Stade Koïkoumboro",
+   "osm_m": 1341,
+   "voiture_m": 1370,
+   "dont_dans_leau_m": 99,
+   "dont_gue_profond_m": 33,
+   "eau_max_m": 0.85,
+   "plus_petit_degagement_m": 1.22,
+   "écart_au_réseau_m": 85,
+   "ancien_itineraire_bloque": {
+    "maison": 12
+   },
+   "ancien_itineraire_bloque_m": 168,
+   "noeud_voiture": 642
+  },
+  {
+   "id": "kaniana",
+   "nom": "Kaniana",
+   "osm_m": 2322,
+   "voiture_m": 2361,
+   "dont_dans_leau_m": 0,
+   "dont_gue_profond_m": 0,
+   "eau_max_m": 0,
+   "plus_petit_degagement_m": 1.26,
+   "écart_au_réseau_m": 95,
+   "ancien_itineraire_bloque": {
+    "maison": 13
+   },
+   "ancien_itineraire_bloque_m": 177,
+   "noeud_voiture": 2995
+  },
+  {
+   "id": "hambarketolo",
+   "nom": "Hambarkétolo",
+   "osm_m": 2413,
+   "voiture_m": 2628,
+   "dont_dans_leau_m": 99,
+   "dont_gue_profond_m": 33,
+   "eau_max_m": 0.85,
+   "plus_petit_degagement_m": 1.22,
+   "écart_au_réseau_m": 135,
+   "ancien_itineraire_bloque": {
+    "pente": 1,
+    "maison": 12
+   },
+   "ancien_itineraire_bloque_m": 216,
+   "noeud_voiture": 3770
+  },
+  {
+   "id": "djennodjeno",
+   "nom": "Djenné-Djenno",
+   "osm_m": 3326,
+   "voiture_m": 3541,
+   "dont_dans_leau_m": 99,
+   "dont_gue_profond_m": 33,
+   "eau_max_m": 0.85,
+   "plus_petit_degagement_m": 1.22,
+   "écart_au_réseau_m": 264,
+   "ancien_itineraire_bloque": {
+    "pente": 1,
+    "maison": 12
+   },
+   "ancien_itineraire_bloque_m": 216,
+   "noeud_voiture": 4650
+  },
+  {
+   "id": "neantis",
+   "nom": "Base NÉANTIS (approx.)",
+   "osm_m": 606,
+   "voiture_m": 665,
+   "dont_dans_leau_m": 49,
+   "dont_gue_profond_m": 0,
+   "eau_max_m": 0.29,
+   "plus_petit_degagement_m": 1.62,
+   "écart_au_réseau_m": 113,
+   "ancien_itineraire_bloque": {
+    "maison": 7
+   },
+   "ancien_itineraire_bloque_m": 67,
+   "noeud_voiture": 1385
+  },
+  {
+   "id": "labo",
+   "nom": "Laboratoire de Tapama",
+   "osm_m": 228,
+   "voiture_m": 228,
+   "dont_dans_leau_m": 0,
+   "dont_gue_profond_m": 0,
+   "eau_max_m": 0,
+   "plus_petit_degagement_m": 3.09,
+   "écart_au_réseau_m": 23,
+   "ancien_itineraire_bloque": {},
+   "ancien_itineraire_bloque_m": 0,
+   "noeud_voiture": 335
+  }
+ ],
+ "graphe": {
+  "noeuds_osm": 7317,
+  "aretes_osm": 7666,
+  "aretes_voiture": 3767,
+  "noeuds_voiture": 3626,
+  "km_osm": 274.7,
+  "km_voiture": 136.922,
+  "refus": {
+   "pente": 14,
+   "hors-modèle": 458,
+   "maison": 594,
+   "eau": 279
+  },
+  "parametres": {
+   "CLEAR": 1.1,
+   "MAX_WATER": 1.3,
+   "MAX_SLOPE": 0.6
+  }
+ }
+}

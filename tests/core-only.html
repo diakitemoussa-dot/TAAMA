@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>core-only</title></head>
+<body><pre id="out">init…</pre>
+<script type="importmap">
+{ "imports": {
+  "three": "/node_modules/three/build/three.module.js",
+  "three/addons/": "/node_modules/three/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+const out = document.getElementById('out');
+const log = (s) => { out.textContent += '\n' + s; console.log(s); };
+window.onerror = (e) => log('ERREUR ' + e);
+window.addEventListener('unhandledrejection', (e) => log('REJET ' + (e.reason?.stack || e.reason)));
+log('module ok');
+
+const URL_ = '../assets/models/tiles/core.gltf';
+try {
+  log('FileLoader…');
+  const txt = await new Promise((res, rej) => new THREE.FileLoader().load(URL_, res, (e) => {
+    if (e.total) log('  progression ' + Math.round(e.loaded / e.total * 100) + '%');
+  }, rej));
+  log('FileLoader OK ' + txt.byteLength + ' octets');
+
+  log('FileLoader arraybuffer…');
+  const buf = await new Promise((res, rej) => {
+    const fl = new THREE.FileLoader();
+    fl.setResponseType('arraybuffer');
+    fl.load(URL_, res, (e) => { if (e.total) log('  progression ' + Math.round(e.loaded / e.total * 100) + '%'); }, rej);
+  });
+  log('FileLoader arraybuffer OK ' + buf.byteLength + ' octets');
+
+  const draco = new DRACOLoader();
+  draco.setDecoderPath('/node_modules/three/examples/jsm/libs/draco/');
+  const loader = new GLTFLoader();
+  loader.setDRACOLoader(draco);
+  loader.manager.onStart = (u) => log('  · début ' + u.split('/').pop());
+  loader.manager.onLoad = () => log('  · fin ressources');
+  loader.manager.onError = (u) => log('  · ERREUR ' + u);
+  log('GLTFLoader…');
+  const p = new Promise((res, rej) => loader.load(URL_, res, undefined, rej));
+  log('appel loader.load effectué');
+  setTimeout(() => log('timer 1 s'), 1000);
+  const gltf = await p;
+  log('GLTF OK — scène ' + gltf.scene.children.length + ' enfants, anims ' + gltf.animations.length);
+  let meshes = 0;
+  gltf.scene.traverse((o) => { if (o.isMesh) meshes++; });
+  log('meshes ' + meshes);
+  log('Mosquee_Base ' + (gltf.scene.getObjectByName('Mosquee_Base') ? 'OK' : 'MANQUANT'));
+  document.title = 'OK';
+} catch (e) {
+  log('ÉCHEC ' + (e?.stack || e));
+  document.title = 'FAIL';
+}
+window.__done = true;
+</script>
+</body></html>

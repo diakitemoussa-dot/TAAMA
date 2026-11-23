@@ -294,3 +294,36 @@
   font-size:11px; letter-spacing:1.5px; transition:background .2s;
 }
 .dg-scan-close:hover{ background:rgba(85,65,93,.45); }
+
+/* ---------- Vue du pilote (vol depuis le sac) : écran dégagé, télécommande en incrustation (app/drone-remote.js) ---------- */
+.dg-pilot .dg-reticle { display: none; }                                   /* la télémétrie est sur le téléphone */
+.dg-pilot { --wr: min(34vw, 430px); }
+/* les zones de manette (souris / doigt) sont posées, invisibles, exactement sur les manettes dessinées de la télécommande, dont les capuchons suivent les commandes */
+.dg-pilot .dg-stick { width: calc(var(--wr) * .40); height: calc(var(--wr) * .40); bottom: calc(var(--wr) * .073 - 2px); opacity: .001; z-index: 45; }
+.dg-pilot .dg-stick--left { left: calc(2.2vw + var(--wr) * .2444 - var(--wr) * .20); right: auto; }
+.dg-pilot .dg-stick--right { left: calc(2.2vw + var(--wr) * .7556 - var(--wr) * .20); right: auto; }
+.dg-pilot .dg-status { top: 16px; right: 70px; gap: 0; padding: 6px 16px 6px 12px; border-radius: 999px; background: rgba(60, 42, 66, .86); border: 1px solid rgba(249, 213, 139, .45);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, .25); font-weight: 800; letter-spacing: .04em; }
+.dg-pilot .dg-batt { font-size: 18px; color: #f8f3ea; margin-right: 10px; }
+.dg-pilot .dg-signal { color: #f9d58b; letter-spacing: 3px; font-size: 20px; }
+.dg-pilot .dg-quit { position: fixed; top: 14px; right: 16px; width: 44px; height: 44px; background: rgba(60, 42, 66, .86); }
+.dg-pilot .dg-toolbar { background: rgba(60, 42, 66, .86); border-color: rgba(249, 213, 139, .45); }
+
+/* ---------- Petites interfaces de la vue du pilote (d'après la maquette) ---------- */
+.dg-mappill, .dg-needle { display: none; }
+.dg-pilot .dg-mappill { display: flex; position: absolute; left: 150px; top: 24px; align-items: center; gap: 8px; height: 42px; padding: 0 20px 0 52px; border-radius: 999px; border: 1px solid rgba(249, 213, 139, .5);
+  background: rgba(60, 42, 66, .9); color: #f8f3ea; font: 800 17px/1 'Rajdhani', 'Open Sans', system-ui, sans-serif; letter-spacing: .06em; cursor: pointer; pointer-events: auto; z-index: -1; box-shadow: 0 3px 14px rgba(0, 0, 0, .25); }
+.dg-pilot .dg-mappill svg { position: absolute; left: 34px; width: 20px; height: 20px; fill: none; stroke: #f9d58b; stroke-width: 2; stroke-linejoin: round; }
+body.has-citymap .dg-pilot .dg-compass, .dg-pilot .dg-compass { left: 292px; top: 24px; width: 56px; height: 56px; background: rgba(60, 42, 66, .9); border: 2px solid #f8f3ea; backdrop-filter: none; }
+.dg-pilot .dg-compass-deg, .dg-pilot .dg-compass-eye, .dg-pilot .dg-compass-fan { display: none; }
+.dg-pilot .dg-needle { display: block; width: 38px; height: 38px; transition: transform .1s linear; }
+.dg-pilot .dg-tool { width: 52px; height: 52px; border: 2px solid rgba(248, 243, 234, .8); color: #f8f3ea; background: rgba(60, 42, 66, .35); }
+.dg-pilot .dg-tool svg { width: 26px; height: 26px; fill: none; stroke: #f8f3ea; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; margin: auto; }
+.dg-pilot .dg-tool--main { width: 64px; height: 64px; border-width: 3px; border-color: #f9d58b; margin: -6px 0; background: rgba(249, 213, 139, .12); }
+.dg-pilot .dg-tool--main svg { width: 32px; height: 32px; stroke: #f9d58b; }
+.dg-pilot .dg-toolbar { gap: 16px; padding: 10px 22px; border-radius: 999px; background: rgba(60, 42, 66, .92); }
+.dg-pilot .dg-signal { color: #f9d58b; }
+/* horloge et pastille du dispositif, à droite sous la batterie (hors du HUD : classe sur body) */
+body.dg-flight .dc-clock { left: auto; right: 24px; bottom: auto; top: 128px; opacity: 1; animation: none; background: rgba(60, 42, 66, .9); border: 1px solid rgba(249, 213, 139, .5); font-size: 15px; padding: 7px 16px; z-index: 62; }
+body.dg-flight div[style*="top:84px"] > div[data-n] { background: rgba(60, 42, 66, .92) !important; border: 1px solid rgba(249, 213, 139, .5) !important; box-shadow: 0 3px 14px rgba(0, 0, 0, .25) !important; color: #f8f3ea !important; }
+body.dg-flight div[style*="top:84px"] > div[data-n] span { color: #f9d58b !important; }

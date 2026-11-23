@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Cinématique d'introduction</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.btn{font-family:'Open Sans',system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:700}
+.btn:hover{filter:brightness(1.15)}
+.btn:focus-visible{outline:3px solid #F8F3EA;outline-offset:3px}
+.glass{border:1px solid rgba(248,243,234,.6);background:rgba(85,65,93,.7);color:#F8F3EA}
+.k{font-family:inherit;font-size:13px;font-weight:700;padding:3px 10px;border:1px solid rgba(248,243,234,.7);border-radius:8px}
+</style>
+</helmet>
+<div style="position:relative;width:1440px;height:810px;overflow:hidden;background:#55415D;font-family:'Open Sans',system-ui,sans-serif;color:#F8F3EA">
+
+<img src="/_blob/ead7075047fea84b5a3e1bd4523adc9d" alt="Plan large de la Grande Mosquée de Djenné au crépuscule" style="position:absolute;left:0;top:0;width:1440px;height:810px;object-fit:cover">
+<div style="position:absolute;left:0;top:0;width:1440px;height:810px;background:radial-gradient(ellipse at center,rgba(85,65,93,0) 45%,rgba(85,65,93,.55) 100%)"></div>
+
+<div style="position:absolute;left:0;top:0;width:1440px;height:92px;background:#55415D"></div>
+<div style="position:absolute;left:0;top:718px;width:1440px;height:92px;background:#55415D"></div>
+
+<div style="position:absolute;left:64px;top:26px;display:flex;align-items:center;gap:14px">
+<span style="font-family:'Rubik',sans-serif;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#F9D58B">Séquence 2</span>
+<span style="font-size:15px">Djenné, un lieu chargé de mémoire</span>
+</div>
+<button class="btn glass" style="position:absolute;right:64px;top:22px;height:48px;padding:0 20px;border-radius:16px;font-size:16px">
+Passer la cinématique
+<svg width="20" height="20" viewBox="0 0 24 24" fill="#F8F3EA" aria-hidden="true"><polygon points="4,5 13,12 4,19"/><polygon points="12,5 21,12 12,19"/></svg>
+<kbd class="k">Échap</kbd>
+</button>
+
+<div style="position:absolute;left:220px;right:220px;top:600px;display:flex;justify-content:center">
+<div style="padding:14px 28px;border-radius:18px;background:rgba(85,65,93,.78);font-size:26px;line-height:1.35;text-align:center;font-weight:600">Djenné. Un lieu où la terre garde la mémoire.</div>
+</div>
+
+<div style="position:absolute;left:64px;right:64px;top:742px;display:flex;align-items:center;gap:20px">
+<button class="btn glass" aria-label="Pause" style="width:48px;height:48px;border-radius:14px;justify-content:center;padding:0">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="#F8F3EA" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
+</button>
+<span style="font-size:15px;font-weight:600;width:50px">0:08</span>
+<div style="flex:1;height:10px;border-radius:5px;background:rgba(248,243,234,.3);position:relative">
+<div style="width:26%;height:100%;border-radius:5px;background:#F9D58B"></div>
+<div style="position:absolute;left:26%;top:-5px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:#F8F3EA;border:3px solid #F9D58B"></div>
+</div>
+<span style="font-size:15px;width:50px;text-align:right">0:32</span>
+<button class="btn glass" aria-label="Sous-titres activés" style="height:48px;padding:0 16px;border-radius:14px;font-size:14px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"/><line x1="7" y1="11" x2="11" y2="11"/><line x1="13" y1="11" x2="17" y2="11"/><line x1="7" y1="15" x2="14" y2="15"/></svg>
+Sous-titres
+</button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":810}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

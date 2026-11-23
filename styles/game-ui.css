@@ -1,0 +1,118 @@
+/* ==========================================================
+   INTERFACE DU JEU — hôte des écrans conçus dans le canvas
+   Les écrans (app/game-screens.js) vivent dans des Shadow DOM :
+   leurs styles ne touchent pas le reste du jeu. Ici : l'hôte,
+   la mise à l'échelle 16:9 et les éléments hors écran.
+   ========================================================== */
+
+/* L'ancienne intro (texte d'entrée, tablette « Décolle le drone », compte à rebours) est remplacée.
+   ?legacy=1 dans l'URL la rétablit. */
+html.gu, html.gu body{ background: #55415D; overflow: hidden; }
+html.gu #stage > *:not(#mosqueStage):not(#soundToggle){ display: none !important; }
+html.gu #glitchOverlay{ display: none !important; }
+
+#guRoot{
+  position: fixed;
+  inset: 0;
+  z-index: 68;                    /* au-dessus des menus de la maquette (65–66), sous l'écran de rotation (70) */
+  background: #55415D;
+  overflow: hidden;
+  font-family: 'Open Sans', system-ui, sans-serif;
+}
+#guRoot[hidden]{ display: none; }
+
+/* Pause : la partie reste visible derrière un voile violet */
+#guRoot.is-pause{ background: rgba(85,65,93,.72); }
+#guRoot.is-pause .gu-bg{ display: none; }
+
+/* Marges autour de l'écran 16:9 : même image, floutée — teintée comme l'écran affiché pour qu'aucun raccord ne se voie */
+.gu-bg{
+  position: absolute;
+  inset: -40px;
+  background: #55415D url('../assets/images/menu-djenne-couchant.jpg') center / cover no-repeat;
+  filter: blur(22px) brightness(.85);
+}
+
+/* Fond de l'écran affiché : couvre toute la fenêtre (image, voiles, dégradés), l'interface reste centrée au-dessus */
+.gu-bgl{
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #55415D;
+  opacity: 0;
+  transition: opacity .28s ease;
+}
+.gu-bgl.on{ opacity: 1; }
+/* Écran « Destinations » : la carte (en fond) reçoit les gestes ; seuls le panneau, le titre et les boutons réagissent */
+#guRoot[data-screen="carte"] .gu-stage,
+#guRoot[data-screen="carte"] .gu-screen{ pointer-events: none; }
+
+.gu-stage{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1440px;
+  height: 810px;
+  transform-origin: 50% 50%;
+}
+.gu-screen{
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity .28s ease;
+}
+.gu-screen.on{ opacity: 1; }
+
+/* Compteur d'images par seconde (option « Affichage ») */
+.gu-fps{
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  z-index: 9400;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(85,65,93,.85);
+  color: #F8F3EA;
+  font: 700 12px/1.3 'Open Sans', system-ui, sans-serif;
+  pointer-events: none;
+}
+.gu-fps[hidden]{ display: none; }
+
+/* Options › Afficher les aides de commandes à l'écran : désactivé = pas de bulles d'aide */
+body.gu-nohints .sn-hint,
+body.gu-nohints .dg-takeoff-hint,
+body.gu-nohints .ar-hint,
+body.gu-nohints #tpRoot .tp-d-hints,
+body.gu-nohints #tpRoot .tp-r-hint{ display: none !important; }
+
+/* Pause : l'appel radio de Tapama attend la reprise */
+html.gu-paused #tpRoot .tp-radio{ display: none; }
+
+/* Contraste renforcé (option « Jeu et langue ») */
+body.gu-contrast #tpRoot .tp-d-text,
+body.gu-contrast #tpRoot .tp-r-text,
+body.gu-contrast #tpRoot .tp-quote{ text-shadow: 0 0 2px #000, 0 0 6px rgba(0,0,0,.8); font-weight: 700; }
+
+/* Partie en cours (Nouvelle partie / Continuer) : l'ancienne interface de la maquette — boutons AR, ☰, GAME / SANCTUAIRE — et le
+   bouton SON ON n'existent plus (le son se règle dans Options › Audio). Ils restent en « Exploration libre ». */
+body.mode-campaign .mq-ui,
+body.mode-campaign #soundToggle{ display: none !important; }
+
+/* Téléphone en portrait : message « tourne ton téléphone » par-dessus les menus */
+.gu-rotatemsg{
+  display: none;
+  position: absolute; inset: 0; z-index: 5;
+  flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 24px; text-align: center;
+  background: rgba(85,65,93,.97); color: #F8F3EA;
+  font: 700 18px/1.4 'Open Sans', system-ui, sans-serif;
+}
+.gu-rotatemsg p{ margin: 0; max-width: 18em; }
+.gu-rotateico{ font-size: 56px; color: #F9D58B; animation: gu-spin 2.4s ease-in-out infinite; }
+@keyframes gu-spin{ 0%,100%{ transform: rotate(-20deg); } 50%{ transform: rotate(70deg); } }
+#guRoot.gu-rotate .gu-rotatemsg{ display: flex; }
+#guRoot.gu-rotate .gu-stage{ visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce){
+  .gu-screen{ transition: none; }
+}

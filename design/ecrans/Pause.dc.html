@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Menu pause en jeu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.btn{font-family:'Open Sans',system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:14px;font-weight:600}
+.btn:hover{filter:brightness(1.12)}
+.btn:focus-visible{outline:3px solid #F8F3EA;outline-offset:3px}
+.glass{border:1px solid rgba(248,243,234,.55);background:rgba(248,243,234,.12);color:#F8F3EA}
+.card{border-radius:24px;border:1px solid rgba(248,243,234,.45);background:rgba(248,243,234,.12)}
+.chip{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:600}
+.k{font-family:inherit;font-size:13px;font-weight:700;padding:3px 10px;border:1px solid rgba(248,243,234,.7);border-radius:8px}
+</style>
+</helmet>
+<div style="position:relative;width:1440px;height:810px;overflow:hidden;background:#55415D;font-family:'Open Sans',system-ui,sans-serif;color:#F8F3EA">
+
+<img src="/_blob/ead7075047fea84b5a3e1bd4523adc9d" alt="La partie en cours, en arrière-plan" style="position:absolute;left:0;top:0;width:1440px;height:810px;object-fit:cover">
+<div style="position:absolute;left:0;top:0;width:1440px;height:810px;background:rgba(85,65,93,.72)"></div>
+
+<div aria-hidden="true" style="position:absolute;left:36px;top:30px;display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:16px;background:rgba(85,65,93,.7);border:1px solid rgba(248,243,234,.3);opacity:.8">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F9D58B" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,14"/></svg>
+<span style="font-size:14px">Objectif · Examiner l’emplacement près de la mosquée</span>
+</div>
+<div aria-hidden="true" style="position:absolute;left:640px;top:370px;width:160px;height:70px;opacity:.7">
+<svg width="160" height="70" viewBox="0 0 160 70" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round"><circle cx="80" cy="35" r="14"/><line x1="80" y1="8" x2="80" y2="22"/><line x1="80" y1="48" x2="80" y2="62"/><line x1="40" y1="35" x2="66" y2="35"/><line x1="94" y1="35" x2="120" y2="35"/></svg>
+</div>
+<div aria-hidden="true" style="position:absolute;left:560px;bottom:30px;width:320px;opacity:.85">
+<div style="font:700 11px/1 'Rubik',sans-serif;letter-spacing:.16em;text-align:center;margin-bottom:6px">INTÉGRITÉ</div>
+<div style="height:10px;border-radius:5px;background:rgba(248,243,234,.3);overflow:hidden"><div style="width:67%;height:100%;border-radius:5px;background:#F9D58B"></div></div>
+</div>
+<div aria-hidden="true" style="position:absolute;left:36px;bottom:30px;display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:16px;background:rgba(85,65,93,.7);border:1px solid rgba(248,243,234,.3);opacity:.8;font-size:14px;font-weight:700">18:12 · ×1</div>
+
+<section aria-label="Menu pause" style="position:absolute;left:96px;top:96px;width:460px;height:618px;box-sizing:border-box;padding:32px;border-radius:28px;background:rgba(85,65,93,.92);border:1px solid rgba(248,243,234,.55);display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+<svg width="36" height="36" viewBox="0 0 24 24" fill="#F9D58B" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="2"/><rect x="14" y="4" width="5" height="16" rx="2"/></svg>
+<h1 style="margin:0;font-family:'Rubik',sans-serif;font-weight:800;font-size:40px;letter-spacing:.02em">Pause</h1>
+</div>
+<button class="btn" style="height:58px;padding:0 22px;border:0;border-radius:18px;background:#F9D58B;color:#55415D;font-size:19px;font-weight:700;box-shadow:0 0 0 3px #F8F3EA">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="#55415D" aria-hidden="true"><polygon points="7,4 20,12 7,20"/></svg><span style="flex:1;text-align:left">Reprendre</span><kbd class="k" style="color:#55415D;border-color:#55415D">Échap</kbd></button>
+<button class="btn glass" style="height:54px;padding:0 22px;border-radius:18px;font-size:17px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg><span style="flex:1;text-align:left">Journal d’enquête</span></button>
+<button class="btn glass" style="height:54px;padding:0 22px;border-radius:18px;font-size:17px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="4"/><line x1="8" y1="12.5" x2="8" y2="12.5"/><line x1="12" y1="12.5" x2="16" y2="12.5"/></svg><span style="flex:1;text-align:left">Commandes</span></button>
+<button class="btn glass" style="height:54px;padding:0 22px;border-radius:18px;font-size:17px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.5" fill="#55415D"/><circle cx="15" cy="17" r="2.5" fill="#55415D"/></svg><span style="flex:1;text-align:left">Options</span></button>
+<button class="btn glass" style="height:54px;padding:0 22px;border-radius:18px;font-size:17px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg><span style="flex:1;text-align:left">Carte des destinations</span></button>
+<div style="height:1px;background:rgba(248,243,234,.3);margin:6px 0"></div>
+<button class="btn glass" style="height:54px;padding:0 22px;border-radius:18px;font-size:17px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></svg><span style="flex:1;text-align:left">Retour au menu principal</span></button>
+<div style="font-size:13px;line-height:1.4;margin-top:auto;display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F9D58B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,12 10,18 20,6"/></svg>Ta progression est sauvegardée à chaque séquence.</div>
+</section>
+
+<section aria-label="Journal d'enquête" class="card" style="position:absolute;left:600px;top:96px;width:744px;height:618px;box-sizing:border-box;padding:32px;background:rgba(85,65,93,.88);display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:12px"><span style="font-family:'Rubik',sans-serif;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#F9D58B">Journal d’enquête</span><span style="font-size:13px;font-weight:700;padding:4px 14px;border-radius:999px;border:1px solid rgba(248,243,234,.6)">Séquence 4 · Le premier repérage</span></div>
+
+<div>
+<div style="font-size:14px;font-weight:700;margin-bottom:8px">Objectif en cours</div>
+<div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:18px;background:rgba(249,213,139,.2);border:1px solid #F9D58B">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F9D58B" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,14"/></svg>
+<div style="font-size:17px;line-height:1.4;font-weight:600">Examiner l’emplacement près de la mosquée et utiliser le drone pour observer un détail éloigné.</div>
+</div>
+</div>
+
+<div style="padding:18px 20px;border-radius:18px;background:rgba(248,243,234,.1);border:1px solid rgba(248,243,234,.4)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="width:34px;height:34px;border-radius:50%;background:#C3A5C7;color:#55415D;font-family:'Rubik',sans-serif;font-weight:800;display:inline-flex;align-items:center;justify-content:center">T</span><span style="font-weight:700;font-size:15px">Tapama</span></div>
+<div style="font-size:16px;line-height:1.5">« J’ai découvert quelque chose près de la mosquée. Je ne sais pas encore ce que c’est, mais certains détails ne correspondent à rien de ce que j’ai étudié. »</div>
+</div>
+
+<div>
+<div style="font-size:14px;font-weight:700;margin-bottom:8px">Découvertes</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<span class="chip" style="background:rgba(249,213,139,.2);border:1px solid #F9D58B"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F8F3EA" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,12 10,18 20,6"/></svg>Premier indice</span>
+<span class="chip" style="background:rgba(248,243,234,.08);border:1px dashed rgba(248,243,234,.6)"><svg width="12" height="14" viewBox="0 0 14 16" fill="none" stroke="#C3A5C7" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="10" height="8" rx="3" fill="#C3A5C7"/><path d="M4 7V5a3 3 0 0 1 6 0v2"/></svg>Fragment de mémoire</span>
+<span class="chip" style="background:rgba(248,243,234,.08);border:1px dashed rgba(248,243,234,.6)"><svg width="12" height="14" viewBox="0 0 14 16" fill="none" stroke="#C3A5C7" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="10" height="8" rx="3" fill="#C3A5C7"/><path d="M4 7V5a3 3 0 0 1 6 0v2"/></svg>Clé de synchronisation</span>
+</div>
+</div>
+
+<div style="margin-top:auto">
+<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span style="font-weight:700">Progression du chapitre</span><span>Séquence 4 sur 13</span></div>
+<div style="height:10px;border-radius:5px;background:rgba(248,243,234,.25);overflow:hidden"><div style="width:31%;height:100%;border-radius:5px;background:#F9D58B"></div></div>
+</div>
+</section>
+
+<div style="position:absolute;left:96px;right:96px;bottom:28px;display:flex;align-items:center;gap:22px;font-size:14px">
+<span style="display:flex;align-items:center;gap:8px"><kbd class="k">↑ ↓</kbd>Choisir</span>
+<span style="display:flex;align-items:center;gap:8px"><kbd class="k">Entrée</kbd>Valider</span>
+<span style="display:flex;align-items:center;gap:8px"><kbd class="k">Échap</kbd>Reprendre</span>
+<span style="display:flex;align-items:center;gap:8px"><kbd class="k">Start</kbd>Manette</span>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":810}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

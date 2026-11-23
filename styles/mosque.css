@@ -94,6 +94,12 @@
   letter-spacing: .22em;
   color: rgba(255,255,255,.7);
 }
+/* Texte d'aide : "molette pour zoomer" (souris) vs "pincez pour zoomer" (tactile) */
+.mq-sub-mobile{ display: none; }
+@media (pointer: coarse){
+  .mq-sub-desktop{ display: none; }
+  .mq-sub-mobile{ display: inline; }
+}
 
 /* === Animation "Think" lettre par lettre sur le titre fort === */
 .mosque-title strong .mq-tchar{
@@ -826,4 +832,35 @@
   backdrop-filter: blur(8px);
   transition: opacity .8s ease;
   pointer-events: none;
+}
+
+/* ---------- Lisibilité des fiches (Façade, Minarets…) sur grand écran : cartes prune opaques, texte clair ----------
+   Avant : texte doré sans fond posé sur le ciel clair et sur la mosquée (illisible). */
+@media (min-width: 900px){
+  .mq-info-title{
+    width: max-content;
+    max-width: 90%;
+    padding: .38em 1.1em .5em;
+    border-radius: 16px;
+    background: rgba(42, 31, 51, .82);
+    border: 1px solid rgba(249, 213, 139, .35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    text-shadow: none;
+  }
+  .mq-info-list li{
+    padding: .75em 1.05em;
+    max-width: 28ch;
+    color: #f8f3ea;
+    font-weight: 600;
+    background: rgba(42, 31, 51, .8);
+    border: 1px solid rgba(249, 213, 139, .3);
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
+    text-shadow: none;
+  }
+  .mq-info-list b, .mq-info-list strong{ color: #f9d58b; text-shadow: none; }
+  .mq-info-list li:nth-child(4){ bottom: 6%; }
 }

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>comparaison tuiles / monolithique</title>
+<style>
+  html,body{margin:0;background:#111;color:#eee;font:12px/1.5 monospace}
+  #out{position:fixed;inset:0;padding:12px;white-space:pre;overflow:auto}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "/node_modules/three/build/three.module.js",
+  "three/addons/": "/node_modules/three/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<pre id="out">init…</pre>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { TileStreamer } from '../app/spatial-streaming.js';
+
+const out = document.getElementById('out');
+const log = (s) => { out.textContent += '\n' + s; console.log(s); };
+window.onerror = (e) => log('ERREUR ' + e);
+window.addEventListener('unhandledrejection', (e) => log('REJET ' + (e.reason?.stack || e.reason)));
+
+const W = 640, H = 400;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+renderer.domElement.style.cssText = 'position:fixed;right:8px;bottom:8px;border:1px solid #444;display:none';
+
+const draco = new DRACOLoader();
+draco.setDecoderPath('/node_modules/three/examples/jsm/libs/draco/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+
+/* deux scènes identiques, l'une monolithique, l'autre en tuiles */
+function makeScene() {
+  const s = new THREE.Scene();
+  s.background = null;
+  s.add(new THREE.HemisphereLight(0xdfe9ff, 0x8a7355, 2.0));
+  const sun = new THREE.DirectionalLight(0xfff0d0, 2.0);
+  sun.position.set(120, 180, 90);
+  s.add(sun);
+  return s;
+}
+const sceneMono = makeScene();
+const sceneTiles = makeScene();
+const camera = new THREE.PerspectiveCamera(52, W / H, 0.5, 4000);
+
+const hideSky = (root) => root.traverse((o) => {
+  if (o.isMesh && /Sky|Sphere/i.test(o.name) && !/Cloud/i.test(o.name)) o.visible = false;
+});
+
+let domeRadius = 0;
+const domeCenter = new THREE.Vector3();
+
+try {
+  const t0 = performance.now();
+  const [mono, streamer] = await Promise.all([
+    new Promise((res, rej) => loader.load('../assets/models/djenne-ar.glb', res, undefined, rej)),
+    (async () => {
+      const st = new TileStreamer({
+        scene: sceneTiles, camera, loader,
+        indexUrl: '../assets/models/tiles/index.json',
+        loadRadius: 1e9, unloadRadius: 1e12, nearRadius: 1e9,
+        maxConcurrent: 6, hud: false,
+      });
+      await st.init();
+      for (let i = 0; i < 200; i++) {
+        st.update(1);
+        const s = st.stats();
+        if (s.loaded + s.errors >= s.total) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return st;
+    })(),
+  ]);
+
+  sceneMono.add(mono.scene);
+  hideSky(mono.scene);
+  hideSky(streamer.group);
+
+  // repère : centre + rayon du dôme (comme mosque-viewer.js)
+  mono.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    if (/Sky|Sphere/i.test(o.name) && !/Cloud/i.test(o.name)) {
+      const b = new THREE.Box3().setFromObject(o);
+      const sz = b.getSize(new THREE.Vector3());
+      domeRadius = Math.max(domeRadius, Math.max(sz.x, sz.y, sz.z) / 2);
+    }
+  });
+
+  const s = streamer.stats();
+  log(`mono + tuiles prêtes en ${Math.round(performance.now() - t0)} ms`);
+  log(`tuiles ${s.loaded}/${s.total} · ${(s.bytes / 1048576).toFixed(2)} Mo · ${s.tris.toLocaleString('fr-FR')} tris · erreurs ${s.errors}`);
+
+  // mêmes bounds que l'app pour le cadrage d'ouverture
+  const mosqueMono = mono.scene.getObjectByName('Mosquee_Base');
+  const box = new THREE.Box3().setFromObject(mosqueMono || mono.scene);
+  const target = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const r = Math.max(size.x, size.y, size.z);
+  const dist = r * 2.4;
+
+  const views = [
+    { name: 'ouverture', pos: [target.x + dist * 0.62, target.y + r * 1.0, target.z + dist * 0.62], tgt: [target.x, target.y, target.z] },
+    { name: 'survol', pos: [target.x + 90, target.y + 55, target.z + 130], tgt: [target.x, target.y + 6, target.z] },
+    { name: 'cour', pos: [target.x + 35, target.y + 22, target.z + 45], tgt: [target.x - 5, target.y + 8, target.z] },
+  ];
+
+  const rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.UnsignedByteType });
+  const shoot = (scene, view) => {
+    camera.position.fromArray(view.pos);
+    camera.lookAt(...view.tgt);
+    camera.updateMatrixWorld(true);
+    renderer.setRenderTarget(rt);
+    renderer.clear();
+    renderer.render(scene, camera);
+    const px = new Uint8Array(W * H * 4);
+    renderer.readRenderTargetPixels(rt, 0, 0, W, H, px);
+    renderer.setRenderTarget(null);
+    return px;
+  };
+
+  for (const v of views) {
+    const a = shoot(sceneMono, v);
+    const b = shoot(sceneTiles, v);
+    let sum = 0, bad = 0, maxd = 0;
+    for (let i = 0; i < a.length; i += 4) {
+      let d = 0;
+      for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(a[i + c] - b[i + c]));
+      sum += d; maxd = Math.max(maxd, d);
+      if (d > 16) bad++;
+    }
+    const pixels = a.length / 4;
+    log(`vue « ${v.name} » : écart moyen ${(sum / pixels).toFixed(2)}/255 · ${(bad / pixels * 100).toFixed(2)} % de pixels différents · max ${maxd}`);
+  }
+
+  // aperçu côte à côte pour l'inspection visuelle
+  const cv = document.createElement('canvas');
+  cv.width = W * 2 + 8; cv.height = H;
+  cv.style.cssText = 'position:fixed;left:0;top:0;z-index:9;width:100%;height:auto;background:#000';
+  const ctx = cv.getContext('2d');
+  const toCanvas = (px) => {
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    const img = g.createImageData(W, H);
+    img.data.set(px);
+    g.putImageData(img, 0, 0);
+    return c;
+  };
+  const view = views[1];
+  ctx.drawImage(toCanvas(shoot(sceneMono, view)), 0, 0);
+  ctx.drawImage(toCanvas(shoot(sceneTiles, view)), W + 8, 0);
+  document.body.appendChild(cv);
+
+  document.title = 'OK';
+  log('\nOK — gauche : monolithique · droite : tuiles');
+} catch (e) {
+  log('ÉCHEC ' + (e?.stack || e));
+  document.title = 'FAIL';
+}
+window.__done = true;
+</script>
+</body>
+</html>

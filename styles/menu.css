@@ -1,0 +1,254 @@
+/* ==========================================================
+   MENU PRINCIPAL — « Les Gardiens de Djenné »
+   Vue 360° : menu affiché par-dessus la maquette révélée,
+   qui tourne doucement (MosqueScene.setAutoRotate).
+   ========================================================== */
+
+#gmRoot{
+  position: absolute;
+  inset: 0;
+  z-index: 65;                    /* au-dessus du carnet/bandeau missions (64), sous l'écran de rotation (70) */
+  pointer-events: none;
+}
+#gmRoot [hidden]{ display: none !important; }
+
+/* ---------------- Menu principal ---------------- */
+.gm-menu{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity .45s ease;
+}
+.gm-menu.on{ opacity: 1; }
+.gm-backdrop{
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 42%, rgba(18,11,26,.30), rgba(6,4,10,.82));
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.gm-wrap{
+  position: relative;
+  width: min(94vw, 720px);
+  max-height: 94svh;
+  overflow-y: auto;
+  padding: clamp(12px, 2.6vh, 26px) clamp(14px, 4vw, 30px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.8vh, 16px);
+  text-align: center;
+}
+.gm-kicker{
+  font-size: clamp(.58rem, 1.8vw, .72rem);
+  letter-spacing: .32em;
+  color: rgba(249,213,139,.85);
+  text-shadow: 0 1px 10px rgba(0,0,0,.9);
+}
+.gm-title{
+  margin: .1em 0 0;
+  font-family: 'Rubik', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 6vw, 2.5rem);
+  letter-spacing: .08em;
+  color: #f9d58b;
+  text-shadow: 0 0 26px rgba(249,213,139,.4), 0 2px 18px rgba(0,0,0,.85);
+}
+.gm-sub{
+  margin: 0;
+  font-family: 'Lato', system-ui, sans-serif;
+  font-size: clamp(.7rem, 2.3vw, .85rem);
+  color: rgba(240,231,255,.85);
+  text-shadow: 0 1px 10px rgba(0,0,0,.85);
+}
+
+.gm-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+}
+@media (min-width: 660px){
+  .gm-grid{ grid-template-columns: 1fr 1fr; }
+  .gm-card--missions{ grid-column: 1 / -1; }
+}
+
+.gm-card{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 15px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(24,15,32,.88), rgba(12,8,18,.93));
+  border: 1.5px solid rgba(249,213,139,.4);
+  color: #f0e7ff;
+  cursor: pointer;
+  font: inherit;
+  transition: transform .16s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.gm-card:hover{
+  transform: translateY(-2px);
+  border-color: #f9d58b;
+  box-shadow: 0 0 26px rgba(249,213,139,.25);
+}
+.gm-card--missions{
+  border-color: rgba(249,213,139,.85);
+  box-shadow: 0 0 30px rgba(249,213,139,.18);
+}
+.gm-ico{ font-size: 1.45rem; }
+.gm-card-txt{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.gm-card-txt b{
+  font-family: 'Rubik', system-ui, sans-serif;
+  font-size: .92rem;
+  letter-spacing: .1em;
+}
+.gm-card-txt i{
+  font-style: normal;
+  font-size: .68rem;
+  line-height: 1.35;
+  color: rgba(201,185,138,.9);
+}
+.gm-card--soon{
+  opacity: .55;
+  border-style: dashed;
+}
+.gm-badge{
+  margin-left: auto;
+  color: #f9d58b;
+  font-size: .74rem;
+  white-space: nowrap;
+}
+.gm-note{
+  margin: 0;
+  font-size: .6rem;
+  letter-spacing: .06em;
+  color: rgba(240,231,255,.5);
+}
+
+/* ---------------- Panneau « Drone & Modèles » ---------------- */
+.gm-models{
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: rgba(6,4,10,.74);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.gm-models.on{ opacity: 1; }
+.gm-models-card{
+  width: min(92vw, 440px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(16px, 3vh, 24px) clamp(16px, 4vw, 26px);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(20,13,27,.97), rgba(9,6,14,.98));
+  border: 1.5px solid rgba(249,213,139,.5);
+  box-shadow: 0 18px 60px rgba(0,0,0,.6);
+  text-align: center;
+}
+.gm-models-title{
+  margin: .1em 0 .2em;
+  font-family: 'Rubik', system-ui, sans-serif;
+  letter-spacing: .1em;
+  font-size: 1.08rem;
+  color: #f9d58b;
+}
+.gm-model-list{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gm-model{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(249,213,139,.28);
+  background: rgba(10,7,15,.6);
+  color: #f0e7ff;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.gm-model b{ font-size: .84rem; letter-spacing: .06em; }
+.gm-model i{
+  font-style: normal;
+  font-size: .66rem;
+  color: rgba(201,185,138,.85);
+}
+.gm-model.is-on{
+  border-color: #f9d58b;
+  background: rgba(249,213,139,.12);
+  box-shadow: 0 0 22px rgba(249,213,139,.22);
+}
+.gm-btn-gold{
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 13px;
+  border: 1.5px solid #f9d58b;
+  background: linear-gradient(180deg, #f9d58b, #e6b558);
+  color: #1a1018;
+  font-family: 'Rubik', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: .8rem;
+  letter-spacing: .14em;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.gm-btn-gold:hover{ transform: translateY(-1px); box-shadow: 0 0 26px rgba(249,213,139,.5); }
+.gm-btn-ghost{
+  width: 100%;
+  padding: 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(249,213,139,.3);
+  background: transparent;
+  color: rgba(249,213,139,.85);
+  font-family: 'Rubik', system-ui, sans-serif;
+  font-size: .72rem;
+  letter-spacing: .1em;
+  cursor: pointer;
+}
+.gm-btn-ghost:hover{ background: rgba(249,213,139,.08); }
+
+/* ---------------- Toast léger du menu ---------------- */
+.gm-toast{
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  transform: translateX(-50%) translateY(10px);
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(8,6,12,.92);
+  border: 1px solid rgba(249,213,139,.5);
+  color: #f9d58b;
+  font-size: .72rem;
+  letter-spacing: .05em;
+  opacity: 0;
+  transition: opacity .3s ease, transform .3s ease;
+  pointer-events: none;
+  z-index: 3;
+  white-space: nowrap;
+  max-width: 92vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gm-toast.on{
+  opacity: 1;
+  transform: translateX(-50%);
+}

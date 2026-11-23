@@ -7,3 +7,48 @@ Thumbs.db
 
 # Outils locaux de dev Blender (non versionnés)
 tools/blender_mcp_addon.py
+
+# Clés API / secrets (ne JAMAIS versionner)
+.env
+key remove bg.txt
+Gemini API key.txt
+
+# Artefacts de debug / captures locales
+.playwright-mcp/
+experience-personnages*.jpeg
+usdz-base64.txt
+
+# Sources Blender et fichiers volumineux
+sources/blender/
+3D/
+*.blend
+
+# Screenshots et fichiers temporaires de test
+*.png
+*.jpg
+*.jpeg
+screenshots/
+test-*.png
+
+# Exception: images du jeu (intro, menus, Tapama)
+!assets/images/**
+
+# Exception: images utilisées dans les projets
+!projects/active/**/asset/image/**
+!shared/assets/**/
+
+# Sauvegardes locales volumineuses, sorties de console, outils de test (ne pas publier)
+backups/
+stdout.txt
+stderr.txt
+.playwright-mcp/
+.claude/settings.local.json
+*.tmp
+_tmp/
+
+# Séances de test : sessions des joueurs (contiennent des prénoms — ne jamais publier)
+playtests/
+
+# Rendus Blender de la cinématique (lourds, gardés en local)
+cinematique/
+*.blend1

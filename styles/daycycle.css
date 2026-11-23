@@ -1,0 +1,51 @@
+/* ==========================================================
+   Cycle jour / nuit — horloge in-game (daycycle.js)
+   Chip doré discret, au-dessus des boutons d'action.
+   ========================================================== */
+.dc-clock{
+  position: absolute;
+  left: clamp(16px, 4vw, 40px);
+  bottom: calc(clamp(20px, 7vh, 58px) + 196px);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-family: 'Rubik', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .08em;
+  color: #ffe8c0;
+  background: rgba(20, 14, 26, .55);
+  border: 1px solid rgba(249, 213, 139, .28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;              /* cliquable : vitesse du temps */
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  transition: background .25s ease, border-color .25s ease;
+  opacity: 0;
+  animation: dcClockIn .9s ease 2.2s forwards;
+}
+.dc-clock:hover{
+  background: rgba(30, 20, 38, .72);
+  border-color: rgba(249, 213, 139, .6);
+}
+.dc-clock em{
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: .05em;
+  color: #f9d58b;
+  opacity: .9;
+}
+.dc-clock i{
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1;
+}
+@keyframes dcClockIn{
+  from{ opacity: 0; transform: translateY(7px); }
+  to  { opacity: 1; transform: none; }
+}
