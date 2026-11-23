@@ -9,11 +9,11 @@
    (« animations réduites »), la même image est figée sur la pose utile.
    ========================================================== */
 
-import * as TL from './touch-layout.js?v=3';
-import { UI_LABELS } from './guide-content.js?v=53';
+import * as TL from './touch-layout.js?v=11';
+import { UI_LABELS } from './guide-content.js?v=63';
 import { t } from './i18n.js?v=3';
 
-import { ICO, icon, PAD_COL, PAD_PS, PAD_NAME, padBtn, lang } from './guide-icons.js?v=53';
+import { ICO, icon, PAD_COL, PAD_PS, PAD_NAME, padBtn, lang } from './guide-icons.js?v=63';
 export { icon, padBtn };
 const keys = (k) => (Array.isArray(k) ? k : k[lang()] || k.fr);
 

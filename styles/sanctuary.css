@@ -541,6 +541,11 @@
 
 /* barre photo / menu / vidéo en bas : retirée sur grand écran */
 @media (min-width: 900px) { .sn-toolbar { display: none !important; } }
+/* … et sur mobile / tablette (écran tactile), même quand les commandes tactiles ne sont pas affichées */
+@media (hover: none), (pointer: coarse) { .sn-toolbar { display: none !important; } }
+
+/* plan de caméra (« Dispositif 1 », « Espace à crépir ») : ni joystick ni boutons à l'écran, seulement le bouton « Commencer » */
+html.sn-intro-cam .sn-stick, html.sn-intro-cam .sn-toolbar, html.sn-intro-cam #tcRoot { display: none !important; }
 
 /* Violence retirée : plus de bouton de tir, de réticule de visée ni de lunette (code d'origine dans archive-violence/) */
 #snFire, #snFireSide, #snAimReticle, #snScope { display: none !important; }

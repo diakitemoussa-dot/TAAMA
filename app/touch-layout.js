@@ -53,7 +53,7 @@ export const ACTIONS = {
   aim:      { icon: 'aim',      kind: 'toggle', modes: ['foot', 'aim'], fr: 'Tireur d’élite', en: 'Sniper', needs: 'gadget' },   // bascule comme T au clavier : un appui active, un autre désactive
   fire:     { icon: 'fire',     kind: 'tap',   modes: ['foot', 'aim'], fr: 'Tirer',        en: 'Fire', needs: 'gadget' },
   fireSide: { icon: 'fireSide', kind: 'tap',   modes: ['foot', 'aim'], fr: 'Tir latéral',  en: 'Side shot', needs: 'gadget' },
-  kneel:    { icon: 'kneel',    kind: 'tap',   modes: ['foot', 'aim'], fr: 'S’agenouiller', en: 'Kneel' },
+  // (genoux à terre retiré des commandes)
   dash:     { icon: 'dash',     kind: 'tap',   modes: ['foot'],        fr: 'Propulsion',   en: 'Dash' },
   interact: { icon: 'interact', kind: 'tap',   modes: ['foot', 'aim', 'drone'], fr: 'Interagir', en: 'Interact', contextual: true },
   droneOn:  { icon: 'drone',    kind: 'tap',   modes: ['foot'],        fr: 'Drone',        en: 'Drone' },
@@ -89,22 +89,20 @@ export function actionLabel(id, lang = 'fr') {
    key  : identifiant stable (le joueur peut remplacer l'action : `action`) */
 const S = (key, action, x, y, size = 1, extra = {}) => ({ key, type: 'btn', action, x, y, size, opacity: 0.85, hidden: false, ...extra });
 const P = (key, action, x, y, size = 1, extra = {}) => ({ key, type: 'pill', action, x, y, size, opacity: 0.85, hidden: false, ...extra });
-const STICK = (key, role, x, y, size = 1.5) => ({ key, type: 'stick', role, action: null, x, y, size, opacity: 0.8, hidden: false, floating: true });
+const STICK = (key, role, x, y, size = 1) => ({ key, type: 'stick', role, action: null, x, y, size, opacity: 0.8, hidden: false, floating: true });
 const LOOK = () => ({ key: 'look', type: 'look', action: null, x: 0.7, y: 0.5, size: 1, opacity: 1, hidden: false });
 
 const FOOT = () => [
   STICK('move', 'move', 0.15, 0.68),
   LOOK(),
-  S('jump',  'jump',  0.90, 0.66, 1.2),
+  S('jump',  'jump',  0.90, 0.60, 1),
   S('aim',   'aim',   0.77, 0.58, 1),
   S('fire',  'fire',  0.88, 0.38, 1.05),
-  S('run',   'run',   0.77, 0.83, 0.95),
-  S('kneel', 'kneel', 0.66, 0.84, 0.8),
-  S('dash',  'dash',  0.92, 0.87, 0.95),
+  // (bouton « Courir » retiré : on court en poussant le joystick à fond — app/sanctuary-mode.js, TOUCH_RUN_IN)
+  S('dash',  'dash',  0.93, 0.84, 1),
   S('interact', 'interact', 0.64, 0.58, 1.25, { contextual: true }),
   S('side',  'fireSide', 0.67, 0.40, 0.8),
-  S('drone', 'droneOn', 0.37, 0.88, 0.75),
-  S('map',   'map',   0.48, 0.90, 0.7),
+  S('drone', 'droneOn', 0.81, 0.84, 1),
   S('photo', 'photo', 0.79, 0.10, 0.7),
   S('pause', 'pause', 0.875, 0.10, 0.7),
 ];
@@ -114,7 +112,6 @@ const AIM = () => [
   S('fire',  'fire',  0.88, 0.58, 1.5),
   S('side',  'fireSide', 0.74, 0.76, 0.95),
   S('aim',   'aim',   0.88, 0.30, 1),
-  S('kneel', 'kneel', 0.70, 0.46, 0.8),
   S('jump',  'jump',  0.60, 0.80, 0.85),
   S('interact', 'interact', 0.50, 0.62, 1.15, { contextual: true }),
   S('photo', 'photo', 0.79, 0.10, 0.7),
@@ -123,26 +120,25 @@ const AIM = () => [
 const CAR = () => [
   S('steerL', 'steerL', 0.10, 0.74, 1.3, { shape: 'arrow' }),
   S('steerR', 'steerR', 0.27, 0.74, 1.3, { shape: 'arrow' }),
-  S('gas',    'gas',    0.90, 0.68, 1.45),
-  S('brake',  'brake',  0.76, 0.80, 1.15),
-  S('hand',   'handbrake', 0.78, 0.50, 0.8),
-  S('lights', 'lights', 0.44, 0.88, 0.8),
-  S('hazard', 'hazard', 0.54, 0.88, 0.8),
-  S('view',   'view',   0.64, 0.88, 0.8),
+  S('gas',    'gas',    0.90, 0.80, 1.2),
+  S('brake',  'brake',  0.77, 0.80, 1.2),
+  S('lights', 'lights', 0.74, 0.55, 0.8),
+  S('hazard', 'hazard', 0.835, 0.55, 0.8),
+  S('view',   'view',   0.93, 0.55, 0.8),
   S('exit',   'exitCar', 0.88, 0.37, 0.85),
   S('photo',  'photo',  0.79, 0.10, 0.7),
   S('pause',  'pause',  0.875, 0.10, 0.7),
 ];
 const DRONE = () => [
-  STICK('left',  'dl', 0.14, 0.68, 1.45),     // gauche : monter / descendre + pivoter
-  STICK('right', 'dr', 0.86, 0.68, 1.45),     // droite : avancer / reculer + glisser sur le côté
-  S('photo', 'photo', 0.70, 0.84, 0.95),
-  S('video', 'video', 0.58, 0.88, 0.8),
+  STICK('left',  'dl', 0.14, 0.68),           // gauche : monter / descendre + pivoter
+  STICK('right', 'dr', 0.86, 0.68),           // droite : avancer / reculer + glisser sur le côté
   S('places', 'places', 0.30, 0.88, 0.8),
+  S('video', 'video', 0.44, 0.88, 0.8),
+  S('photo', 'photo', 0.58, 0.88, 0.8),
   S('interact', 'interact', 0.50, 0.62, 1.2, { contextual: true }),
-  S('back',  'backChar', 0.87, 0.36, 0.85),
-  S('quit',  'quitDrone', 0.955, 0.34, 0.7),
-  S('pause', 'pause', 0.87, 0.19, 0.7),
+  S('pause', 'pause', 0.87, 0.19, 0.8),
+  S('back',  'backChar', 0.80, 0.36, 0.8),
+  S('quit',  'quitDrone', 0.94, 0.90, 0.8),
 ];
 const BUILDERS = { foot: FOOT, aim: AIM, car: CAR, drone: DRONE };
 

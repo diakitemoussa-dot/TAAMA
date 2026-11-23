@@ -112,7 +112,7 @@ test('pages : trois modes complets, gestes valides, boutons tactiles qui existen
     if (kc) assert.equal(kc.length, k.length, `${p.id} légendes clavier`);
     if (p.g.pad.bc) assert.equal(p.g.pad.bc.length, p.g.pad.b.length, `${p.id} légendes manette`);
   }
-  assert.ok(C.PAGES.length >= 18);
+  assert.ok(C.PAGES.length >= 17);
 });
 
 test('état d’une ancienne version : conseils « vus » et « Passer » oubliés, préférences gardées', () => {

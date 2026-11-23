@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import * as WL from './water-logic.js?v=8';
-import { createCarDashboard } from './car-dashboard.js?v=11';
+import { createCarDashboard } from './car-dashboard.js?v=13';
 import { createCargo } from './car-cargo.js?v=2';
 
 const M = window.MosqueScene;
@@ -754,7 +754,60 @@ function cargoTick(dt, speed, yaw) {
     n.position.set(r.x + it.x, r.y + it.y, r.z + it.z); n.rotation.set(it.rx, it.yaw, it.rz, 'YXZ');
   }
 }
+/* ---------- Guidage au sol : chevrons jaunes qui défilent sur la route à suivre (conduite seulement) ---------- */
+const RC = { n: 12, step: 9 };                 // 12 chevrons espacés de 9 m
+let chevrons = null;
+const chevronMat = new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, toneMapped: false, side: THREE.DoubleSide });
+const chevronGeo = (() => {
+  const s = new THREE.Shape();
+  s.moveTo(-1.1, -0.2); s.lineTo(0, 0.9); s.lineTo(1.1, -0.2); s.lineTo(1.1, -0.7); s.lineTo(0, 0.0); s.lineTo(-1.1, -0.7); s.closePath();
+  return new THREE.ShapeGeometry(s);
+})();
+function ensureChevrons() {
+  if (chevrons) return;
+  chevrons = [];
+  for (let i = 0; i < RC.n; i++) {
+    const m = new THREE.Mesh(chevronGeo, chevronMat);
+    m.rotation.order = 'YXZ'; m.rotation.x = -Math.PI / 2; m.visible = false;
+    m.raycast = () => {}; m.frustumCulled = false;
+    M.scene.add(m); chevrons.push(m);
+  }
+}
+function hideChevrons() { if (chevrons) for (const m of chevrons) m.visible = false; }
+/** Chevrons posés sur le sol, orientés vers le sens du trajet, à partir du point de la route le plus proche de la voiture. */
+function tickChevrons() {
+  const CM = window.CityMap;
+  const rt = CM && CM.routePts;
+  if (!rt || !CM.gameToReal || !CM.realToGame) { hideChevrons(); return; }
+  ensureChevrons();
+  const me = CM.gameToReal(pos.x, pos.z);
+  let bi = 0, bd = Infinity;
+  for (let i = 0; i < rt.length; i++) { const d = Math.hypot(rt[i][0] - me.e, rt[i][1] - me.n); if (d < bd) { bd = d; bi = i; } }
+  const cum = [0];                                          // distance cumulée le long de la route, depuis le point le plus proche
+  for (let i = bi + 1; i < rt.length; i++) {
+    cum.push(cum[cum.length - 1] + Math.hypot(rt[i][0] - rt[i - 1][0], rt[i][1] - rt[i - 1][1]));
+    if (cum[cum.length - 1] > 260) break;
+  }
+  const flow = (performance.now() / 1000 * 3.5) % RC.step;   // défilement vers l'avant
+  for (let k = 0; k < chevrons.length; k++) {
+    const m = chevrons[k];
+    const D = 4 + flow + k * RC.step;
+    let j = 0; while (j < cum.length - 1 && cum[j + 1] < D) j++;
+    if (j >= cum.length - 1) { m.visible = false; continue; }
+    const i0 = bi + j, i1 = i0 + 1;
+    const L = (cum[j + 1] - cum[j]) || 1, t = Math.min(1, Math.max(0, (D - cum[j]) / L));
+    const a = rt[i0], b = rt[i1];
+    const p = CM.realToGame(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t);
+    const pa = CM.realToGame(a[0], a[1]), pb = CM.realToGame(b[0], b[1]);
+    const gy = groundAt(p.x, pos.y + 2, p.z);
+    m.position.set(p.x, (gy !== null ? gy : pos.y) + 0.06, p.z);
+    m.rotation.y = Math.atan2(-(pb.x - pa.x), -(pb.z - pa.z));   // le sommet du chevron pointe vers l'avant du trajet
+    m.visible = true;
+  }
+}
+
 function drive(dt) {
+  tickChevrons();
   const inp = inputs();
   if (wantsToggle()) { startExit(); return; }
   const WFX = window.WaterFx;
@@ -930,13 +983,13 @@ const controller = {
       if (g !== null && Math.abs(g - pos.y) > 0.12) { pos.y = g; S.pendingGround = false; applyTransform(); }
     }
     if (S.st === ST.DRIVE) { if (!_wasDrive) { _wasDrive = true; document.body.classList.add('in-car'); dash.refuel(); dash.showHint(drivingHint(), 0); } drive(dt); }
-    else { if (_wasDrive) { _wasDrive = false; document.body.classList.remove('in-car'); dash.hide(); } tickSequence(dt); }
+    else { if (_wasDrive) { _wasDrive = false; document.body.classList.remove('in-car'); dash.hide(); hideChevrons(); } tickSequence(dt); }
   },
 };
 let _wasDrive = false;
 function reset() {
   if (car.cargo) { car.cargo.reset(); for (const it of car.cargo.items) { it.node.position.copy(it.node.userData.rest); it.node.rotation.set(0, 0, 0); } }
-  S.lightsMan = null; S.hazard = false; _wasDrive = false; document.body.classList.remove('in-car'); dash.hide();
+  S.lightsMan = null; S.hazard = false; _wasDrive = false; document.body.classList.remove('in-car'); dash.hide(); hideChevrons();
   if (_fadeMats) fadeEnd();
   try { if (SM()) gadgetShow(true); } catch (_) {}
   if (S.acts && SM()) { try { SM().resetActions(); } catch (_) {} S.acts = null; }

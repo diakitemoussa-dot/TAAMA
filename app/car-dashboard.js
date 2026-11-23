@@ -13,7 +13,7 @@
    Logique pure (speedKmh, speedNeedleAngle, gearOf, blinkerState, fuelAfter, scaleFor) : testée sous Node (tests/car-dashboard.test.mjs).
    Données : voir CarDashboard.update(dt, data). Le guidage vient de window.CityMap.guide (app/route-arrow.js).
    ========================================================== */
-import { gaugeAngle, isUTurn, relativeDeg, fmtDist, turnLabel } from './route-arrow.js?v=9';
+import { gaugeAngle, isUTurn, relativeDeg, fmtDist, turnLabel } from './route-arrow.js?v=10';
 
 export const SPEED_MAX_KMH = 120;             // fin de l'échelle du compteur (pointe : 72 km/h, jusqu'à ~115 km/h accélérateur maintenu)
 export const PANEL_W = 760;                   // largeur du bandeau (px) avant mise à l'échelle
@@ -248,7 +248,6 @@ const CSS = `
 #snDash .cd-hint.show { opacity: 1; }
 #snDash .cd-key { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 6px; border-radius: 9px; background: rgba(70,52,78,.82); border: 1px solid rgba(249,213,139,.7); color: ${CREAM}; font: 700 13px 'Rajdhani', 'Open Sans', system-ui, sans-serif; letter-spacing: .02em; box-shadow: 0 0 8px rgba(249,213,139,.25); }
 #snDash .cd-key kbd { min-width: 20px; padding: 1px 5px; text-align: center; border: 1.2px solid ${GOLD}; border-radius: 6px; color: ${GOLD}; font: 800 12px 'Rajdhani', system-ui, sans-serif; }
-body.in-car #cityMap { display: none !important; }
 `;
 
 export function createCarDashboard() {
