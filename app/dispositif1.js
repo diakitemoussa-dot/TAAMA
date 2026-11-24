@@ -161,6 +161,7 @@ function take() {
   if (!S.built || S.taken || S.taking || !S.active) return;
   S.taking = 0.0001; prompt(false); S.takeFrom = S.group.localToWorld(S.holder.position.clone());
   window.GamepadKit?.rumble?.(120, 0.35);
+  window.Sfx?.stopLoop('device-hum', 0.2); window.Sfx?.play('device-pickup'); window.Sfx?.holdMission?.(2600);   // son de ramassage (le son de réussite attend sa fin)
 }
 function finishTake() {
   S.taken = true; S.taking = 0; S.group.visible = false;
@@ -370,6 +371,10 @@ M?.addFrameHook((dt) => {
     S.holder.rotation.x += (0 - S.holder.rotation.x) * Math.min(1, dt * 1.2); S.holder.rotation.z += (0 - S.holder.rotation.z) * Math.min(1, dt * 1.2);
   }
   const sm = window.SanctuaryMode, pp = sm && sm.playerPosition ? sm.playerPosition() : null;
+  if (S.active && pp && S.group.visible) {                          // bourdonnement qui monte quand on s'approche du dispositif
+    const wp = S.group.getWorldPosition(new THREE.Vector3()), v = Math.max(0, 1 - Math.hypot(pp.x - wp.x, pp.z - wp.z) / 18);
+    if (v > 0.02) window.Sfx?.loop('device-hum', { vol: Math.min(1, 0.08 + Math.pow(v, 1.5) * 1.1), rate: 0.85 + v * 0.4 }); else window.Sfx?.stopLoop('device-hum', 0.4);   // plus on approche, plus c'est fort et aigu
+  }
   const near = !!(pp && Math.hypot(pp.x - POS.x, pp.z - POS.z) < REACH && Math.abs(pp.y - 1.7 - POS.y) < 2.2);
   let label = null; S.act = null;
   if (near) { label = S.active ? 'Récupérer le dispositif' : 'Examiner l’objet'; S.act = S.active ? take : activate; }

@@ -199,6 +199,16 @@ function _tickDirAnim(dt) {
     const p = n.userData.pulse;
     const ps = 0.55 + 0.45 * k; p.scale.set(ps, ps, 1); p.material.opacity = 0.85 * (1 - k);          // l onde s étend dans le plan seulement
   }
+  // son à chaque ENTRÉE dans un cercle jaune (à pied ou en voiture) ; marge de sortie de 0,6 m pour ne pas rejouer à la moindre oscillation
+  const drv = window.Vehicle && window.Vehicle.state === 'drive' && window.Vehicle.position;
+  const fx = drv ? drv.x : playerPos.x, fz = drv ? drv.z : playerPos.z, fy = drv ? drv.y : playerPos.y - EYE_HEIGHT;
+  for (const n of _dirNodes) {
+    const r = n.userData.radius || 2, d = Math.hypot(fx - n.position.x, fz - n.position.z), near = Math.abs(fy - n.position.y) < 2.5;
+    const inside = n.userData.inside;
+    if (inside === undefined) { n.userData.inside = near && d < r; continue; }          // premier relevé : pas de son si on se trouve déjà dedans (cercle créé sous nos pieds)
+    if (!inside && near && d < r) { n.userData.inside = true; window.Sfx?.play('circle-enter'); }
+    else if (inside && (!near || d > r + 0.6)) n.userData.inside = false;
+  }
 }
 
 /* ---------- Guidage vers la mosquée par les cercles jaunes ----------
@@ -526,7 +536,7 @@ const _startWalk = () => {
 /** Une interface plein écran est ouverte (labo, dossier, carte, guide, dialogue de Tapama) : le personnage ne marche pas et les pas se taisent. */
 const _uiBlocking = () => !!(window.__storyFreeze || (window.CityMap && window.CityMap.isOpen) || (window.Guide && window.Guide.isOpen)
   || (window.Tapama && window.Tapama.isBusy && window.Tapama.isBusy()) || document.querySelector('.gu-screen.on'));
-setInterval(() => { if (_walkPlaying && _uiBlocking()) _stopWalk(); }, 150);       // filet de sécurité : même si la boucle du jeu est gelée, les pas s'arrêtent
+setInterval(() => { if (_walkPlaying && (_uiBlocking() || window.__vehicleBusy)) _stopWalk(); }, 150);       // filet de sécurité : même si la boucle du jeu est gelée, les pas s'arrêtent
 const _stopWalk = () => {
   if (!_walkPlaying) return;
   _walkPlaying = false;
@@ -5136,7 +5146,7 @@ function tickFPS(dt) {
     playerYaw += dYaw * Math.min(1, PLAYER_TURN_RATE * dt);
   }
 
-  if (isMoving && !_playerJumping && !_swimming) {
+  if (isMoving && !_playerJumping && !_swimming && !window.__vehicleBusy) {   // en voiture, les touches font conduire : pas de bruit de pas
     _walkSound.playbackRate = running ? WALK_SOUND_RATE_RUN : WALK_SOUND_RATE_WALK;
     _startWalk();
   } else {

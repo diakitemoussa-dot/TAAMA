@@ -136,14 +136,48 @@ function wallSurfaces(info, center) {
     box.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
     if (box.distanceToPoint(center) < 3) out.push(o);
   });
-  return out.concat(info.colliders);
+  return out.length ? out : info.colliders;          // les maillages proches suffisent : lancer des milliers de rayons contre TOUTES les collisions de la ville gelait le jeu (des dizaines de secondes) à la fin de la vidéo
 }
-function buildPanel(info, center, right, n, targets = info.colliders, keep = null) {   // keep(x, y, z) : la case est-elle gardée (à portée de main) ?
-  const NV = (SEG_X + 1) * (SEG_Y + 1);
+/* Fissures du mur à crépir : une texture transparente (lignes brisées sombres, quelques ramifications, un liseré clair pour le relief) posée
+   sous la terre fraîche. Là où la terre n'est pas encore passée, les fissures se voient ; la terre les recouvre. Tracé reproductible (même aspect à chaque partie). */
+function crackTexture() {
+  const W = 1024, H = 597, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  let seed = 20260711; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const crack = (x, y, ang, len, w0) => {                      // une fissure : segments brisés qui s'amincissent, avec parfois une branche
+    const pts = [[x, y]]; let a = ang, px = x, py = y, done = 0;
+    while (done < len) {
+      const st = 14 + rnd() * 20; a += (rnd() - 0.5) * 0.9;
+      px += Math.cos(a) * st; py += Math.sin(a) * st; done += st; pts.push([px, py]);
+      if (rnd() < 0.16 && len - done > 60) crack(px, py, a + (rnd() < 0.5 ? -1 : 1) * (0.6 + rnd() * 0.6), (len - done) * (0.35 + rnd() * 0.3), w0 * 0.55);
+    }
+    const draw = (dx, dy, col, wm) => {
+      g.strokeStyle = col;
+      for (let i = 1; i < pts.length; i++) {
+        const k = 1 - i / pts.length; g.lineWidth = Math.max(1.2, w0 * wm * (0.35 + 0.65 * k));
+        g.beginPath(); g.moveTo(pts[i - 1][0] + dx, pts[i - 1][1] + dy); g.lineTo(pts[i][0] + dx, pts[i][1] + dy); g.stroke();
+      }
+    };
+    draw(2.5, 2.5, 'rgba(255,236,205,0.22)', 0.9);              // liseré clair : bord de la lèvre éclairée
+    draw(0, 0, 'rgba(48,30,19,0.92)', 1);                       // le creux, sombre
+  };
+  for (let i = 0; i < 5; i++) {                                // fissures principales, parties de bords différents
+    const side = i % 4, x = side === 0 ? rnd() * W : side === 1 ? W : side === 2 ? rnd() * W : 0, y = side === 0 ? 0 : side === 1 ? rnd() * H : side === 2 ? H : rnd() * H;
+    const toward = Math.atan2(H / 2 - y + (rnd() - 0.5) * 200, W / 2 - x + (rnd() - 0.5) * 300);
+    crack(x, y, toward, 420 + rnd() * 380, 10 + rnd() * 3);
+  }
+  for (let i = 0; i < 6; i++) crack(rnd() * W, rnd() * H, rnd() * Math.PI * 2, 90 + rnd() * 140, 5 + rnd() * 2.5);   // petites fissures isolées
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  return tex;
+}
+function buildPanel(info, center, right, n, targets = info.colliders, keep = null, segs = null) {   // segs [x, y] : maillage grossier pour la RECHERCHE de la meilleure position (pas de matériaux, très rapide)
+  const SX = segs ? segs[0] : SEG_X, SY = segs ? segs[1] : SEG_Y;   // keep(x, y, z) : la case est-elle gardée (à portée de main) ?
+  const NV = (SX + 1) * (SY + 1);
   const pos = new Float32Array(NV * 3), uv = new Float32Array(NV * 2), idx = [], depth = new Float32Array(NV), ok = new Uint8Array(NV);
   const up = new THREE.Vector3(0, 1, 0), P = new THREE.Vector3(), O = new THREE.Vector3(), nd = n.clone().negate(), nf = new THREE.Vector3();
-  for (let j = 0; j <= SEG_Y; j++) for (let i = 0; i <= SEG_X; i++) {
-    const u = i / SEG_X, r = j / SEG_Y, k = j * (SEG_X + 1) + i;
+  for (let j = 0; j <= SY; j++) for (let i = 0; i <= SX; i++) {
+    const u = i / SX, r = j / SY, k = j * (SX + 1) + i;
     P.copy(center).addScaledVector(right, (u - 0.5) * PANEL_W).addScaledVector(up, (0.5 - r) * PANEL_H);
     O.copy(P).addScaledVector(n, 1.4);
     const h = ray(targets, O, nd, 5).find((x) => x.face && !NOT_WALL.test(x.object.name || ''));
@@ -157,9 +191,9 @@ function buildPanel(info, center, right, n, targets = info.colliders, keep = nul
   // Un point sans mur (rayon passé dans un creux, une fente) est rempli à partir de ses voisins : la terre suit le creux au lieu de laisser un trou.
   for (let pass = 0; pass < 3; pass++) {
     const add = [];
-    for (let j = 0; j <= SEG_Y; j++) for (let i = 0; i <= SEG_X; i++) {
-      const k = j * (SEG_X + 1) + i; if (ok[k]) continue;
-      const nb = [i > 0 ? k - 1 : -1, i < SEG_X ? k + 1 : -1, j > 0 ? k - (SEG_X + 1) : -1, j < SEG_Y ? k + (SEG_X + 1) : -1].filter((q) => q >= 0 && ok[q]);
+    for (let j = 0; j <= SY; j++) for (let i = 0; i <= SX; i++) {
+      const k = j * (SX + 1) + i; if (ok[k]) continue;
+      const nb = [i > 0 ? k - 1 : -1, i < SX ? k + 1 : -1, j > 0 ? k - (SX + 1) : -1, j < SY ? k + (SX + 1) : -1].filter((q) => q >= 0 && ok[q]);
       if (nb.length >= 2) add.push([k, nb]);
     }
     for (const [k, nb] of add) {
@@ -167,14 +201,15 @@ function buildPanel(info, center, right, n, targets = info.colliders, keep = nul
       depth[k] = nb.reduce((a, q) => a + depth[q], 0) / nb.length; ok[k] = 1;
     }
   }
-  const validQuad = new Uint8Array(SEG_X * SEG_Y);
-  for (let j = 0; j < SEG_Y; j++) for (let i = 0; i < SEG_X; i++) {
-    const a = j * (SEG_X + 1) + i, b = a + 1, c = a + SEG_X + 1, d = c + 1;
+  const validQuad = new Uint8Array(SX * SY);
+  for (let j = 0; j < SY; j++) for (let i = 0; i < SX; i++) {
+    const a = j * (SX + 1) + i, b = a + 1, c = a + SX + 1, d = c + 1;
     if (!(ok[a] && ok[b] && ok[c] && ok[d])) continue;                             // pas de mur derrière : pas de terre dans le vide
     if (keep && !keep(pos[a * 3], pos[a * 3 + 1], pos[a * 3 + 2])) continue;         // hors de portée de la main : pas de terre à poser là
     if (Math.max(depth[a], depth[b], depth[c], depth[d]) - Math.min(depth[a], depth[b], depth[c], depth[d]) > 1.4) continue;    // saut de profondeur énorme (bord du mur, vide derrière) : on ne tend pas de toile
-    validQuad[j * SEG_X + i] = 1; idx.push(a, c, b, b, c, d);
+    validQuad[j * SX + i] = 1; idx.push(a, c, b, b, c, d);
   }
+  if (segs) return { pos, validQuad, sx: SX, sy: SY, search: true };                 // recherche : on n'a besoin que des positions et des cases valides
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
   const mask = document.createElement('canvas'); mask.width = MASK_W; mask.height = MASK_H;
@@ -182,9 +217,12 @@ function buildPanel(info, center, right, n, targets = info.colliders, keep = nul
   const maskTex = new THREE.CanvasTexture(mask);
   const mat = new THREE.MeshStandardMaterial({ map: plasterTexture(), alphaMap: maskTex, transparent: true, roughness: 0.78, metalness: 0,   /* terre fraîche : à peine brillante */ side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   const mesh = new THREE.Mesh(geo, mat); mesh.name = 'PanneauCrepi'; mesh.frustumCulled = false; mesh.renderOrder = 3;
-  return { mesh, mask, mctx, maskTex, pos, validQuad };
+  const crackMat = new THREE.MeshStandardMaterial({ map: crackTexture(), transparent: true, roughness: 1, metalness: 0, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const crackMesh = new THREE.Mesh(geo, crackMat); crackMesh.name = 'FissuresCrepi'; crackMesh.frustumCulled = false; crackMesh.renderOrder = 2;     // sous la terre fraîche (renderOrder 3)
+  crackMesh.raycast = () => {};
+  return { mesh, crackMesh, mask, mctx, maskTex, pos, validQuad };
 }
-function disposePanel(p) { try { p.mesh.geometry.dispose(); p.mesh.material.map?.dispose(); p.maskTex.dispose(); p.mesh.material.dispose(); } catch (_) {} }
+function disposePanel(p) { if (!p || p.search) return; try { p.mesh.geometry.dispose(); p.mesh.material.map?.dispose(); p.maskTex.dispose(); p.mesh.material.dispose(); p.crackMesh?.material.map?.dispose(); p.crackMesh?.material.dispose(); } catch (_) {} }
 /** Point 3D du panneau en (u, r) : interpolation des sommets. */
 function panelPoint(u, r, out) {
   const fx = L.clamp01(u) * SEG_X, fy = L.clamp01(r) * SEG_Y, i = Math.min(SEG_X - 1, Math.floor(fx)), j = Math.min(SEG_Y - 1, Math.floor(fy)), tx = fx - i, ty = fy - j, p = S.panel.pos;
@@ -425,6 +463,8 @@ function tick(dt) {
     S.pressed = true;
   } else if (painting && !moved) { L.stamp(S.cov, S.cur.u, S.cur.r, BRUSH_M / PANEL_W, 0.25); paintMask(S.cur.u, S.cur.r); S.pressed = true; }
   else S.pressed = false;
+  if (S.pressed && moved) { const spd = Math.hypot(S.cur.u - S.last.u, S.cur.r - S.last.r) / Math.max(dt, 1e-3); window.Sfx?.loop('plaster-spread', { vol: Math.min(0.8, 0.3 + spd * 2), rate: 0.9 + Math.min(0.3, spd * 0.5) }); }   // frottement de terre tant que la main avance
+  else window.Sfx?.stopLoop('plaster-spread', 0.15);
   S.last.u = S.cur.u; S.last.r = S.cur.r;
   // 3. le corps suit la main le long du mur (la main n'a qu'une portée d'un bras)
   panelPoint(S.cur.u, S.cur.r, S.hand);                                          // le corps ne bouge pas : seuls les bras (et, un peu, le buste et l'épaule) suivent la main
@@ -492,12 +532,13 @@ function tick(dt) {
 
 /* ---------- début, fin ---------- */
 function cleanup(keepPanel) {
+  window.Sfx?.stopLoop('plaster-spread', 0.1);
   if (!S) return;
   window.removeEventListener('keydown', S.kd, true); window.removeEventListener('keyup', S.ku, true);
   window.removeEventListener('wheel', S.wh, true); window.removeEventListener('contextmenu', S.cm, true); window.removeEventListener('pointermove', S.pm, true); window.removeEventListener('pointerdown', S.pd, true); window.removeEventListener('pointerup', S.pu, true);
   S.ui.box.remove();
   try { S.mud.dispose(); } catch (_) {}
-  if (!keepPanel) { S.info.scene.remove(S.panel.mesh); S.panel.mesh.geometry.dispose(); S.panel.mesh.material.dispose(); }
+  if (!keepPanel) { S.info.scene.remove(S.panel.mesh); S.panel.mesh.geometry.dispose(); S.panel.mesh.material.dispose(); if (S.panel.crackMesh) { S.info.scene.remove(S.panel.crackMesh); S.panel.crackMesh.material.map?.dispose(); S.panel.crackMesh.material.dispose(); } }
 }
 function restoreY() { if (!S) return; S.info.playerPos.y = S.baseY; S.info.sm.scenePlaceXZ(S.stand.x, S.stand.z); S.info.sm.sceneSetYaw(S.yaw0); }
 function abort() {                                   // Échap : le joueur quitte le mur (le cercle reste pour recommencer)
@@ -514,6 +555,7 @@ function chapterEnd() {                              // fin directe du chapitre 
 }
 function finish() {
   S.finishing = true;
+  window.Sfx?.stopLoop('plaster-spread', 0.2); window.Sfx?.missionDone();   // fin de la mission : son de réussite
   const done = () => {
     blackTransition(() => { restoreY(); window.SanctuaryMode.endSceneHook(); cleanup(true); S = null; chapterEnd(); })
       .then(() => { try { window.GameUI?.show?.('carte'); } catch (e) { console.warn('[GameUI]', e); } });
@@ -555,27 +597,28 @@ function start() {
   shoulder.addScaledVector(n, -0.22);               // pendant le crépissage le buste se penche : l'épaule avance d'environ 22 cm vers le mur
   const sideBase = shoulder.clone().sub(wall.point).dot(right);
   const score = (p) => {                             // part des cases : sur le mur ET à portée (coin haut-gauche de chaque case)
-    let s = 0; const P = p.pos, V = p.validQuad;
-    for (let j = 0; j < SEG_Y; j++) for (let i = 0; i < SEG_X; i++) {
-      if (!V[j * SEG_X + i]) continue; const k = (j * (SEG_X + 1) + i) * 3;
+    let s = 0; const P = p.pos, V = p.validQuad, SX = p.sx || SEG_X, SY = p.sy || SEG_Y;
+    for (let j = 0; j < SY; j++) for (let i = 0; i < SX; i++) {
+      if (!V[j * SX + i]) continue; const k = (j * (SX + 1) + i) * 3;
       if (Math.hypot(P[k] - shoulder.x, P[k + 1] - shoulder.y, P[k + 2] - shoulder.z) <= reachR) s++;
     }
     return s / V.length;
   };
   let panel = null, center = null, best = -1, bestValid = 0;
-  for (let y = shoulder.y + 0.1; y >= feetY + 0.35 - 1e-6; y -= 0.1) {
-    for (const side of [sideBase - 0.1, sideBase - 0.25, sideBase, sideBase - 0.4, sideBase + 0.1]) {
+  for (let y = shoulder.y + 0.1; y >= feetY + 0.35 - 1e-6; y -= 0.2) {                          // pas de 20 cm et 3 côtés : ≈ 20 positions testées (chaque rayon coûte cher sans index spatial)
+    for (const side of [sideBase - 0.3, sideBase - 0.1, sideBase + 0.1]) {
       const c = new THREE.Vector3(wall.point.x, y, wall.point.z).addScaledVector(right, side);
-      const p = buildPanel(info, c, right, n, surfaces);
+      const p = buildPanel(info, c, right, n, surfaces, null, [8, 5]);             // recherche sur un maillage grossier (≈ 50 rayons au lieu de 660)
       const sc = score(p);
       if (sc > best + 0.01) { if (panel) disposePanel(panel); panel = p; center = c; best = sc; bestValid = p.validQuad.reduce((a, v) => a + v, 0) / p.validQuad.length; } else disposePanel(p);
     }
   }
   // la zone retenue est reconstruite SANS les cases hors de portée : pas de terre là où la main ne peut pas aller, et elles ne comptent pas dans la barre
-  if (best > 0.25) { const kept = buildPanel(info, center, right, n, surfaces, (x, y, z) => Math.hypot(x - shoulder.x, y - shoulder.y, z - shoulder.z) <= reachR); disposePanel(panel); panel = kept; }
+  disposePanel(panel);
+  panel = buildPanel(info, center, right, n, surfaces, best > 0.25 ? (x, y, z) => Math.hypot(x - shoulder.x, y - shoulder.y, z - shoulder.z) <= reachR : null);   // un seul panneau complet, à la meilleure position
   console.info('[Crépissage] panneau posé à', center.y.toFixed(2), 'm ·', Math.round(bestValid * 100) + ' % sur le mur ·', Math.round(best * 100) + ' % sur le mur et à portée de main · portée', reachR.toFixed(2), 'm · épaule', shoulder.x.toFixed(2), shoulder.y.toFixed(2), shoulder.z.toFixed(2));
   const sc = window.MosqueScene && window.MosqueScene.scene; if (!sc) return false;
-  info.scene = sc; sc.add(panel.mesh);
+  info.scene = sc; sc.add(panel.crackMesh); sc.add(panel.mesh);
   const pn = THREE.PropertyBinding.sanitizeNodeName;
   const bones = { arm: info.model.getObjectByName(pn('mixamorig:RightArm')), fore: info.model.getObjectByName(pn('mixamorig:RightForeArm')), hand: info.model.getObjectByName(pn('mixamorig:RightHand')) };
   if (!bones.arm || !bones.fore || !bones.hand) bones.arm = bones.fore = bones.hand = null;

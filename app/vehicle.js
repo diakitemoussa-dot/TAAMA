@@ -404,6 +404,12 @@ function engineStart() {
 function engineUpdate(on) {
   const e = S.engine; if (!e) return;
   const t = e.ctx.currentTime, sp = Math.abs(S.speed) / MAX_FWD;
+  // moteur enregistré (assets/audio/sfx/engine-loop.mp3) : s'il existe, il remplace la synthèse ; sa hauteur suit la vitesse
+  if (window.Sfx?.has?.('engine-loop')) {
+    e.g.gain.setTargetAtTime(0, t, 0.1);
+    if (on) window.Sfx.loop('engine-loop', { vol: 0.45 + sp * 0.35, rate: 0.75 + sp * 1.0 }); else window.Sfx.stopLoop('engine-loop', 0.3);
+    return;
+  }
   const fr = 52 + sp * 95;
   e.o.frequency.setTargetAtTime(fr, t, 0.08); e.o2.frequency.setTargetAtTime(fr * 0.5, t, 0.08);
   e.f.frequency.setTargetAtTime(300 + sp * 700, t, 0.1);
@@ -529,7 +535,7 @@ function startEnter() {
   api.play('walk'); engineStart(); S.camMode = 0; S.camT = 0;
 }
 function startExit() {
-  S.t = 0; S.st = ST.OPEN_OUT; window.__vehicleBusy = true; prompt(false); S.speed = 0; S.camMode = 0;
+  S.t = 0; S.st = ST.OPEN_OUT; window.__vehicleBusy = true; prompt(false); S.speed = 0; S.camMode = 0; window.Sfx?.play('door-open');
 }
 
 function tickSequence(dt) {
@@ -552,7 +558,7 @@ function tickSequence(dt) {
     }
     case ST.REACH_IN: {                                  // la main droite va vers la poignée
       S.ikW = ease(clamp01(S.t / DUR.reach));
-      if (S.t >= DUR.reach) { S.t = 0; S.st = ST.OPEN_IN; }
+      if (S.t >= DUR.reach) { S.t = 0; S.st = ST.OPEN_IN; window.Sfx?.play('door-open'); }
       break;
     }
     case ST.OPEN_IN: {                                   // il tire : la portière s'ouvre, la main suit la poignée, puis se relâche
@@ -585,7 +591,7 @@ function tickSequence(dt) {
     case ST.APPEAR_IN: {                                 // assis : la portière se referme, la pose assise reste active
       seated();
       S.doorAmt = 1 - ease(clamp01(S.t / DUR.closeIn));
-      if (S.t >= DUR.closeIn) { fadeEnd(); S.doorAmt = 0; S.st = ST.DRIVE; S.camInit = false; }
+      if (S.t >= DUR.closeIn) { fadeEnd(); S.doorAmt = 0; S.st = ST.DRIVE; S.camInit = false; window.Sfx?.play('door-close'); window.Sfx?.play('car-start'); }
       break;
     }
     case ST.OPEN_OUT: {
@@ -608,7 +614,7 @@ function tickSequence(dt) {
       fadeSet(ease(clamp01(S.t / DUR.appear)));
       S.doorAmt = 1 - ease(clamp01((S.t - 0.2) / DUR.close));
       if (S.t >= DUR.appear + 0.2) {
-        fadeEnd(); S.st = ST.PARKED; S.doorAmt = 0; window.__vehicleBusy = false; dustClear();   // garée : plus aucun nuage
+        fadeEnd(); S.st = ST.PARKED; S.doorAmt = 0; window.__vehicleBusy = false; dustClear(); window.Sfx?.play('door-close'); window.Sfx?.stopLoop('brake-skid', 0);   // garée : plus aucun nuage
         api.setCameraYaw(S.yaw + Math.PI / 2); api.snapCamera(); api.setHeadFade(0);
         M.camera.near = 0.1; M.camera.updateProjectionMatrix();
       }
@@ -830,6 +836,7 @@ function drive(dt) {
     S.lbT = Math.max(0, S.lbT - dt);
   }
   S.braking = (inp.brake > 0.05 && S.speed > 0.3) || (inp.hand && Math.abs(S.speed) > 0.3);
+  if (S.braking && Math.abs(S.speed) > 6) window.Sfx?.loop('brake-skid', { vol: Math.min(0.8, Math.abs(S.speed) / 25) }); else window.Sfx?.stopLoop('brake-skid');
   const fwdX = Math.sin(S.yaw), fwdZ = Math.cos(S.yaw);
   // vitesse
   const climb = Math.max(0, S.slope || 0);                                      // pente montante (rad) mesurée à l'image précédente
@@ -857,7 +864,7 @@ function drive(dt) {
   const step = S.speed * dt;
   if (Math.abs(step) > 1e-4) {
     const dx = fwdX * Math.sign(step), dz = fwdZ * Math.sign(step);
-    if (blockedAhead(dx, dz, Math.abs(step), 0.75)) { S.speed *= -0.25; if (Math.abs(step) / dt > 6 && performance.now() - (S.rumbleT || 0) > 900) { S.rumbleT = performance.now(); window.GamepadKit?.rumble?.(120, 0.5); } }
+    if (blockedAhead(dx, dz, Math.abs(step), 0.75)) { S.speed *= -0.25; if (Math.abs(step) / dt > 6 && performance.now() - (S.rumbleT || 0) > 900) { S.rumbleT = performance.now(); window.Sfx?.play(Math.abs(step) / dt > 12 ? 'crash-heavy' : 'crash-light', { vol: Math.min(1, Math.abs(step) / dt / 14) * (Math.abs(step) / dt > 12 ? 0.45 : 0.3) }); window.GamepadKit?.rumble?.(120, 0.5); } }
     else { pos.x += fwdX * step; pos.z += fwdZ * step; }
   }
   // suspension : 4 rayons au sol
@@ -874,6 +881,7 @@ function drive(dt) {
     S.slope = (S.slope || 0) + (tp - (S.slope || 0)) * (1 - Math.exp(-6 * dt));                    // pente lissée (>0 = montée)
     S.pitch += (-tp - S.pitch) * (1 - Math.exp(-9 * dt));
     S.roll += (tr - S.roll) * (1 - Math.exp(-9 * dt));
+    { const dv = S.lastAvg === undefined ? 0 : (avg - S.lastAvg) / Math.max(dt, 1e-3); S.lastAvg = avg; const nw = performance.now(); if (Math.abs(dv) > 2.2 && Math.abs(S.speed) > 3 && nw - (S.bumpT || 0) > 350) { S.bumpT = nw; window.Sfx?.play('car-bump', { vol: Math.min(1, Math.abs(dv) / 8), rate: 0.9 + Math.random() * 0.2 }); } }
     S.bed = avg;                                                 // sol réel sous la voiture (lit du fleuve compris)
     pos.y += ((wsurf !== null ? Math.max(avg, wsurf - FLOAT_Y) : avg) - pos.y) * (1 - Math.exp(-14 * dt));
   } else if (hs.length) { S.bed = hs[0]; pos.y += (hs[0] - pos.y) * (1 - Math.exp(-8 * dt)); }
@@ -933,7 +941,7 @@ function dustTick(dt, amount) {
 }
 
 /* ---------- boucle ---------- */
-let _blinkT = 0, _blinkPhase = true;
+let _blinkT = 0, _blinkPhase = true, _blinkPrev = true;
 function lightsUpdate(dt = 0.016) {
   const n = nightLevel();
   const driving = S.st === ST.DRIVE || S.st === ST.APPEAR_IN || S.st === ST.OPEN_OUT || S.st === ST.VANISH_OUT;
@@ -962,6 +970,7 @@ function lightsUpdate(dt = 0.016) {
   _blinkPhase = phase;
   const left = driving && (S.hazard || (S.steer > 0.12 && S.st === ST.DRIVE));
   const right = driving && (S.hazard || (S.steer < -0.12 && S.st === ST.DRIVE));
+  if (phase !== _blinkPrev) { _blinkPrev = phase; if (left || right) window.Sfx?.play('indicator', { vol: 0.6, rate: phase ? 1 : 0.8 }); }   // tic-toc à chaque changement de phase
   if (car.ind) {
     for (const [side, on] of [['L', left], ['R', right]]) {
       const lit = on && phase;
@@ -994,6 +1003,7 @@ function reset() {
   try { if (SM()) gadgetShow(true); } catch (_) {}
   if (S.acts && SM()) { try { SM().resetActions(); } catch (_) {} S.acts = null; }
   S.camMode = 0; S.camT = 0;
+  window.Sfx?.stopLoop('brake-skid', 0);
   S.st = ST.PARKED; S.doorAmt = 0; S.speed = 0; S.held = {}; S.down = {}; window.__vehicleBusy = false; engineUpdate(false); dustClear();   // touches relâchées + poussière effacée : rien ne reste figé après une sortie brutale (labo)
   const r = SM() && SM().root(); if (r) r.visible = true;
 }

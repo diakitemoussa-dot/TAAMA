@@ -32,6 +32,7 @@ const FADE_OUT_VID_MS = 600, HOLD_BLACK_MS = 150, FADE_OUT_MS = 600;       // so
 function stop(ov, vid) {
   if (ov._ending) return; ov._ending = true;
   clearTimeout(ov._startT);
+  try { ov._snd?.stop(0.4); } catch (_) {}                                   // la bande-son du grimpage s'arrête avec la vidéo
   try { vid.pause(); } catch (_) {}
   window.removeEventListener('keydown', ov._key, true);
   const skip = ov.querySelector('button'); if (skip) skip.style.opacity = '0';
@@ -86,7 +87,7 @@ function playVideo() {
     if (ov._ending) return;
     ov._started = true;
     try { vid.currentTime = START_AT; } catch (_) {}
-    vid.play().then(() => { vid.style.opacity = '1'; }).catch(() => { vid.muted = true; vid.play().then(() => { vid.style.opacity = '1'; }).catch(() => stop(ov, vid)); });
+    vid.play().then(() => { vid.style.opacity = '1'; if (!ov._ending) ov._snd = window.Sfx?.track('grimpe', { vol: 0.9, offset: START_AT }); }).catch(() => { vid.muted = true; vid.play().then(() => { vid.style.opacity = '1'; }).catch(() => stop(ov, vid)); });
   };
   ov._startT = setTimeout(() => { if (vid.readyState >= 1) go(); else vid.addEventListener('loadedmetadata', go, { once: true }); }, FADE_IN_MS);
 }

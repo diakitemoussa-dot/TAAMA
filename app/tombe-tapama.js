@@ -121,6 +121,7 @@ function take() {
   try { localStorage.setItem('taama.tombe', '1'); } catch (_) {}
   if (promptEl) promptEl.style.display = 'none';
   if (state.group) state.group.visible = false;
+  window.Sfx?.stopLoop('device-hum', 0.2); window.Sfx?.play('device-pickup'); window.Sfx?.holdMission?.(2600);   // son de ramassage (le son de réussite attend sa fin)
   window.GamepadKit?.rumble?.(220, 0.6);
   window.GamepadKit?.toast?.(t('Dispositif 2 récupéré. Va à Barey So avec Tapama.'));
   try { window.GameUI?.completeSequence?.(8); } catch (_) {}
@@ -146,6 +147,8 @@ M?.addFrameHook((dt) => {
   if (lock > 0) lock -= dt;
   let done = false; try { done = localStorage.getItem('taama.tombe') === '1'; } catch (_) {}
   if (!done && state.group) {                                    // le dispositif flotte un peu et sa lueur pulse
+    const pp = window.SanctuaryMode?.playerPosition?.();
+    if (pp) { const v = Math.max(0, 1 - Math.hypot(pp.x - state.device.x, pp.z - state.device.z) / 18); if (v > 0.02) window.Sfx?.loop('device-hum', { vol: Math.min(1, 0.08 + Math.pow(v, 1.5) * 1.1), rate: 0.85 + v * 0.4 }); else window.Sfx?.stopLoop('device-hum', 0.4); }   // plus on approche, plus c'est fort et aigu
     state.t += dt;
     state.holder.position.y = 0.28 + Math.sin(state.t * 1.6) * 0.05; state.holder.rotation.y += dt * 0.5;
     state.glowMat.emissiveIntensity = 0.8 + 0.4 * (0.5 + 0.5 * Math.sin(state.t * 2.2));
