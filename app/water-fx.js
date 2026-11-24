@@ -125,6 +125,7 @@ const TAU = Math.PI * 2;
 /** Gerbe + onde à l'entrée / la sortie de l'eau. power ~ 0,4 (petit) … 1,5 (gros plouf). */
 function splash(x, y, z, power = 1) {
   power = Math.max(0.2, Math.min(1.6, power));
+  window.Sfx?.play('splash', { vol: Math.min(1, power * 0.7), rate: 1.25 - power * 0.3 });
   const n = Math.max(5, Math.round(NP * 0.28 * power));
   for (let k = 0; k < n; k++) {
     const a = Math.random() * TAU, sp = (0.6 + Math.random() * 1.8) * (0.6 + power * 0.5);

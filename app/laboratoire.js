@@ -776,6 +776,7 @@ function phasePlacement() {
     const done = () => {
       if (S.placed) return;
       S.placed = true;
+      window.Sfx?.play('device-place');
       root.classList.remove('wants-device');
       placeDevice().then(resolve);
     };
@@ -1395,6 +1396,7 @@ async function scene(stage, onDone) {
       for (let i = resume; i < 3; i++) await runEnigme(list[i], i + 1, 3);
     }
     ui.panel.hidden = true;
+    window.Sfx?.play('device-unlock');                              // le dispositif se déverrouille
     await (stage === 1 ? projection1() : projection2());
     await dialogue(`coupure${stage}`, stage === 1 ? LIGNES.coupure1 : LIGNES.coupure2);
     await typing();

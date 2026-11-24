@@ -211,6 +211,7 @@ function show(id, opts = {}) {
   if (!NEW_UI) return;
   if (transitioning) return;                                   // un changement d'écran est déjà en cours : les entrées sont bloquées
   if (current && isMenuScreen(id)) {
+    window.Sfx?.play('menu-enter');                              // son d'entrée dans un menu
     transitioning = true;
     lockUntil = performance.now() + BLACK_MS;
     const push = !!opts.push;
@@ -347,6 +348,7 @@ function moveFocus(step) {
   if (kbIndex < 0) kbIndex = step > 0 ? 0 : items.length - 1;
   else kbIndex = (kbIndex + step + items.length) % items.length;
   paintFocus();
+  window.Sfx?.play('menu-move');                                  // son de défilement entre les options
 }
 
 function adjustFocused(dir) {
@@ -1299,6 +1301,12 @@ function setupScreen(scr) {
 
   // le survol souris remplace la sélection clavier
   root.addEventListener('pointermove', () => { if (kbIndex >= 0) { kbIndex = -1; paintFocus(); } });
+  let lastHover = null;                                          // survol souris d'une option : même son de défilement
+  root.addEventListener('pointerover', (e) => {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    const el = e.target && e.target.closest ? e.target.closest(FOCUS_SEL) : null;
+    if (el && el !== lastHover) { lastHover = el; window.Sfx?.play('menu-move', { vol: 0.7 }); } else if (!el) lastHover = null;
+  });
 
   bindAll(root, map);
 
@@ -1754,6 +1762,7 @@ window.GameUI = {
   save: () => (save ? { ...save } : null),
   completeSequence(n) {
     if (!save) return;
+    if (!(save.done || []).includes(n)) window.Sfx?.missionDone();   // nouvelle étape accomplie : son de réussite
     save = G.completeSequence(save, n, iso());
     persistSave();
     track('sequence', { n });
