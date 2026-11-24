@@ -131,9 +131,9 @@ function _spawnDirAt(pos, radius = 2.5, opts = {}) {
   const mk = (geo, op) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: gold, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })); m.rotation.x = -Math.PI / 2; m.renderOrder = 5; m.raycast = () => {}; m.frustumCulled = false; return m; };
   const root = new THREE.Group(); root.name = 'RepereCercle';
   root.position.copy(pos);
-  const disc = mk(new THREE.CircleGeometry(radius * 0.96, 48), 0.32); disc.position.y = 0.03;
-  const ring = mk(new THREE.RingGeometry(radius * 0.82, radius, 64), 1.0); ring.position.y = 0.04;
-  const pulse = mk(new THREE.RingGeometry(radius * 0.9, radius, 64), 0.9); pulse.position.y = 0.05;
+  const disc = mk(new THREE.CircleGeometry(radius * 0.96, 48), 0.5); disc.position.y = 0.03;
+  const ring = mk(new THREE.RingGeometry(radius * 0.8, radius, 64), 1.0); ring.position.y = 0.04;
+  const pulse = mk(new THREE.RingGeometry(radius * 0.88, radius, 64), 1.0); pulse.position.y = 0.05;
   const col = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.95, radius * 0.95, 3.0, 40, 1, true), new THREE.MeshBasicMaterial({ color: gold, transparent: true, opacity: 0.10, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
   col.position.y = 1.5; col.raycast = () => {}; col.renderOrder = 4; col.frustumCulled = false;
   root.add(disc, ring, pulse, col);

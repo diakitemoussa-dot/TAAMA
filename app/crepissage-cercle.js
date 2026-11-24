@@ -27,7 +27,7 @@ function clear() { try { window.SanctuaryMode?.removeCircle?.(node); } catch (_)
    le personnage est déplacé quand l'écran est noir, puis le noir se lève sur sa nouvelle position (0,8 + 0,4 + 0,8 = 2 s). */
 const FADE_IN_MS = 4000;                                                    // entrée : le jeu passe au noir en 4 s
 const VID_FADE_MS = 700;                                                    // la vidéo apparaît en fondu
-const FADE_OUT_VID_MS = 800, HOLD_BLACK_MS = 400, FADE_OUT_MS = 800;       // sortie : 0,8 s vers le noir + 0,4 s de noir + 0,8 s de retour = 2 s
+const FADE_OUT_VID_MS = 600, HOLD_BLACK_MS = 150, FADE_OUT_MS = 600;       // sortie : 0,6 s vers le noir + 0,15 s de noir (la mission se place pendant ce noir) + 0,6 s de retour = 1,35 s
 
 function stop(ov, vid) {
   if (ov._ending) return; ov._ending = true;
@@ -49,6 +49,15 @@ function stop(ov, vid) {
     }, HOLD_BLACK_MS);
   }, ov._started ? FADE_OUT_VID_MS : 0);
 }
+/* La vidéo est chargée à l'avance (dès qu'on approche du cercle) : à l'entrée elle démarre sans saccade. */
+let preVid = null;
+function makeVideo() {
+  const v = document.createElement('video');
+  v.src = VIDEO; v.playsInline = true; v.preload = 'auto'; v.controls = false;
+  try { v.load(); } catch (_) {}
+  return v;
+}
+
 function playVideo() {
   if (playing) return;
   playing = true;
@@ -60,8 +69,7 @@ function playVideo() {
   try { document.exitPointerLock?.(); } catch (_) {}
   const ov = document.createElement('div'); ov._hooked = hooked;
   ov.style.cssText = `position:fixed;inset:0;z-index:99995;background:#000;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity ${FADE_IN_MS}ms ease`;
-  const vid = document.createElement('video');
-  vid.src = VIDEO; vid.playsInline = true; vid.preload = 'auto'; vid.controls = false;
+  const vid = preVid || makeVideo(); preVid = null;
   vid.style.cssText = `width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transition:opacity ${VID_FADE_MS}ms ease`;
   const skip = document.createElement('button');
   skip.type = 'button'; skip.textContent = 'Passer';
@@ -91,6 +99,7 @@ setInterval(() => {
   const pp = sm.playerPosition && sm.playerPosition(); if (!pp || playing) return;
   const c = node && node.position ? node.position : POS;
   const d = Math.hypot(pp.x - c.x, pp.z - c.z), near = d < POS.r && Math.abs(pp.y - 1.7 - c.y) < 2.5;
+  if (!preVid && d < POS.r + 12) preVid = makeVideo();                                  // on approche : la vidéo se charge avant l'entrée
   if (locked) { if (d > POS.r + 1.5) locked = false; return; }
   if (near && !window.__storyFreeze && !window.Tapama?.isBusy?.() && !window.CityMap?.isOpen) playVideo();
 }, 250);
