@@ -30,7 +30,7 @@ function load(name) {
     .catch(() => { bufs[name] = null; })
     .finally(() => { loading[name] = false; });
 }
-const PRELOAD = ['car-start', 'brake-skid', 'crash-light', 'crash-heavy', 'door-open', 'door-close', 'engine-loop', 'plaster-spread', 'plaster-done', 'grimpe', 'device-pickup', 'device-hum', 'device-place', 'device-unlock', 'menu-move', 'menu-enter', 'circle-enter'];   // sons déjà fournis (les autres sont optionnels)
+const PRELOAD = ['car-start', 'brake-skid', 'crash-light', 'crash-heavy', 'door-open', 'door-close', 'engine-loop', 'plaster-spread', 'plaster-done', 'grimpe', 'device-pickup', 'device-hum', 'device-place', 'device-unlock', 'menu-move', 'menu-enter', 'circle-enter', 'swim'];   // sons déjà fournis (les autres sont optionnels)
 let preloaded = false;
 function buffer(name) {
   const c = ensure(); if (!c) return null;
@@ -197,5 +197,10 @@ function test() {
   PRELOAD.forEach((n, i) => setTimeout(() => { console.info('[Sfx] test :', n); play(n, { vol: 1 }); }, 1500 + i * 2500));
   return 'Test lancé : 6 sons, un toutes les 2,5 s (tapez Sfx.debug() pour l’état)';
 }
+
+/* Nage : le son de nage tourne en boucle tant que le joueur nage (événement « player:swim » { on } de sanctuary-mode.js). */
+let swimOn = false;
+window.addEventListener('player:swim', (e) => { swimOn = !!(e.detail && e.detail.on); if (swimOn) loop('swim', { vol: 0.75 }); else stopLoop('swim', 0.5); });
+setInterval(() => { if (swimOn) loop('swim', { vol: 0.75 }); }, 500);        // relance si le son n'était pas encore chargé au début de la nage
 
 window.Sfx = { play, loop, stopLoop, track, missionDone, holdMission, has, NAMES, preload: preloadAll, debug, test };
