@@ -227,10 +227,16 @@ const LIGNES = {
   coupure2: [
     { who: 'tapama', mood: 'attentive', text: 'La carte s’est éteinte. Je relance les écrans, mais retiens bien ce que le dispositif vient de nous montrer.' },
   ],
+  reel1: [                                                  // Tapama présente la mission, avant la vidéo
+    { who: 'tapama', mood: 'attentive', text: 'Chaque année, toute la communauté de Djenné, et du monde entier, hommes et femmes, se mobilise pour le crépissage de la Grande Mosquée. Bien plus qu’un entretien du bâtiment, ce rendez-vous est un moment de partage, de transmission des savoirs et de renforcement des liens sociaux. Il célèbre la solidarité, la paix et la cohésion qui unissent les habitants autour de leur patrimoine. Regarde cette vidéo : elle te montre comment ce moment se vit.' },
+  ],
+  reel2: [                                                  // Tapama invite le joueur, après la vidéo, avant qu'il quitte le labo
+    { who: 'tapama', mood: 'souriante', text: 'À ton tour, {nom} ! Ta mission : crépir un mur de la Grande Mosquée. Grimpe sur les torons, passe la main sur le mur, et contribue à faire vivre ce savoir-faire collectif.' },
+  ],
   fin2: [
     { who: 'tapama', mood: 'attentive', text: 'Les deux dispositifs ne sont qu’un début. Il y en a d’autres, cachés ailleurs en Afrique de l’Ouest.' },
     { who: 'player', text: 'Alors on doit les trouver avant eux.' },
-    { who: 'tapama', mood: 'souriante', text: 'Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac, {nom} !' },
+    { who: 'tapama', mood: 'souriante', text: 'Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac, {nom} ! Mais avant de partir, une dernière mission t’attend.' },
   ],
 };
 
@@ -1310,6 +1316,31 @@ async function phaseNote() {
   await pause(2400);
 }
 
+/* Vidéo du crépissage réel de la Grande Mosquée : plein écran, avec son, avant la sortie du labo (une seule fois). */
+const CREPISSAGE_REEL = 'assets/videos/crepissage-reel.mp4?v=1';
+function playCrepissageReel() {
+  return dialogue('reel1', LIGNES.reel1).then(() => playReelVideo()).then(() => dialogue('reel2', LIGNES.reel2));
+}
+function playReelVideo() {
+  return new Promise((resolve) => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99994;background:#000;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.8s ease';
+    const v = document.createElement('video');
+    v.src = CREPISSAGE_REEL; v.playsInline = true; v.preload = 'auto'; v.controls = false;
+    v.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000';
+    ov.appendChild(v); document.body.appendChild(ov);
+    let finished = false;
+    const end = () => {
+      if (finished) return; finished = true;
+      ov.style.transition = 'opacity 0.8s ease'; ov.style.opacity = '0';
+      setTimeout(() => { ov.remove(); resolve(); }, 850);
+    };
+    v.addEventListener('ended', end); v.addEventListener('error', end);
+    requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; v.play().catch(() => { v.muted = true; v.play().catch(end); }); }));
+    setTimeout(end, 60000);                                         // filet de sécurité : jamais bloqué plus d'une minute
+  });
+}
+
 async function projection2() {
   S.phase = 'projection';
   ui.panel.hidden = true;
@@ -1401,6 +1432,7 @@ async function scene(stage, onDone) {
     await dialogue(`coupure${stage}`, stage === 1 ? LIGNES.coupure1 : LIGNES.coupure2);
     await typing();
     await dialogue(`fin${stage}`, stage === 1 ? LIGNES.fin1 : LIGNES.fin2);
+    if (stage === 2) await playCrepissageReel();                  // vidéo du crépissage réel, juste avant que le personnage quitte le labo
 
     guard();
     store(`taama.lab${stage}`, 'done');

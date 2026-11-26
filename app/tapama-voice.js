@@ -23,7 +23,7 @@ const AUDIO_BASE = 'assets/audio/tapama/';
 let manifests = {}, manifestPs = {}, segTimer = 0, segAudio = null, token = 0, speakingAudio = false, busy = false;   // busy : une réplique est en cours (y compris les pauses entre ses phrases)
 const off = () => { try { return localStorage.getItem('taama.voice') === '0' || /[?&]novoice=1/.test(location.search); } catch (_) { return false; } };
 /* Un manifeste par langue : manifest.json (français) et manifest-en.json (voix anglaise). Les clés sont celles du texte FRANÇAIS d'origine. */
-const mfile = (lg) => (lg === 'en' ? 'manifest-en.json?v=5' : 'manifest.json?v=9');
+const mfile = (lg) => (lg === 'en' ? 'manifest-en.json?v=8' : 'manifest.json?v=12');
 const loadManifest = (lg = getLang()) => manifestPs[lg] || (manifestPs[lg] = fetch(AUDIO_BASE + mfile(lg)).then((r) => (r.ok ? r.json() : {})).then((m) => (manifests[lg] = m)).catch(() => (manifests[lg] = {})));
 if (typeof window !== 'undefined') setTimeout(() => { if (!off()) loadManifest(); }, 1500);
 

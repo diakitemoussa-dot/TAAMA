@@ -129,7 +129,7 @@ function init() {
   const acte = () => lsv('taama.acte');
   const storyTarget = () => {
     if (lsv('taama.chapitre1') === 'done') return null;
-    if (acte() === '4:crepissage') return 'mosquee';                  // dernière mission (après le labo 2) : recrépir la Grande Mosquée
+    if (acte() === '4:crepissage') return 'marche';                   // dernière mission (après le labo 2) : l'itinéraire mène à la place du marché, devant la Grande Mosquée
     if (lsv('taama.lab2') === 'done') return null;
     if (ls('taama.dispositif2')) return 'deuxieme';
     if (ls('taama.tombe') && acte() === '3:biblio') return bibliFini() ? 'deuxieme' : 'bibliotheque';

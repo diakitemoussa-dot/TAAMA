@@ -300,13 +300,23 @@
   "mood": "attentive"
  },
  {
+  "key": "99733548",
+  "text": "Chaque année, toute la communauté de Djenné, et du monde entier, hommes et femmes, se mobilise pour le crépissage de la Grande Mosquée. Bien plus qu’un entretien du bâtiment, ce rendez-vous est un moment de partage, de transmission des savoirs et de renforcement des liens sociaux. Il célèbre la solidarité, la paix et la cohésion qui unissent les habitants autour de leur patrimoine. Regarde cette vidéo : elle te montre comment ce moment se vit.",
+  "mood": "attentive"
+ },
+ {
+  "key": "93a6b06a",
+  "text": "À ton tour, {nom} ! Ta mission : crépir un mur de la Grande Mosquée. Grimpe sur les torons, passe la main sur le mur, et contribue à faire vivre ce savoir-faire collectif.",
+  "mood": "souriante"
+ },
+ {
   "key": "10bbd554",
   "text": "Les deux dispositifs ne sont qu’un début. Il y en a d’autres, cachés ailleurs en Afrique de l’Ouest.",
   "mood": "attentive"
  },
  {
-  "key": "e4bbba8f",
-  "text": "Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac, {nom} !",
+  "key": "e995ecd8",
+  "text": "Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac, {nom} ! Mais avant de partir, une dernière mission t’attend.",
   "mood": "souriante"
  },
  {
@@ -820,8 +830,23 @@
   "mood": "surprise"
  },
  {
+  "key": "0e2cc5b0",
+  "text": "À ton tour,",
+  "mood": "souriante"
+ },
+ {
+  "key": "c47534f9",
+  "text": "! Ta mission : crépir un mur de la Grande Mosquée. Grimpe sur les torons, passe la main sur le mur, et contribue à faire vivre ce savoir-faire collectif.",
+  "mood": "souriante"
+ },
+ {
   "key": "524d40d8",
   "text": "Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac,",
+  "mood": "souriante"
+ },
+ {
+  "key": "7d874e55",
+  "text": "! Mais avant de partir, une dernière mission t’attend.",
   "mood": "souriante"
  },
  {

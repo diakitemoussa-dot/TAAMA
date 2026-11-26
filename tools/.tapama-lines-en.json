@@ -255,13 +255,23 @@
   "mood": "attentive"
  },
  {
+  "key": "99733548",
+  "text": "Every year, the whole community of Djenné, and people from around the world, men and women alike, gather for the replastering of the Great Mosque. More than building upkeep, this gathering is a moment of sharing, of passing on knowledge and of strengthening social bonds. It celebrates the solidarity, peace and unity that bring the inhabitants together around their heritage. Now watch this video: it shows you how this shared moment comes to life.",
+  "mood": "attentive"
+ },
+ {
+  "key": "93a6b06a",
+  "text": "Your turn, {nom}! Your mission: replaster a wall of the Great Mosque. Climb the torons, pass your hand over the wall, and help keep this collective skill alive.",
+  "mood": "souriante"
+ },
+ {
   "key": "10bbd554",
   "text": "The two devices are only the beginning. There are others, hidden elsewhere in West Africa.",
   "mood": "attentive"
  },
  {
-  "key": "e4bbba8f",
-  "text": "Exactly. Next stop: Bandiagara, in the cliffs. Pack your bag, {nom}!",
+  "key": "e995ecd8",
+  "text": "Exactly. Next stop: Bandiagara, in the cliffs. Pack your bag, {nom}! But before we leave, one last mission awaits you.",
   "mood": "souriante"
  },
  {
