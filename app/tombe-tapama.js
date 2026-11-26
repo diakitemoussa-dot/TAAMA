@@ -127,7 +127,7 @@ function take() {
   try { window.GameUI?.completeSequence?.(8); } catch (_) {}
   // Tapama envoie le joueur à Barey So ; à la fin de la bulle, la carte s'ouvre avec l'itinéraire
   const call = { text: 'Bien joué, {nom} ! Tu as le dispositif 2, mais il est verrouillé. Va à Barey So, la bibliothèque, récolter des informations sur lui. Ensuite on le déverrouille ensemble dans mon labo.', mood: 'souriante', duration: 9 };
-  const go = () => setTimeout(() => { try { localStorage.setItem('taama.acte', '3:biblio'); window.CityMap?.openTo?.('bibliotheque'); } catch (_) {} }, 2000);   // 2 s après la disparition de la bulle
+  const go = () => setTimeout(() => { try { localStorage.setItem('taama.acte', '3:biblio'); window.CityMap?.selectPlace?.('bibliotheque'); } catch (_) {} }, 2000);   // 2 s après la disparition de la bulle
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 10000); }
   window.dispatchEvent(new CustomEvent('tombe:dispositif', { detail: { position: state.device.toArray() } }));
 }

@@ -286,9 +286,7 @@ function leaveLab(stage) {
     }
     freeze(false); S.labBusy = false; S.leaving = false;
     veil(false, 700);
-    if (stage === 2) setTimeout(() => {       // dès la sortie du labo : Tapama annonce la dernière mission, puis l'itinéraire de la mosquée s'affiche
-      radioThen({ text: 'Avant ton départ, il te manque une dernière mission. Retourne à la Grande Mosquée : une partie de ses murs doit être recrépie, et tout le monde a besoin de toi.', mood: 'souriante', duration: 11 }, () => { window.dispatchEvent(new CustomEvent('taama:crepissage-cercle')); });
-    }, 900);
+    if (stage === 2) setTimeout(() => { window.dispatchEvent(new CustomEvent('taama:crepissage-cercle')); }, 900);   // dès la sortie du labo : le cercle du crépissage apparaît (plus d'annonce radio ici)
   });
 }
 /* le cercle déclenche à pied comme au volant (portée élargie en voiture : le point suivi est le siège) */

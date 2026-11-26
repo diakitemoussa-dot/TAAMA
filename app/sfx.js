@@ -199,8 +199,16 @@ function test() {
 }
 
 /* Nage : le son de nage tourne en boucle tant que le joueur nage (événement « player:swim » { on } de sanctuary-mode.js). */
-let swimOn = false;
-window.addEventListener('player:swim', (e) => { swimOn = !!(e.detail && e.detail.on); if (swimOn) loop('swim', { vol: 0.75 }); else stopLoop('swim', 0.5); });
-setInterval(() => { if (swimOn) loop('swim', { vol: 0.75 }); }, 500);        // relance si le son n'était pas encore chargé au début de la nage
+let swimOn = false, swimLast = null, swimLastT = 0;
+window.addEventListener('player:swim', (e) => { swimOn = !!(e.detail && e.detail.on); if (!swimOn) stopLoop('swim', 0.5); });
+// le son ne joue que si le joueur AVANCE dans l'eau : arrêté dans l'eau, il se tait en fondu ; il reprend dès qu'il bouge (vitesse mesurée 6 fois par seconde)
+setInterval(() => {
+  const sm = window.SanctuaryMode, p = sm && sm.playerPosition ? sm.playerPosition() : null, now = performance.now();
+  let spd = 0;
+  if (p && swimLast) spd = Math.hypot(p.x - swimLast.x, p.z - swimLast.z) / Math.max((now - swimLastT) / 1000, 0.001);
+  if (p) { swimLast = { x: p.x, z: p.z }; swimLastT = now; }
+  if (swimOn && spd > 0.25) loop('swim', { vol: Math.min(1, 0.5 + spd * 0.1), rate: 0.92 + Math.min(0.25, spd * 0.04) });
+  else stopLoop('swim', 0.35);
+}, 160);
 
 window.Sfx = { play, loop, stopLoop, track, missionDone, holdMission, has, NAMES, preload: preloadAll, debug, test };

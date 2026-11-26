@@ -50,11 +50,15 @@ function stop(ov, vid) {
     }, HOLD_BLACK_MS);
   }, ov._started ? FADE_OUT_VID_MS : 0);
 }
-/* La vidéo est chargée à l'avance (dès qu'on approche du cercle) : à l'entrée elle démarre sans saccade. */
-let preVid = null;
+/* La vidéo est chargée À L'AVANCE : dès que le cercle existe, le fichier est téléchargé en entier (1,8 Mo) et gardé en mémoire ; à l'entrée elle démarre sans attente ni saccade. */
+let preVid = null, preBlob = null, preBlobP = null;
+function startPreload() {
+  if (preBlobP) return;
+  preBlobP = fetch(VIDEO).then((r) => (r.ok ? r.blob() : null)).then((b) => { if (b) preBlob = URL.createObjectURL(b); }).catch(() => {});
+}
 function makeVideo() {
   const v = document.createElement('video');
-  v.src = VIDEO; v.playsInline = true; v.preload = 'auto'; v.controls = false;
+  v.src = preBlob || VIDEO; v.playsInline = true; v.preload = 'auto'; v.controls = false;
   try { v.load(); } catch (_) {}
   return v;
 }
@@ -96,11 +100,12 @@ setInterval(() => {
   if (ls(KEY) !== '1') { if (node) clear(); return; }
   const sm = window.SanctuaryMode;
   if (!sm || !sm.isActive || !sm.isActive()) return;
+  startPreload();
   if (!node) spawn();
   const pp = sm.playerPosition && sm.playerPosition(); if (!pp || playing) return;
   const c = node && node.position ? node.position : POS;
   const d = Math.hypot(pp.x - c.x, pp.z - c.z), near = d < POS.r && Math.abs(pp.y - 1.7 - c.y) < 2.5;
-  if (!preVid && d < POS.r + 12) preVid = makeVideo();                                  // on approche : la vidéo se charge avant l'entrée
+  if (!preVid && (preBlob || d < POS.r + 12)) preVid = makeVideo();                      // dès que le fichier est en mémoire (ou à l'approche) : l'élément vidéo est prêt avant l'entrée
   if (locked) { if (d > POS.r + 1.5) locked = false; return; }
   if (near && !window.__storyFreeze && !window.Tapama?.isBusy?.() && !window.CityMap?.isOpen) playVideo();
 }, 250);
@@ -112,7 +117,7 @@ window.addEventListener('taama:crepissage-fini', () => { try { localStorage.remo
 /* Plan automatique : dès que le personnage s'approche de la mosquée (mission du crépissage en cours), la caméra survole la mosquée
    et se pose sur le mur à crépir, comme le plan du dispositif 1 : le joueur voit où il doit aller. À chaque entrée dans le jeu tant que la mission du crépissage est en cours. */
 const KEY_VUE = 'taama.crepissage.vue', WALL_TARGET = { x: -38.4, y: 17.5, z: 22.5 }, MAX_FEET_Y = 8;   // au-dessus de 8 m, le joueur est sur un toit / un toron : le plan ne se lance pas
-let vueFaite = false;                       // une fois par ENTRÉE dans le jeu (Continuer / Nouvelle partie) : repart à zéro dès que le joueur quitte le sanctuaire
+let vueFaite = false;
 let attente = '';                           // raison pour laquelle le plan attend (affichée une fois dans la console à chaque changement : aide au diagnostic)
 const attendre = (r) => { if (r !== attente) { attente = r; if (r) console.info('[Crépissage] plan de caméra en attente :', r); } return false; };
 function planPossible(sm) {

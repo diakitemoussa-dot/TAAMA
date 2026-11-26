@@ -265,8 +265,23 @@
   "mood": "surprise"
  },
  {
+  "key": "0e2cc5b0",
+  "text": "À ton tour,",
+  "mood": "souriante"
+ },
+ {
+  "key": "c47534f9",
+  "text": "! Ta mission : crépir un mur de la Grande Mosquée. Grimpe sur les torons, passe la main sur le mur, et contribue à faire vivre ce savoir-faire collectif.",
+  "mood": "souriante"
+ },
+ {
   "key": "524d40d8",
   "text": "Exactement. Prochaine étape : Bandiagara, dans les falaises. Prépare ton sac,",
+  "mood": "souriante"
+ },
+ {
+  "key": "7d874e55",
+  "text": "! Mais avant de partir, une dernière mission t’attend.",
   "mood": "souriante"
  },
  {

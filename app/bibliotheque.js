@@ -239,7 +239,7 @@ function unlockLab() {
   try { window.GameUI?.completeSequence?.(9); window.GameUI?.completeSequence?.(10); } catch (_) {}
   window.GamepadKit?.toast?.(t('Le laboratoire de Tapama est ouvert : rejoins le cercle jaune.'));
   const call = { text: 'Bien joué, {nom} ! Tu as déjà de quoi travailler. Rejoins-moi à mon laboratoire avec tes phrases : on va déverrouiller le dispositif 2.', mood: 'souriante', duration: 8 };
-  const go = () => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} };
+  const go = () => { try { window.CityMap?.selectPlace?.('deuxieme'); } catch (_) {} };
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 9000); }
   window.dispatchEvent(new CustomEvent('bibliotheque:fini', { detail: { phrases: DroneBase.phrases().length, anticipe: true } }));
 }
@@ -254,7 +254,7 @@ function checkFini() {
   try { window.GameUI?.completeSequence?.(9); window.GameUI?.completeSequence?.(10); } catch (_) {}
   // Tapama : « Rejoins-moi » ; à la fin de la bulle, la carte s'ouvre sur le labo (le stade 2 du labo décortique les phrases)
   const call = { text: 'Tu as récolté toutes les informations, {nom} ! Rejoins-moi à mon laboratoire avec les phrases que tu as retenues : on va déverrouiller le dispositif 2.', mood: 'souriante', duration: 9 };
-  const go = () => { try { localStorage.setItem('taama.acte', '3:retour'); window.CityMap?.openTo?.('deuxieme'); } catch (_) {} };
+  const go = () => { try { localStorage.setItem('taama.acte', '3:retour'); window.CityMap?.selectPlace?.('deuxieme'); } catch (_) {} };
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go); else { window.Tapama?.radio?.(call); setTimeout(go, 10000); }
   window.dispatchEvent(new CustomEvent('bibliotheque:fini', { detail: { phrases: DroneBase.phrases().length } }));
 }
@@ -287,7 +287,7 @@ function checkEntree(dt) {
   try { localStorage.setItem(KEY_ENTREE, '1'); } catch (_) {}
   const call = { text: 'Te voilà à Barey So, {nom} ! Récolte le plus d’informations que tu peux. Juste après, je t’affiche le chemin de retour vers mon laboratoire, puis tu pourras lire les livres.', mood: 'attentive', duration: 11 };
   // l'itinéraire de retour vers le labo ne s'affiche qu'APRÈS le message de Tapama (1 s après la disparition de la bulle)
-  const go = () => setTimeout(() => { try { window.CityMap?.openTo?.('deuxieme'); } catch (_) {} }, 1000);
+  const go = () => setTimeout(() => { try { window.CityMap?.selectPlace?.('deuxieme'); } catch (_) {} }, 1000);
   if (window.Dispositif1?.radioThen) window.Dispositif1.radioThen(call, go);
   else { window.Tapama?.radio?.(call); setTimeout(go, (call.duration || 11) * 1000 + 1000); }
 }
